@@ -7,7 +7,7 @@ vLLM / llama.cpp), опционально Anthropic. Свой `.env` — ядр�
 Агенты: суммаризатор материала, структуризатор наработок, Q&A по предмету (RAG на pgvector),
 классификатор Drive-файлов, извлечение дедлайнов из текста задания.
 
-Язык — Python (FastAPI) рекомендован, альтернатива Go — открытый вопрос №4 в
-`docs/OPEN-QUESTIONS.md`.
+Язык — Python (FastAPI), решено (D30 в `docs/DECISIONS.md`). Своё окружение (`.venv`,
+`pyproject.toml`), свой Dockerfile.
 
 Статус: **создаётся после MVP** (см. `docs/PLAN.md`, §10).

@@ -25,7 +25,7 @@ self-hosted модель) и markdown-редактор.
 | Mobile (`apps/mobile`) | Expo (React Native) + Expo Router, TypeScript, TanStack Query (+persist), Zustand, react-hook-form + zod, expo-sqlite (офлайн-outbox сообщений), expo-notifications, i18next |
 | Web (`apps/web`, этап W2-A) | Vite + React, тот же UI и хуки |
 | Общий UI (`packages/ui`) | Tamagui (универсальные компоненты mobile + web) |
-| ИИ-сервис (`apps/ai`, этап W2-B) | отдельный процесс, общается с ядром только по REST; провайдер `openai-compatible` (локальная модель), опционально Anthropic |
+| ИИ-сервис (`apps/ai`, этап W2-B) | Python (FastAPI), отдельный процесс, общается с ядром только по REST; провайдер `openai-compatible` (локальная модель), опционально Anthropic |
 | Хранилище | MinIO (S3 API) — dev и prod; провайдер `local` для минимального сервера |
 | Инфраструктура | docker/podman compose + Caddy; Go — один статический бинарник с подкомандами `api | worker | migrate | gen` |
 
@@ -78,7 +78,8 @@ docs/            PLAN.md, DATA-MODEL.md, DECISIONS.md, OPEN-QUESTIONS.md, adr/
 - **Коммиты:** Conventional Commits с русским описанием:
   `feat(api): добавить загрузку материалов`, `fix(mobile): починить офлайн-outbox`.
   Типы: `feat | fix | refactor | docs | chore | test | ci | build`. Скоупы: `api | mobile | web |
-  ai | ui | shared | core | infra | docs`.
+  ai | ui | shared | core | infra | docs`. **Без строк авторства ИИ-агента** (`Co-Authored-By`,
+  `Claude-Session` и т.п.) — автор коммитов один; исключение сделано только для первого коммита.
 - **Ветки:** `main` (стабильная), `feat/<кратко>`, `fix/<кратко>`.
 - **Go:** `gofmt`, `go vet`, `golangci-lint`; раскладка `cmd/ internal/`; ошибки —
   обёртка с контекстом (`fmt.Errorf("...: %w", err)`), доменные ошибки — типизированы;
