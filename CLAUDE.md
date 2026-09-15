@@ -10,12 +10,15 @@ Heatseeker — платформа для учебной группы (~20 чел
 Mobile-first (Android APK), веб — вторым этапом. Вторая волна — ИИ-агенты (отдельный сервис,
 self-hosted модель) и markdown-редактор.
 
-## Статус (2026-09-15)
+## Статус (2026-09-16)
 
-**Планирование завершено, кодирование не начато.** Репозиторий содержит только структуру,
-конфиги и документацию. Все принятые решения — в `docs/DECISIONS.md`, нерешённое — в
+**Этап 0 (фундамент) — в работе.** Готово: Go-ядро (`apps/api`) с auth L1/L2, группами,
+мультиролями, инвайтами, предметами/тегами, журналом событий и `sync`; миграции; OpenAPI;
+`packages/shared` (генерируется из Go), `packages/api-client`, `packages/i18n`,
+`packages/config`; compose для dev; CI. Не начато: `apps/mobile` (Expo + Tamagui),
+`packages/ui`, `packages/core`. Все принятые решения — в `docs/DECISIONS.md`, нерешённое — в
 `docs/OPEN-QUESTIONS.md`. **Не принимать решения по открытым вопросам молча** — спросить или
-явно предложить вариант. Следующий шаг — этап 0 из `docs/PLAN.md` (§11 Roadmap).
+явно предложить вариант.
 
 ## Стек (утверждён)
 
@@ -97,25 +100,36 @@ docs/            PLAN.md, DATA-MODEL.md, DECISIONS.md, OPEN-QUESTIONS.md, adr/
 - **Ничего постороннего:** в репозитории не ссылаться на другие проекты автора; репозиторий
   самодостаточен.
 
-## Команды (появятся на этапе 0; поддерживать актуальными)
+## Команды (поддерживать актуальными)
+
+Go-тулчейн стоит в user-space; в каждом shell перед Go-командами:
+`source /run/media/deck/EE4S8/go-toolchain/env.sh` (даёт go, sqlc, task, golangci-lint).
+Docker Hub недоступен — compose использует зеркала (`mirror.gcr.io`, `quay.io`).
 
 ```bash
-# инфраструктура для разработки
-podman compose -f infra/compose/docker-compose.dev.yml up -d   # Postgres, Redis, MinIO, asynqmon
+# инфраструктура для разработки (Postgres :5433, Redis :6379, MinIO :9100/:9101, asynqmon :8082)
+task dev:up      # = podman compose -f infra/compose/docker-compose.dev.yml up -d
+task dev:down    # остановить (данные сохраняются); task dev:reset — стереть данные
 
-# ядро
-cd apps/api && go run ./cmd/heatseeker migrate up
-cd apps/api && go run ./cmd/heatseeker api        # HTTP + /docs
-cd apps/api && go run ./cmd/heatseeker worker     # asynq-воркеры + планировщик
-cd apps/api && go run ./cmd/heatseeker gen        # OpenAPI → openapi/, permissions → packages/shared
-cd apps/api && go test ./...
+# ядро (из apps/api; конфиг — apps/api/.env, шаблон — .env.example в корне)
+task api:migrate            # goose up;  task api:migrate -- status|down|redo
+task api:run:api            # HTTP API, документация: http://localhost:8080/api/v1/docs
+task api:run:worker         # asynq-воркеры + планировщик
+task api:gen                # sqlc → OpenAPI (apps/api/openapi/) → packages/shared/src/generated/
+task api:test               # юнит-тесты
+task api:test:integration   # интеграционный сквозной тест на живой БД (compose должен быть поднят)
+task api:lint               # go vet + golangci-lint
+task api:check              # всё, что гоняет CI
 
-# JS-часть
+# JS-часть (корень репо)
 pnpm install
-pnpm -F @heatseeker/api-client generate           # openapi-typescript из apps/api/openapi
-pnpm -F mobile start                              # Expo dev server
-pnpm dev | pnpm lint | pnpm typecheck | pnpm test # через turbo
+task gen                                          # api:gen + регенерация @heatseeker/api-client
+pnpm lint | pnpm typecheck | pnpm test           # через turbo по всем workspaces
 ```
+
+Сгенерированные артефакты (`apps/api/openapi/openapi.json`, `packages/shared/src/generated/`,
+`packages/api-client/src/schema.d.ts`, `internal/adapters/postgres/sqlcgen/`) **коммитятся**;
+CI проверяет, что они актуальны. После изменения SQL, хендлеров или матрицы прав — `task gen`.
 
 ## Ссылки
 
