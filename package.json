@@ -2,7 +2,7 @@
   "name": "heatseeker",
   "private": true,
   "description": "Heatseeker — платформа для учебной группы (монорепо)",
-  "packageManager": "pnpm@10.0.0",
+  "packageManager": "pnpm@10.34.5",
   "engines": {
     "node": ">=22"
   },
@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "prettier": "^3.6.0",
-    "turbo": "^2.5.0"
+    "turbo": "^2.5.0",
+    "@heatseeker/config": "workspace:*"
   }
 }

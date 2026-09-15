@@ -1,0 +1,4 @@
+{
+  "extends": "@heatseeker/config/tsconfig.base.json",
+  "include": ["src", "test"]
+}

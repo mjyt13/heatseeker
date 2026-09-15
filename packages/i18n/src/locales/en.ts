@@ -1,0 +1,94 @@
+// Словарь en. Ключи — по модулям; плюрали — суффиксы _one/_few/_many/_other.
+export default {
+  "app": {
+    "name": "Heatseeker"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "retry": "Retry",
+    "loading": "Loading…",
+    "empty": "Nothing here yet",
+    "search": "Search",
+    "offline": "Offline — showing cached data"
+  },
+  "auth": {
+    "welcome_title": "What's your name?",
+    "welcome_hint": "Just a name — your groupmates will see it. Password and email can be added later.",
+    "name_placeholder": "First and last name",
+    "continue": "Continue",
+    "have_account": "Already have a secured account? Sign in",
+    "login_title": "Sign in",
+    "email": "Email",
+    "password": "Password",
+    "login": "Sign in",
+    "secure_title": "Secure your account",
+    "secure_hint": "Add a password or email to sign in on other devices and to hold headman, moderator or admin roles.",
+    "secured": "Account secured",
+    "logout": "Sign out",
+    "logout_all": "Sign out everywhere"
+  },
+  "groups": {
+    "title": "Groups",
+    "create": "Create group",
+    "join": "Join by code",
+    "join_code": "Group or invite code",
+    "join_question": "Join “{{name}}”?",
+    "members_count_one": "{{count}} member",
+    "members_count_other": "{{count}} members",
+    "name": "Group name",
+    "kind": {
+      "MASTERS": "Master's",
+      "DPO": "Continuing education",
+      "OTHER": "Other"
+    },
+    "members": "Members",
+    "invites": "Invites",
+    "settings": "Group settings",
+    "switch": "Switch group"
+  },
+  "roles": {
+    "OWNER": "Owner",
+    "ADMIN": "Admin",
+    "MODERATOR": "Moderator",
+    "HEADMAN": "Headman",
+    "STUDENT": "Student",
+    "GUEST": "Guest"
+  },
+  "quick_tags": {
+    "mine": "Mine",
+    "saved": "Saved",
+    "unread": "Unread"
+  },
+  "tabs": {
+    "feed": "Feed",
+    "schedule": "Schedule",
+    "tasks": "Tasks",
+    "threads": "Discussions",
+    "more": "More"
+  },
+  "subjects": {
+    "title": "Subjects",
+    "add": "Add subject",
+    "name": "Name",
+    "short_name": "Short name",
+    "teacher": "Teacher",
+    "aliases": "Aliases for automatic file sorting",
+    "archived": "Archived"
+  },
+  "errors": {
+    "network": "Could not reach the server",
+    "unauthorized": "Session expired — sign in again",
+    "forbidden": "Not enough permissions",
+    "not_found": "Not found",
+    "conflict": "Already exists",
+    "gone": "This link is no longer valid",
+    "validation": "Check the entered data",
+    "unknown": "Something went wrong"
+  }
+} as const;
