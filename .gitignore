@@ -1,0 +1,70 @@
+# --- Секреты и окружение ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p8
+*.p12
+*.jks
+*.keystore
+service-account*.json
+credentials/
+secrets/
+
+# --- Go ---
+bin/
+dist/
+*.exe
+*.test
+*.out
+coverage.*
+apps/api/tmp/
+apps/api/openapi/*.tmp
+
+# --- Node / pnpm / turbo ---
+node_modules/
+.pnpm-store/
+.turbo/
+*.tsbuildinfo
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# --- Expo / React Native ---
+.expo/
+.expo-shared/
+expo-env.d.ts
+apps/mobile/android/
+apps/mobile/ios/
+*.apk
+*.aab
+*.ipa
+*.orig.*
+web-build/
+
+# --- Vite ---
+apps/web/dist/
+
+# --- Python (ИИ-сервис) ---
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Данные локальных сервисов ---
+infra/compose/data/
+*.db
+*.sqlite
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+!.vscode/extensions.json
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
