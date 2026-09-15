@@ -15,7 +15,8 @@ export default {
     "loading": "Loading…",
     "empty": "Nothing here yet",
     "search": "Search",
-    "offline": "Offline — showing cached data"
+    "offline": "Offline — showing cached data",
+    "coming_soon": "Coming soon"
   },
   "auth": {
     "welcome_title": "What's your name?",
@@ -31,7 +32,8 @@ export default {
     "secure_hint": "Add a password or email to sign in on other devices and to hold headman, moderator or admin roles.",
     "secured": "Account secured",
     "logout": "Sign out",
-    "logout_all": "Sign out everywhere"
+    "logout_all": "Sign out everywhere",
+    "password_hint": "At least {{min}} characters"
   },
   "groups": {
     "title": "Groups",
@@ -90,5 +92,30 @@ export default {
     "gone": "This link is no longer valid",
     "validation": "Check the entered data",
     "unknown": "Something went wrong"
+  },
+  "feed": {
+    "empty_hint": "Group materials and tasks will appear here. For now — the activity feed."
+  },
+  "stages": {
+    "schedule": "Group schedule — stage 3 of the roadmap",
+    "tasks": "Tasks and deadlines — stage 2",
+    "threads": "Subject discussions — stage 2"
+  },
+  "events": {
+    "group_created": "Group created",
+    "group_updated": "Group settings changed",
+    "member_joined": "New member",
+    "member_roles_changed": "Member roles changed",
+    "member_status_changed": "Member status changed",
+    "subject_created": "Subject added",
+    "subject_updated": "Subject changed",
+    "subject_archived": "Subject archived",
+    "subject_restored": "Subject restored",
+    "tag_created": "Tag added",
+    "tag_updated": "Tag changed",
+    "tag_deleted": "Tag deleted",
+    "invite_created": "Invite created",
+    "invite_revoked": "Invite revoked",
+    "group_join_code_rotated": "Group code rotated"
   }
 } as const;

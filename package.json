@@ -16,8 +16,10 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,yml,yaml}\""
   },
   "devDependencies": {
+    "@heatseeker/config": "workspace:*",
+    "eslint": "^10.0.0",
     "prettier": "^3.6.0",
     "turbo": "^2.5.0",
-    "@heatseeker/config": "workspace:*"
+    "typescript": "~6.0.3"
   }
 }

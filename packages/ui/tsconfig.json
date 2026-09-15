@@ -1,0 +1,7 @@
+{
+  "extends": "@heatseeker/config/tsconfig.react.json",
+  "compilerOptions": {
+    "types": []
+  },
+  "include": ["src"]
+}

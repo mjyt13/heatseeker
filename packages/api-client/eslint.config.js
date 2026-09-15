@@ -1,3 +1,4 @@
 import base from '@heatseeker/config/eslint';
+import { defineConfig, globalIgnores } from 'eslint/config';
 
-export default [...base, { ignores: ['src/schema.d.ts'] }];
+export default defineConfig([globalIgnores(['src/schema.d.ts']), ...base]);

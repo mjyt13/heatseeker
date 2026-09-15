@@ -1,0 +1,35 @@
+{
+  "name": "@heatseeker/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Платформо-независимая клиентская логика: сессия, провайдер API, хуки TanStack Query, права",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@heatseeker/api-client": "workspace:*",
+    "@heatseeker/shared": "workspace:*",
+    "zustand": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.80.0",
+    "react": ">=18.2.0"
+  },
+  "devDependencies": {
+    "@heatseeker/config": "workspace:*",
+    "@tanstack/react-query": "^5.80.0",
+    "@types/react": "^19.1.0",
+    "eslint": "^10.0.0",
+    "react": "^19.1.0",
+    "typescript": "~6.0.3",
+    "vitest": "^3.2.0"
+  }
+}

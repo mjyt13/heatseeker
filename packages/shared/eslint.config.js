@@ -1,3 +1,4 @@
 import base from '@heatseeker/config/eslint';
+import { defineConfig } from 'eslint/config';
 
-export default [...base];
+export default defineConfig([...base]);
