@@ -1,0 +1,77 @@
+# Task runner for the Go core (https://taskfile.dev). Run from apps/api:
+#   task            — list tasks
+#   task gen        — sqlc + OpenAPI + packages/shared
+#   task run:api    — start the HTTP API with .env
+version: '3'
+
+vars:
+  BIN: bin/heatseeker
+  VERSION:
+    sh: git describe --tags --always --dirty 2>/dev/null || echo dev
+
+tasks:
+  default:
+    cmds: [task --list]
+    silent: true
+
+  gen:
+    desc: Regenerate sqlc code, OpenAPI document and packages/shared
+    deps: [gen:sqlc]
+    cmds:
+      - go run ./cmd/heatseeker gen all
+
+  gen:sqlc:
+    desc: Generate Go from SQL (db/queries → internal/adapters/postgres/sqlcgen)
+    cmds: [sqlc generate]
+    sources: [db/migrations/*.sql, db/queries/*.sql, sqlc.yaml]
+    generates: [internal/adapters/postgres/sqlcgen/*.go]
+
+  gen:openapi:
+    desc: Write openapi/openapi.json
+    cmds: [go run ./cmd/heatseeker gen openapi]
+
+  gen:shared:
+    desc: Write packages/shared/src/generated/*
+    cmds: [go run ./cmd/heatseeker gen shared]
+
+  build:
+    desc: Build the static binary
+    cmds:
+      - CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X heatseeker/api/internal/transport/http.Version={{.VERSION}}" -o {{.BIN}} ./cmd/heatseeker
+
+  run:api:
+    desc: Run the HTTP API (reads .env)
+    cmds: [go run ./cmd/heatseeker api]
+
+  run:worker:
+    desc: Run the asynq worker and scheduler (reads .env)
+    cmds: [go run ./cmd/heatseeker worker]
+
+  migrate:
+    desc: Apply migrations (task migrate -- status|down|redo|version)
+    cmds: [go run ./cmd/heatseeker migrate {{.CLI_ARGS}}]
+
+  test:
+    desc: Unit tests
+    cmds: [go test ./...]
+
+  test:integration:
+    desc: Integration tests against TEST_DATABASE_URL (compose must be up)
+    cmds: [go test -tags integration -count=1 ./...]
+
+  lint:
+    desc: golangci-lint + go vet
+    cmds:
+      - go vet ./...
+      - golangci-lint run ./...
+
+  tidy:
+    cmds: [go mod tidy]
+
+  check:
+    desc: Everything CI runs
+    deps: [gen:sqlc]
+    cmds:
+      - task: lint
+      - task: test
+      - go build ./...

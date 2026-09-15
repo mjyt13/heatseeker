@@ -1,0 +1,68 @@
+# Local infrastructure for development. Ports are bound to loopback and
+# offset from defaults so they do not collide with other projects on the host.
+#
+# Images come from mirrors (mirror.gcr.io, quay.io): Docker Hub may be
+# unreachable from some networks.
+#
+#   podman compose -f infra/compose/docker-compose.dev.yml up -d
+#   podman compose -f infra/compose/docker-compose.dev.yml down        # keep data
+#   podman compose -f infra/compose/docker-compose.dev.yml down -v     # wipe data
+name: heatseeker-dev
+
+services:
+  postgres:
+    image: mirror.gcr.io/library/postgres:17-alpine
+    environment:
+      POSTGRES_USER: heatseeker
+      POSTGRES_PASSWORD: heatseeker
+      POSTGRES_DB: heatseeker
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U heatseeker -d heatseeker"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: mirror.gcr.io/library/redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: quay.io/minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-heatseeker}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-heatseeker-dev-secret}
+    ports:
+      - "127.0.0.1:9100:9000"   # S3 API
+      - "127.0.0.1:9101:9001"   # web console
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  asynqmon:
+    image: mirror.gcr.io/hibiken/asynqmon:latest
+    command: ["--redis-addr=redis:6379", "--port=8080"]
+    ports:
+      - "127.0.0.1:8082:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  miniodata:

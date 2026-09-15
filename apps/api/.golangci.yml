@@ -1,0 +1,37 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  enable:
+    - misspell
+    - unconvert
+    - unparam
+    - gocritic
+    - revive
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+  exclusions:
+    generated: lax
+    paths:
+      - internal/adapters/postgres/sqlcgen
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - heatseeker/api
+  exclusions:
+    paths:
+      - internal/adapters/postgres/sqlcgen

@@ -1,0 +1,228 @@
+{
+  "actions": [
+    "announcement.send",
+    "bookmark.manage",
+    "drive.manage",
+    "group.archive",
+    "group.read",
+    "group.settings",
+    "invite.create",
+    "material.edit.own",
+    "material.moderate",
+    "material.upload",
+    "member.manage",
+    "member.view_author",
+    "member.view_extended",
+    "message.hide.self",
+    "message.moderate",
+    "proposal.create",
+    "proposal.moderate",
+    "reminder.manage",
+    "schedule.approve",
+    "schedule.edit",
+    "schedule.propose",
+    "schedule.read",
+    "subject.manage",
+    "tag.manage",
+    "task.create",
+    "task.pin",
+    "task.status.group",
+    "task.status.own",
+    "thread.write"
+  ],
+  "matrix": {
+    "announcement.send": [
+      "OWNER",
+      "ADMIN",
+      "HEADMAN"
+    ],
+    "bookmark.manage": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN",
+      "STUDENT",
+      "GUEST"
+    ],
+    "drive.manage": [
+      "OWNER",
+      "ADMIN",
+      "HEADMAN"
+    ],
+    "group.archive": [
+      "OWNER"
+    ],
+    "group.read": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN",
+      "STUDENT",
+      "GUEST"
+    ],
+    "group.settings": [
+      "OWNER",
+      "ADMIN"
+    ],
+    "invite.create": [
+      "OWNER",
+      "ADMIN",
+      "HEADMAN"
+    ],
+    "material.edit.own": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN",
+      "STUDENT"
+    ],
+    "material.moderate": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR"
+    ],
+    "material.upload": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN",
+      "STUDENT"
+    ],
+    "member.manage": [
+      "OWNER",
+      "ADMIN"
+    ],
+    "member.view_author": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR"
+    ],
+    "member.view_extended": [
+      "OWNER",
+      "ADMIN"
+    ],
+    "message.hide.self": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN",
+      "STUDENT"
+    ],
+    "message.moderate": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR"
+    ],
+    "proposal.create": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN",
+      "STUDENT"
+    ],
+    "proposal.moderate": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR"
+    ],
+    "reminder.manage": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN",
+      "STUDENT",
+      "GUEST"
+    ],
+    "schedule.approve": [
+      "OWNER",
+      "ADMIN",
+      "HEADMAN"
+    ],
+    "schedule.edit": [
+      "OWNER",
+      "ADMIN",
+      "HEADMAN"
+    ],
+    "schedule.propose": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN",
+      "STUDENT"
+    ],
+    "schedule.read": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN",
+      "STUDENT",
+      "GUEST"
+    ],
+    "subject.manage": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN"
+    ],
+    "tag.manage": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN"
+    ],
+    "task.create": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN",
+      "STUDENT"
+    ],
+    "task.pin": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN"
+    ],
+    "task.status.group": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN"
+    ],
+    "task.status.own": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN",
+      "STUDENT"
+    ],
+    "thread.write": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN",
+      "STUDENT"
+    ]
+  },
+  "roles": [
+    "OWNER",
+    "ADMIN",
+    "MODERATOR",
+    "HEADMAN",
+    "STUDENT",
+    "GUEST"
+  ],
+  "secured": [
+    "announcement.send",
+    "drive.manage",
+    "group.archive",
+    "group.settings",
+    "material.moderate",
+    "member.manage",
+    "member.view_extended",
+    "message.moderate",
+    "proposal.moderate",
+    "schedule.approve",
+    "schedule.edit"
+  ]
+}

@@ -1,0 +1,45 @@
+# Repo-level task runner (https://taskfile.dev). `task` lists everything;
+# Go-specific tasks live in apps/api/Taskfile.yml and are namespaced `api:`.
+version: '3'
+
+includes:
+  api:
+    taskfile: apps/api/Taskfile.yml
+    dir: apps/api
+
+vars:
+  COMPOSE: podman compose -f infra/compose/docker-compose.dev.yml
+
+tasks:
+  default:
+    cmds: [task --list]
+    silent: true
+
+  dev:up:
+    desc: Start Postgres, Redis, MinIO, asynqmon for development
+    cmds: ["{{.COMPOSE}} up -d"]
+
+  dev:down:
+    desc: Stop development infrastructure (data is kept)
+    cmds: ["{{.COMPOSE}} down"]
+
+  dev:reset:
+    desc: Stop development infrastructure and wipe its data
+    cmds: ["{{.COMPOSE}} down -v"]
+
+  dev:logs:
+    cmds: ["{{.COMPOSE}} logs -f --tail=100"]
+
+  gen:
+    desc: Regenerate everything derived from Go (sqlc, OpenAPI, packages/shared, api-client)
+    cmds:
+      - task: api:gen
+      - pnpm -F @heatseeker/api-client generate
+
+  check:
+    desc: Lint, typecheck and test the whole repo
+    cmds:
+      - task: api:check
+      - pnpm lint
+      - pnpm typecheck
+      - pnpm test
