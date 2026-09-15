@@ -68,3 +68,6 @@ infra/compose/data/
 *.swo
 .DS_Store
 Thumbs.db
+
+# Expo export check output
+apps/mobile/.expo/

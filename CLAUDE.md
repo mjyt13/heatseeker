@@ -12,13 +12,16 @@ self-hosted модель) и markdown-редактор.
 
 ## Статус (2026-09-16)
 
-**Этап 0 (фундамент) — в работе.** Готово: Go-ядро (`apps/api`) с auth L1/L2, группами,
+**Этап 0 (фундамент) — каркас собран.** Готово: Go-ядро (`apps/api`) с auth L1/L2, группами,
 мультиролями, инвайтами, предметами/тегами, журналом событий и `sync`; миграции; OpenAPI;
 `packages/shared` (генерируется из Go), `packages/api-client`, `packages/i18n`,
-`packages/config`; compose для dev; CI. Не начато: `apps/mobile` (Expo + Tamagui),
-`packages/ui`, `packages/core`. Все принятые решения — в `docs/DECISIONS.md`, нерешённое — в
-`docs/OPEN-QUESTIONS.md`. **Не принимать решения по открытым вопросам молча** — спросить или
-явно предложить вариант.
+`packages/config`, `packages/core` (сессия, хуки TanStack Query), `packages/ui` (Tamagui);
+`apps/mobile` (Expo SDK 57 + Expo Router: имя → группа → главный с чипами, «Ещё» с защитой
+аккаунта; вкладки расписания/задач/обсуждений — заглушки до своих этапов); compose для dev; CI.
+Не сделано в этапе 0: запуск на устройстве/эмуляторе (проверена только сборка бандла),
+EAS-конфигурация, оптимизирующий плагин Tamagui. Все принятые решения — в `docs/DECISIONS.md`,
+нерешённое — в `docs/OPEN-QUESTIONS.md`. **Не принимать решения по открытым вопросам молча** —
+спросить или явно предложить вариант.
 
 ## Стек (утверждён)
 
@@ -125,7 +128,15 @@ task api:check              # всё, что гоняет CI
 pnpm install
 task gen                                          # api:gen + регенерация @heatseeker/api-client
 pnpm lint | pnpm typecheck | pnpm test           # через turbo по всем workspaces
+
+# мобильное приложение
+pnpm -F mobile start                              # Metro + QR для Expo Go (EXPO_PUBLIC_API_URL — адрес API в сети)
+pnpm -F mobile export:check                       # собрать Android-бандл без устройства (проверка компиляции)
+pnpm -F mobile exec expo install <pkg>            # добавлять Expo-модули только так (версии под SDK)
 ```
+
+Не запускать несколько Bash-вызовов с разными `cd` параллельно — shell общий, cwd гоняется;
+для команд workspace'ов использовать `pnpm -F <pkg> ...` из корня.
 
 Сгенерированные артефакты (`apps/api/openapi/openapi.json`, `packages/shared/src/generated/`,
 `packages/api-client/src/schema.d.ts`, `internal/adapters/postgres/sqlcgen/`) **коммитятся**;
