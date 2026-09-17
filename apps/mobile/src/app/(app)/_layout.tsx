@@ -31,6 +31,12 @@ export default function AppLayout() {
       <Tabs.Screen name="threads" options={{ title: t('tabs.threads'), tabBarIcon: icon('chatbubbles-outline') }} />
       <Tabs.Screen name="more" options={{ title: t('tabs.more'), tabBarIcon: icon('ellipsis-horizontal') }} />
       <Tabs.Screen name="groups" options={{ href: null }} />
+      <Tabs.Screen name="material/[id]" options={{ href: null }} />
+      <Tabs.Screen name="upload" options={{ href: null }} />
+      <Tabs.Screen name="inbox" options={{ href: null }} />
+      <Tabs.Screen name="drive" options={{ href: null }} />
+      <Tabs.Screen name="activity" options={{ href: null }} />
+      <Tabs.Screen name="subjects" options={{ href: null }} />
     </Tabs>
   );
 }

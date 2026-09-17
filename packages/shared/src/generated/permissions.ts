@@ -6,6 +6,7 @@ export const ACTIONS = [
   "announcement.send",
   "bookmark.manage",
   "drive.manage",
+  "drive.upload",
   "group.archive",
   "group.read",
   "group.settings",
@@ -40,6 +41,7 @@ export const PERMISSIONS: Record<Action, readonly Role[]> = {
   "announcement.send": ["OWNER", "ADMIN", "HEADMAN"],
   "bookmark.manage": ["OWNER", "ADMIN", "MODERATOR", "HEADMAN", "STUDENT", "GUEST"],
   "drive.manage": ["OWNER", "ADMIN", "HEADMAN"],
+  "drive.upload": ["OWNER", "ADMIN", "MODERATOR", "HEADMAN", "STUDENT"],
   "group.archive": ["OWNER"],
   "group.read": ["OWNER", "ADMIN", "MODERATOR", "HEADMAN", "STUDENT", "GUEST"],
   "group.settings": ["OWNER", "ADMIN"],
@@ -68,7 +70,7 @@ export const PERMISSIONS: Record<Action, readonly Role[]> = {
   "thread.write": ["OWNER", "ADMIN", "MODERATOR", "HEADMAN", "STUDENT"],
 };
 
-export const SECURED_ACTIONS: readonly Action[] = ["announcement.send", "drive.manage", "group.archive", "group.settings", "material.moderate", "member.manage", "member.view_extended", "message.moderate", "proposal.moderate", "schedule.approve", "schedule.edit"];
+export const SECURED_ACTIONS: readonly Action[] = ["announcement.send", "drive.manage", "drive.upload", "group.archive", "group.settings", "material.moderate", "member.manage", "member.view_extended", "message.moderate", "proposal.moderate", "schedule.approve", "schedule.edit"];
 
 /** Returns true when any of the roles grants the action (union semantics, as on the server). */
 export function can(roles: readonly Role[], action: Action): boolean {

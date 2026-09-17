@@ -15,6 +15,15 @@ export type Subject = Schemas['SubjectDTO'];
 export type Tag = Schemas['TagDTO'];
 export type QuickTag = Schemas['QuickTagDTO'];
 export type GroupEvent = Schemas['EventDTO'];
+export type Material = Schemas['MaterialDTO'];
+export type MaterialDetails = Schemas['MaterialDetailsDTO'];
+export type MaterialVersion = Schemas['MaterialVersionDTO'];
+export type MaterialOpen = Schemas['OpenDTO'];
+export type UploadTicket = Schemas['UploadTicketDTO'];
+export type DriveStatus = Schemas['DriveStatusDTO'];
+export type DriveConnection = Schemas['DriveConnectionDTO'];
+export type DriveItem = Schemas['DriveItemDTO'];
+export type ServerMeta = Schemas['MetaOutputBody'];
 export type ApiErrorBody = Schemas['ErrorModel'];
 
 /** Пара токенов, которую хранит клиент. */
@@ -56,14 +65,19 @@ export class ApiError extends Error {
  */
 export function createApiClient(options: ClientOptions) {
   const client = createClient<paths>({ baseUrl: options.baseUrl, fetch: options.fetch });
+  const doFetch = (input: Request | string, init?: RequestInit) =>
+    (options.fetch ?? fetch)(input, init);
   let refreshing: Promise<Tokens | null> | null = null;
+  // Untouched copies of requests with a body: the original body is consumed by
+  // the first attempt, so a retry after 401 is built from the copy.
+  const replayable = new WeakMap<Request, Request>();
 
   async function refresh(): Promise<Tokens | null> {
     if (!refreshing) {
       refreshing = (async () => {
         const current = await options.tokens.get();
         if (!current) return null;
-        const res = await (options.fetch ?? fetch)(`${options.baseUrl}/auth/refresh`, {
+        const res = await doFetch(`${options.baseUrl}/auth/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refresh_token: current.refreshToken }),
@@ -86,24 +100,48 @@ export function createApiClient(options: ClientOptions) {
 
   const auth: Middleware = {
     async onRequest({ request, schemaPath }) {
-      if (schemaPath.startsWith('/auth/') && !schemaPath.startsWith('/auth/google')) return request;
+      if (schemaPath.startsWith('/auth/') && !schemaPath.startsWith('/auth/google'))
+        return undefined;
       const tokens = await options.tokens.get();
       if (tokens) request.headers.set('Authorization', `Bearer ${tokens.accessToken}`);
+      if (request.body !== null) replayable.set(request, request.clone());
       return request;
     },
+    // Return undefined unless the response is replaced: openapi-fetch checks
+    // `instanceof Response`, and React Native's fetch (expo/fetch) returns its
+    // own response class, so even handing back the same object fails there.
     async onResponse({ request, response, schemaPath }) {
-      if (response.status !== 401 || schemaPath.startsWith('/auth/')) return response;
-      if (request.headers.get('x-heatseeker-retried') === '1') return response;
+      if (response.status !== 401 || schemaPath.startsWith('/auth/')) return undefined;
       const next = await refresh();
-      if (!next) return response;
-      const retry = new Request(request, { headers: new Headers(request.headers) });
+      if (!next) return undefined;
+      // The retry goes straight to fetch, bypassing this middleware, so it
+      // cannot loop.
+      const retry = new Request(replayable.get(request) ?? request, {
+        headers: new Headers(request.headers),
+      });
       retry.headers.set('Authorization', `Bearer ${next.accessToken}`);
-      retry.headers.set('x-heatseeker-retried', '1');
-      return (options.fetch ?? fetch)(retry);
+      return asResponse(await doFetch(retry));
     },
   };
   client.use(auth);
   return client;
+}
+
+/**
+ * Wraps a platform-specific response into the global Response class. The body
+ * is passed as already decoded text: React Native's Response polyfill
+ * (whatwg-fetch) turns an ArrayBuffer body into a string byte by byte, which
+ * garbles any non-ASCII (UTF-8) JSON. API responses are JSON, so text is enough.
+ */
+async function asResponse(res: Response): Promise<Response> {
+  // Typed as Response, but at runtime it may be another class.
+  if ((res as unknown) instanceof Response) return res;
+  const empty = res.status === 204 || res.status === 205 || res.status === 304;
+  return new Response(empty ? null : await res.text(), {
+    status: res.status,
+    statusText: res.statusText,
+    headers: res.headers,
+  });
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;

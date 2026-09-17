@@ -33,6 +33,33 @@ export type PushProvider = (typeof PUSH_PROVIDERS)[number];
 export const IDENTITY_PROVIDERS = ["GOOGLE", "APPLE"] as const;
 export type IdentityProvider = (typeof IDENTITY_PROVIDERS)[number];
 
-export const EVENT_KINDS = ["group.created", "group.updated", "member.joined", "member.roles_changed", "member.status_changed", "subject.created", "subject.updated", "subject.archived", "subject.restored", "tag.created", "tag.updated", "tag.deleted", "invite.created", "invite.revoked", "group.join_code_rotated"] as const;
+export const EVENT_KINDS = ["group.created", "group.updated", "member.joined", "member.roles_changed", "member.status_changed", "subject.created", "subject.updated", "subject.archived", "subject.restored", "tag.created", "tag.updated", "tag.deleted", "invite.created", "invite.revoked", "group.join_code_rotated", "material.added", "material.updated", "material.classified", "material.archived", "material.restored", "material.deleted", "drive.connected", "drive.disconnected", "drive.synced"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
+
+export const MATERIAL_KINDS = ["LECTURE", "NOTES", "REPORT", "CALC", "ASSIGNMENT", "OTHER"] as const;
+export type MaterialKind = (typeof MATERIAL_KINDS)[number];
+
+export const MATERIAL_SOURCES = ["UPLOAD", "GDRIVE"] as const;
+export type MaterialSource = (typeof MATERIAL_SOURCES)[number];
+
+export const MATERIAL_STATUSS = ["ACTIVE", "ARCHIVED", "DELETED"] as const;
+export type MaterialStatus = (typeof MATERIAL_STATUSS)[number];
+
+export const REVIEW_REASONS = ["LOW_CONFIDENCE", "REMOVED_FROM_DRIVE"] as const;
+export type ReviewReason = (typeof REVIEW_REASONS)[number];
+
+export const STORAGE_KINDS = ["DRIVE", "S3", "LOCAL"] as const;
+export type StorageKind = (typeof STORAGE_KINDS)[number];
+
+export const SCAN_STATUSS = ["PENDING", "CLEAN", "INFECTED", "SKIPPED"] as const;
+export type ScanStatus = (typeof SCAN_STATUSS)[number];
+
+export const DRIVE_UPLOAD_STATUSS = ["PENDING", "DONE", "FAILED"] as const;
+export type DriveUploadStatus = (typeof DRIVE_UPLOAD_STATUSS)[number];
+
+export const DRIVE_CONNECTION_STATUSS = ["PENDING", "SYNCING", "OK", "ERROR"] as const;
+export type DriveConnectionStatus = (typeof DRIVE_CONNECTION_STATUSS)[number];
+
+export const DRIVE_ITEM_STATES = ["NEW", "LINKED", "IMPORTED", "SKIPPED", "ERROR", "DELETED"] as const;
+export type DriveItemState = (typeof DRIVE_ITEM_STATES)[number];
 

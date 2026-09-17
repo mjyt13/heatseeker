@@ -35,6 +35,48 @@ type Device struct {
 	UpdatedAt        time.Time
 }
 
+type DriveConnection struct {
+	ID               uuid.UUID
+	GroupID          uuid.UUID
+	Mode             string
+	RootFolderID     string
+	RootFolderName   string
+	DriveID          *string
+	Status           string
+	LastError        *string
+	SyncStartedAt    *time.Time
+	LastSyncAt       *time.Time
+	LastFullScanAt   *time.Time
+	ChangesPageToken *string
+	SyncIntervalSec  int32
+	Writable         bool
+	CreatedBy        *uuid.UUID
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+type DriveItem struct {
+	ID             uuid.UUID
+	ConnectionID   uuid.UUID
+	DriveFileID    string
+	ParentID       *string
+	PathCache      string
+	Name           string
+	Mime           string
+	IsFolder       bool
+	Md5            *string
+	SizeBytes      *int64
+	ModifiedTime   *time.Time
+	WebViewLink    *string
+	MaterialID     *uuid.UUID
+	State          string
+	Classification []byte
+	LastError      *string
+	SeenAt         time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
 type Group struct {
 	ID         uuid.UUID
 	Name       string
@@ -76,6 +118,60 @@ type Invite struct {
 	CreatedBy uuid.UUID
 	RevokedAt *time.Time
 	CreatedAt time.Time
+}
+
+type Material struct {
+	ID               uuid.UUID
+	GroupID          uuid.UUID
+	SubjectID        *uuid.UUID
+	UploaderID       *uuid.UUID
+	Title            string
+	Description      string
+	Kind             string
+	Source           string
+	Status           string
+	CurrentVersionID *uuid.UUID
+	Classification   []byte
+	NeedsReview      bool
+	ReviewReason     *string
+	DownloadCount    int32
+	SortAt           time.Time
+	Search           interface{}
+	ArchivedBy       *uuid.UUID
+	ArchivedAt       *time.Time
+	DeletedBy        *uuid.UUID
+	DeletedAt        *time.Time
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+type MaterialTag struct {
+	MaterialID uuid.UUID
+	TagID      uuid.UUID
+}
+
+type MaterialVersion struct {
+	ID                uuid.UUID
+	MaterialID        uuid.UUID
+	VersionNo         int32
+	Storage           string
+	StorageKey        *string
+	CacheExpiresAt    *time.Time
+	DriveFileID       *string
+	DriveWebViewLink  *string
+	DriveMd5          *string
+	DriveModifiedTime *time.Time
+	DriveUploadStatus *string
+	DriveUploadError  *string
+	OriginalName      string
+	Mime              string
+	SizeBytes         int64
+	Sha256            *string
+	ScanStatus        string
+	TextKey           *string
+	PreviewKey        *string
+	UploadedBy        *uuid.UUID
+	CreatedAt         time.Time
 }
 
 type Membership struct {
@@ -128,6 +224,23 @@ type Tag struct {
 	SubjectID *uuid.UUID
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+type Upload struct {
+	ID          uuid.UUID
+	GroupID     uuid.UUID
+	UserID      uuid.UUID
+	Storage     string
+	StorageKey  string
+	FileName    string
+	Mime        string
+	SizeBytes   int64
+	Meta        []byte
+	Status      string
+	MaterialID  *uuid.UUID
+	ExpiresAt   time.Time
+	CompletedAt *time.Time
+	CreatedAt   time.Time
 }
 
 type User struct {

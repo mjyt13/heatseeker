@@ -1,18 +1,25 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useLogout, useMe, useSetCredentials } from '@heatseeker/core';
+import { useInboxCount, useLogout, useMe, useSetCredentials } from '@heatseeker/core';
 import { LIMITS } from '@heatseeker/shared';
 import { Avatar, Button, ErrorText, Field, H4, ListRow, Paragraph, Screen, ScreenTitle, Separator, YStack } from '@heatseeker/ui';
 
 import { describeError } from '@/lib/errors';
+import { useGroupContext } from '@/lib/group';
 import { tokenStore } from '@/lib/storage';
 
-/** Профиль: защита аккаунта, выход. */
+/** Разделы группы, профиль: защита аккаунта, выход. */
 export default function MoreScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const me = useMe();
+  const ctx = useGroupContext();
+  const moderator = ctx.permissions.can('material.moderate');
+  const inbox = useInboxCount(ctx.groupId, moderator);
   const secure = useSetCredentials();
   const logout = useLogout(async () => (await tokenStore.get())?.refreshToken ?? null);
   const [email, setEmail] = useState('');
@@ -30,6 +37,35 @@ export default function MoreScreen() {
             title={user.name}
             subtitle={user.secured ? t('auth.secured') : user.email ?? null}
           />
+        ) : null}
+
+        {ctx.groupId ? (
+          <YStack>
+            <H4>{t('more.section_group')}</H4>
+            <ListRow
+              leading={<Ionicons name="book-outline" size={22} />}
+              title={t('subjects.manage')}
+              onPress={() => router.push('/(app)/subjects')}
+            />
+            <ListRow
+              leading={<Ionicons name="logo-google" size={22} />}
+              title={t('drive.title')}
+              onPress={() => router.push('/(app)/drive')}
+            />
+            {moderator ? (
+              <ListRow
+                leading={<Ionicons name="file-tray-full-outline" size={22} />}
+                title={t('inbox.title')}
+                trailing={inbox.data ? <H4>{inbox.data}</H4> : undefined}
+                onPress={() => router.push('/(app)/inbox')}
+              />
+            ) : null}
+            <ListRow
+              leading={<Ionicons name="pulse-outline" size={22} />}
+              title={t('activity.title')}
+              onPress={() => router.push('/(app)/activity')}
+            />
+          </YStack>
         ) : null}
 
         <Separator />

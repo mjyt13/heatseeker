@@ -13,6 +13,7 @@ export {
   Separator,
   SizableText,
   Spinner,
+  Switch,
   Text,
   TextArea,
   Theme,

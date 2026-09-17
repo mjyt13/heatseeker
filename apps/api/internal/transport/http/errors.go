@@ -3,6 +3,7 @@ package http
 import (
 	"errors"
 	"log/slog"
+	nethttp "net/http"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -36,6 +37,10 @@ func apiErr(log *slog.Logger, err error) error {
 		return huma.Error410Gone(err.Error())
 	case errors.Is(err, domain.ErrRateLimited):
 		return huma.Error429TooManyRequests(err.Error())
+	case errors.Is(err, domain.ErrTooLarge):
+		return huma.NewError(nethttp.StatusRequestEntityTooLarge, err.Error())
+	case errors.Is(err, domain.ErrUnavailable):
+		return huma.Error503ServiceUnavailable(err.Error())
 	}
 	if log == nil {
 		log = slog.Default()

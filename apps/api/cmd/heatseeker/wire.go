@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"heatseeker/api/internal/bootstrap"
 	"heatseeker/api/internal/jobs"
@@ -39,12 +38,7 @@ func runWorker(ctx context.Context, cfg *config.Config, log *slog.Logger) error 
 	}
 	defer func() { _ = rdb.Close() }()
 
-	server, err := jobs.NewServer(opt, cfg.Jobs, jobs.Deps{
-		Auth:           svc.Store.Auth(),
-		Events:         svc.Store.Events(),
-		EventRetention: time.Duration(cfg.Events.RetentionDays) * 24 * time.Hour,
-		Log:            log,
-	})
+	server, err := jobs.NewServer(opt, cfg.Jobs, svc.JobDeps(cfg, log))
 	if err != nil {
 		return fmt.Errorf("start worker: %w", err)
 	}

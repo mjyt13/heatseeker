@@ -5,5 +5,5 @@ TypeScript; TanStack Query (+persist), Zustand, react-hook-form + zod; UI — `p
 (Tamagui); API — `packages/api-client`; офлайн-outbox сообщений — expo-sqlite; i18n —
 `packages/i18n`.
 
-Статус: **код не написан** — создаётся на этапе 0 (`create-expo-app` + настройка Tamagui с
-2-дневным time-box, см. `docs/adr/0005-tamagui-universal-ui.md`).
+Запуск (Metro на :4173, адрес API — `EXPO_PUBLIC_API_URL` в `apps/mobile/.env.local`) и тест на
+телефоне — в корневом [`README.md`](../../README.md#запуск-локальная-разработка).

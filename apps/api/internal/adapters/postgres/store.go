@@ -109,6 +109,15 @@ func (s *Store) Tags() domain.TagRepo { return &tagRepo{s} }
 // Events returns the event repository.
 func (s *Store) Events() domain.EventRepo { return &eventRepo{s} }
 
+// Materials returns the material repository.
+func (s *Store) Materials() domain.MaterialRepo { return &materialRepo{s} }
+
+// Uploads returns the upload repository.
+func (s *Store) Uploads() domain.UploadRepo { return &uploadRepo{s} }
+
+// Drive returns the Drive connection/index repository.
+func (s *Store) Drive() domain.DriveRepo { return &driveRepo{s} }
+
 // mapErr converts driver errors into domain errors.
 func mapErr(err error, entity string) error {
 	if err == nil {

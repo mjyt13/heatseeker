@@ -10,7 +10,7 @@ import (
 // EventKind names what happened. Kinds are dotted "<entity>.<verb>".
 type EventKind string
 
-// Event kinds emitted in the first stage. Later stages add more.
+// Event kinds. Later stages add more; keep AllEventKinds in sync.
 const (
 	EventGroupCreated    EventKind = "group.created"
 	EventGroupUpdated    EventKind = "group.updated"
@@ -27,7 +27,28 @@ const (
 	EventInviteCreated   EventKind = "invite.created"
 	EventInviteRevoked   EventKind = "invite.revoked"
 	EventJoinCodeRotated EventKind = "group.join_code_rotated"
+
+	EventMaterialAdded      EventKind = "material.added"
+	EventMaterialUpdated    EventKind = "material.updated"
+	EventMaterialClassified EventKind = "material.classified"
+	EventMaterialArchived   EventKind = "material.archived"
+	EventMaterialRestored   EventKind = "material.restored"
+	EventMaterialDeleted    EventKind = "material.deleted"
+	EventDriveConnected     EventKind = "drive.connected"
+	EventDriveDisconnected  EventKind = "drive.disconnected"
+	EventDriveSynced        EventKind = "drive.synced"
 )
+
+// AllEventKinds lists every kind, exported to packages/shared.
+var AllEventKinds = []EventKind{
+	EventGroupCreated, EventGroupUpdated, EventMemberJoined, EventMemberRoles, EventMemberStatus,
+	EventSubjectCreated, EventSubjectUpdated, EventSubjectArchived, EventSubjectRestored,
+	EventTagCreated, EventTagUpdated, EventTagDeleted, EventInviteCreated, EventInviteRevoked,
+	EventJoinCodeRotated,
+	EventMaterialAdded, EventMaterialUpdated, EventMaterialClassified, EventMaterialArchived,
+	EventMaterialRestored, EventMaterialDeleted,
+	EventDriveConnected, EventDriveDisconnected, EventDriveSynced,
+}
 
 // Event is one row of the append-only group log. Seq is monotonic per group
 // and is the cursor for realtime and offline sync.

@@ -49,7 +49,8 @@ tasks:
 
   migrate:
     desc: Apply migrations (task migrate -- status|down|redo|version)
-    cmds: [go run ./cmd/heatseeker migrate {{.CLI_ARGS}}]
+    cmds:
+      - go run ./cmd/heatseeker migrate {{.CLI_ARGS}}
 
   test:
     desc: Unit tests

@@ -56,6 +56,111 @@
         ],
         "type": "object"
       },
+      "ClassificationDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "format": "double",
+            "type": "number"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "method": {
+            "enum": [
+              "auto",
+              "manual",
+              "upload"
+            ],
+            "type": "string"
+          },
+          "semester": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "signals": {
+            "description": "Чем руководствовался классификатор: path:…, name:…, conflict.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "subject_id": {
+            "description": "Предложенный/подтверждённый предмет.",
+            "type": "string"
+          },
+          "topic": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "confidence"
+        ],
+        "type": "object"
+      },
+      "ClassifyMaterialInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/ClassifyMaterialInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "LECTURE",
+              "NOTES",
+              "REPORT",
+              "CALC",
+              "ASSIGNMENT",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "learn_alias": {
+            "description": "Запомнить папку на Диске как синоним предмета.",
+            "type": "boolean"
+          },
+          "subject_id": {
+            "description": "Пусто — «без предмета».",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ConnectDriveInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/ConnectDriveInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "folder": {
+            "description": "Ссылка на папку Google Диска или её id.",
+            "maxLength": 500,
+            "minLength": 10,
+            "type": "string"
+          }
+        },
+        "required": [
+          "folder"
+        ],
+        "type": "object"
+      },
       "CreateGroupInputBody": {
         "additionalProperties": false,
         "properties": {
@@ -123,6 +228,78 @@
             ]
           }
         },
+        "type": "object"
+      },
+      "CreateUploadInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/CreateUploadInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 10000,
+            "type": "string"
+          },
+          "file_name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "LECTURE",
+              "NOTES",
+              "REPORT",
+              "CALC",
+              "ASSIGNMENT",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "mime": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "size_bytes": {
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "subject_id": {
+            "description": "Не указан — угадывается по имени файла.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "tag_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "title": {
+            "description": "По умолчанию — из имени файла.",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "to_drive": {
+            "description": "Опубликовать копию в папке группы на Google Диске (нужен защищённый аккаунт).",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "file_name",
+          "size_bytes"
+        ],
         "type": "object"
       },
       "CredentialsInputBody": {
@@ -224,6 +401,272 @@
         "required": [
           "items"
         ],
+        "type": "object"
+      },
+      "DriveConnectionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/DriveConnectionDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "folder_url": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "last_error": {
+            "description": "Только для управляющих Диском.",
+            "type": "string"
+          },
+          "last_full_scan_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "last_sync_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "root_folder_id": {
+            "type": "string"
+          },
+          "root_folder_name": {
+            "type": "string"
+          },
+          "shared_drive": {
+            "description": "Папка лежит в общем диске (Google Workspace).",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "SYNCING",
+              "OK",
+              "ERROR"
+            ],
+            "type": "string"
+          },
+          "sync_interval_sec": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "writable": {
+            "description": "Сервисный аккаунт может добавлять файлы в папку.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "root_folder_id",
+          "root_folder_name",
+          "folder_url",
+          "shared_drive",
+          "status",
+          "sync_interval_sec",
+          "writable",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "DriveItemDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "classification": {
+            "$ref": "#/components/schemas/ClassificationDTO"
+          },
+          "drive_file_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "last_error": {
+            "type": "string"
+          },
+          "material_id": {
+            "type": "string"
+          },
+          "mime": {
+            "type": "string"
+          },
+          "modified_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "seen_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "size_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "NEW",
+              "LINKED",
+              "IMPORTED",
+              "SKIPPED",
+              "ERROR",
+              "DELETED"
+            ],
+            "type": "string"
+          },
+          "web_view_link": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "drive_file_id",
+          "path",
+          "name",
+          "mime",
+          "state",
+          "classification",
+          "seen_at"
+        ],
+        "type": "object"
+      },
+      "DriveItemsOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/DriveItemsOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DriveItemDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "DriveStatsDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "errors": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "files": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "folders": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "inbox_size": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "linked": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "skipped": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "files",
+          "folders",
+          "linked",
+          "skipped",
+          "deleted",
+          "errors",
+          "inbox_size"
+        ],
+        "type": "object"
+      },
+      "DriveStatusDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/DriveStatusDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "configured": {
+            "description": "На сервере настроен сервисный аккаунт.",
+            "type": "boolean"
+          },
+          "connection": {
+            "$ref": "#/components/schemas/DriveConnectionDTO"
+          },
+          "service_account_email": {
+            "description": "Этому адресу нужно выдать доступ к папке.",
+            "type": "string"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/DriveStatsDTO"
+          },
+          "upload_enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "configured",
+          "upload_enabled"
+        ],
+        "type": "object"
+      },
+      "DriveSyncInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/DriveSyncInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "full": {
+            "description": "Полный перескан папки вместо ленты изменений.",
+            "type": "boolean"
+          }
+        },
         "type": "object"
       },
       "ErrorDetail": {
@@ -346,6 +789,24 @@
           "entity_type",
           "payload",
           "created_at"
+        ],
+        "type": "object"
+      },
+      "FeaturesDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "drive_proxy": {
+            "description": "Файлы с Диска можно смотреть через сервер.",
+            "type": "boolean"
+          },
+          "drive_upload": {
+            "description": "Можно публиковать загрузки на Google Диск.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "drive_upload",
+          "drive_proxy"
         ],
         "type": "object"
       },
@@ -650,6 +1111,406 @@
         ],
         "type": "object"
       },
+      "MaterialDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/MaterialDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "archived_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "classification": {
+            "$ref": "#/components/schemas/ClassificationDTO"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deleted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "description": "Markdown.",
+            "type": "string"
+          },
+          "download_count": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "file": {
+            "$ref": "#/components/schemas/MaterialVersionDTO",
+            "description": "Текущая версия файла."
+          },
+          "group_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "LECTURE",
+              "NOTES",
+              "REPORT",
+              "CALC",
+              "ASSIGNMENT",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "needs_review": {
+            "description": "Лежит во «Входящих» модератора.",
+            "type": "boolean"
+          },
+          "review_reason": {
+            "enum": [
+              "LOW_CONFIDENCE",
+              "REMOVED_FROM_DRIVE"
+            ],
+            "type": "string"
+          },
+          "sort_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "UPLOAD",
+              "GDRIVE"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED",
+              "DELETED"
+            ],
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "tag_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "uploader_id": {
+            "description": "Нет у файлов, найденных на Диске.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "group_id",
+          "title",
+          "description",
+          "kind",
+          "source",
+          "status",
+          "tag_ids",
+          "classification",
+          "needs_review",
+          "download_count",
+          "sort_at",
+          "file",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "MaterialDetailsDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/MaterialDetailsDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "archived_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "can_delete": {
+            "type": "boolean"
+          },
+          "can_edit": {
+            "type": "boolean"
+          },
+          "classification": {
+            "$ref": "#/components/schemas/ClassificationDTO"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deleted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "description": "Markdown.",
+            "type": "string"
+          },
+          "download_count": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "drive_path": {
+            "description": "Папки на Диске от корня группы.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "file": {
+            "$ref": "#/components/schemas/MaterialVersionDTO",
+            "description": "Текущая версия файла."
+          },
+          "group_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "LECTURE",
+              "NOTES",
+              "REPORT",
+              "CALC",
+              "ASSIGNMENT",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "moderator": {
+            "type": "boolean"
+          },
+          "needs_review": {
+            "description": "Лежит во «Входящих» модератора.",
+            "type": "boolean"
+          },
+          "review_reason": {
+            "enum": [
+              "LOW_CONFIDENCE",
+              "REMOVED_FROM_DRIVE"
+            ],
+            "type": "string"
+          },
+          "sort_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "UPLOAD",
+              "GDRIVE"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED",
+              "DELETED"
+            ],
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "tag_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "uploader_id": {
+            "description": "Нет у файлов, найденных на Диске.",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/MaterialVersionDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "versions",
+          "can_edit",
+          "can_delete",
+          "moderator",
+          "id",
+          "group_id",
+          "title",
+          "description",
+          "kind",
+          "source",
+          "status",
+          "tag_ids",
+          "classification",
+          "needs_review",
+          "download_count",
+          "sort_at",
+          "file",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "MaterialVersionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "drive_modified_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "drive_upload_error": {
+            "type": "string"
+          },
+          "drive_upload_status": {
+            "enum": [
+              "PENDING",
+              "DONE",
+              "FAILED"
+            ],
+            "type": "string"
+          },
+          "drive_web_view_link": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mime": {
+            "type": "string"
+          },
+          "original_name": {
+            "type": "string"
+          },
+          "scan_status": {
+            "enum": [
+              "PENDING",
+              "CLEAN",
+              "INFECTED",
+              "SKIPPED"
+            ],
+            "type": "string"
+          },
+          "size_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "storage": {
+            "enum": [
+              "DRIVE",
+              "S3",
+              "LOCAL"
+            ],
+            "type": "string"
+          },
+          "uploaded_by": {
+            "type": "string"
+          },
+          "version_no": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version_no",
+          "storage",
+          "original_name",
+          "mime",
+          "size_bytes",
+          "scan_status",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "MaterialsPageOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/MaterialsPageOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "inbox_count": {
+            "description": "Размер «Входящих» (для модераторов и при inbox=true).",
+            "format": "int64",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MaterialDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "next_cursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
       "MemberDTO": {
         "additionalProperties": false,
         "properties": {
@@ -816,6 +1677,114 @@
           "status",
           "joined_via",
           "joined_at"
+        ],
+        "type": "object"
+      },
+      "MetaOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/MetaOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "features": {
+            "$ref": "#/components/schemas/FeaturesDTO"
+          },
+          "material_kinds": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "upload": {
+            "$ref": "#/components/schemas/UploadLimitsDTO"
+          }
+        },
+        "required": [
+          "upload",
+          "features",
+          "material_kinds"
+        ],
+        "type": "object"
+      },
+      "OpenDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/OpenDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "download_url": {
+            "description": "Прямая ссылка на файл в хранилище.",
+            "type": "string"
+          },
+          "drive_web_view_link": {
+            "description": "Открыть в Google Диске (нужен доступ к папке).",
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "Когда ссылки перестанут работать.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "file_name": {
+            "type": "string"
+          },
+          "material_id": {
+            "type": "string"
+          },
+          "mime": {
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "LINK",
+              "CACHE",
+              "IMPORT"
+            ],
+            "type": "string"
+          },
+          "size_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "storage": {
+            "enum": [
+              "DRIVE",
+              "S3",
+              "LOCAL"
+            ],
+            "type": "string"
+          },
+          "stream_url": {
+            "description": "Файл с Диска через сервер (поддерживает Range).",
+            "type": "string"
+          },
+          "version_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "material_id",
+          "version_id",
+          "mode",
+          "storage",
+          "file_name",
+          "mime",
+          "size_bytes"
         ],
         "type": "object"
       },
@@ -1463,6 +2432,56 @@
         },
         "type": "object"
       },
+      "UpdateMaterialInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/UpdateMaterialInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "clear_subject": {
+            "description": "Убрать предмет.",
+            "type": "boolean"
+          },
+          "description": {
+            "maxLength": 10000,
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "LECTURE",
+              "NOTES",
+              "REPORT",
+              "CALC",
+              "ASSIGNMENT",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "tag_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "UpdateProfileInputBody": {
         "additionalProperties": false,
         "properties": {
@@ -1492,6 +2511,86 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "UploadLimitsDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed_ext": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "max_bytes": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "max_bytes",
+          "allowed_ext"
+        ],
+        "type": "object"
+      },
+      "UploadTicketDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/UploadTicketDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "file_name": {
+            "type": "string"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "max_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "method": {
+            "enum": [
+              "PUT"
+            ],
+            "type": "string"
+          },
+          "mime": {
+            "type": "string"
+          },
+          "upload_id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "upload_id",
+          "method",
+          "url",
+          "headers",
+          "expires_at",
+          "max_bytes",
+          "file_name",
+          "mime"
+        ],
         "type": "object"
       },
       "UserDTO": {
@@ -1567,7 +2666,7 @@
     }
   },
   "info": {
-    "description": "API ядра Heatseeker: группы, участники, предметы, теги, синхронизация.",
+    "description": "API ядра Heatseeker: группы, участники, предметы, теги, материалы, Google Диск, синхронизация.",
     "title": "Heatseeker API",
     "version": "dev"
   },
@@ -2083,6 +3182,286 @@
         ]
       }
     },
+    "/groups/{groupId}/drive/connection": {
+      "delete": {
+        "description": "Индекс удаляется, материалы остаются.",
+        "operationId": "drive-disconnect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Отключить Google Диск",
+        "tags": [
+          "drive"
+        ]
+      },
+      "put": {
+        "description": "Папка должна быть открыта для service_account_email (для загрузки из приложения — с правами редактора). Первая индексация запускается сразу.",
+        "operationId": "drive-connect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectDriveInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveConnectionDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Подключить папку Google Диска",
+        "tags": [
+          "drive"
+        ]
+      }
+    },
+    "/groups/{groupId}/drive/items": {
+      "get": {
+        "description": "Для диагностики: что найдено и что с каждым файлом сделано.",
+        "operationId": "drive-items",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "enum": [
+                "NEW",
+                "LINKED",
+                "IMPORTED",
+                "SKIPPED",
+                "ERROR",
+                "DELETED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveItemsOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Файлы в индексе Диска",
+        "tags": [
+          "drive"
+        ]
+      }
+    },
+    "/groups/{groupId}/drive/status": {
+      "get": {
+        "description": "Адрес сервисного аккаунта, папка, состояние синхронизации и счётчики.",
+        "operationId": "drive-status",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveStatusDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Подключение Google Диска",
+        "tags": [
+          "drive"
+        ]
+      }
+    },
+    "/groups/{groupId}/drive/sync": {
+      "post": {
+        "operationId": "drive-sync",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DriveSyncInputBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Синхронизировать сейчас",
+        "tags": [
+          "drive"
+        ]
+      }
+    },
     "/groups/{groupId}/invites": {
       "get": {
         "operationId": "invites-list",
@@ -2278,6 +3657,226 @@
         "summary": "Сменить код группы",
         "tags": [
           "groups"
+        ]
+      }
+    },
+    "/groups/{groupId}/materials": {
+      "get": {
+        "description": "Фильтры комбинируются. Пагинация курсором: передайте next_cursor в cursor.",
+        "operationId": "materials-list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Только материалы предмета.",
+            "explode": false,
+            "in": "query",
+            "name": "subject_id",
+            "schema": {
+              "description": "Только материалы предмета.",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Только материалы без предмета.",
+            "explode": false,
+            "in": "query",
+            "name": "no_subject",
+            "schema": {
+              "description": "Только материалы без предмета.",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Материалы со всеми указанными тегами (тег предмета = фильтр по предмету).",
+            "explode": false,
+            "in": "query",
+            "name": "tag_id",
+            "schema": {
+              "description": "Материалы со всеми указанными тегами (тег предмета = фильтр по предмету).",
+              "items": {
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "kind",
+            "schema": {
+              "enum": [
+                "LECTURE",
+                "NOTES",
+                "REPORT",
+                "CALC",
+                "ASSIGNMENT",
+                "OTHER"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Только загруженные мной.",
+            "explode": false,
+            "in": "query",
+            "name": "mine",
+            "schema": {
+              "description": "Только загруженные мной.",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "«Входящие»: материалы, требующие разбора.",
+            "explode": false,
+            "in": "query",
+            "name": "inbox",
+            "schema": {
+              "description": "«Входящие»: материалы, требующие разбора.",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Архив вместо актуальных.",
+            "explode": false,
+            "in": "query",
+            "name": "archived",
+            "schema": {
+              "description": "Архив вместо актуальных.",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Поиск по названию и имени файла.",
+            "explode": false,
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "description": "Поиск по названию и имени файла.",
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 30,
+              "format": "int32",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialsPageOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Лента материалов",
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/groups/{groupId}/materials/uploads": {
+      "post": {
+        "description": "Возвращает адрес, куда отправить файл методом PUT с указанными заголовками. После загрузки вызовите /uploads/{uploadId}/complete.",
+        "operationId": "uploads-create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUploadInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadTicketDTO"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Начать загрузку файла",
+        "tags": [
+          "materials"
         ]
       }
     },
@@ -3183,6 +4782,420 @@
         ]
       }
     },
+    "/materials/{materialId}": {
+      "delete": {
+        "description": "Своё — пока его никто не открывал; любое — модератору. Файлы на Google Диске не удаляются.",
+        "operationId": "materials-delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "materialId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Удалить материал",
+        "tags": [
+          "materials"
+        ]
+      },
+      "get": {
+        "operationId": "materials-get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "materialId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialDetailsDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Материал с историей версий",
+        "tags": [
+          "materials"
+        ]
+      },
+      "patch": {
+        "description": "Своё — загрузившему, любое — модератору. Смена предмета или типа считается ручной классификацией.",
+        "operationId": "materials-update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "materialId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMaterialInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Изменить материал",
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/materials/{materialId}/archive": {
+      "post": {
+        "description": "Своё — загрузившему, любое — модератору.",
+        "operationId": "materials-archive",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "materialId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Архивировать материал",
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/materials/{materialId}/classify": {
+      "post": {
+        "description": "Модератор подтверждает предмет и тип; материал уходит из «Входящих».",
+        "operationId": "materials-classify",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "materialId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassifyMaterialInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Разобрать материал из «Входящих»",
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/materials/{materialId}/open": {
+      "get": {
+        "description": "Ссылки временные (см. expires_at) и не требуют заголовка Authorization.",
+        "operationId": "materials-open",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "materialId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "version_id",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Скачать вместо просмотра.",
+            "explode": false,
+            "in": "query",
+            "name": "download",
+            "schema": {
+              "description": "Скачать вместо просмотра.",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ссылки для просмотра и скачивания",
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/materials/{materialId}/restore": {
+      "post": {
+        "description": "Удалённый (до окончательной очистки) возвращает только модератор.",
+        "operationId": "materials-restore",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "materialId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Вернуть материал из архива",
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/materials/{materialId}/stream": {
+      "get": {
+        "description": "Ссылка берётся из /materials/{materialId}/open. Поддерживает Range; документы Google отдаются в PDF.",
+        "operationId": "materials-stream",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "materialId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Из ответа /materials/{materialId}/open.",
+            "explode": false,
+            "in": "query",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "description": "Из ответа /materials/{materialId}/open.",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Range",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "contentMediaType": "application/octet-stream",
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Содержимое файла."
+          },
+          "206": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "contentMediaType": "application/octet-stream",
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Часть файла (Range)."
+          }
+        },
+        "summary": "Файл с Google Диска через сервер",
+        "tags": [
+          "media"
+        ]
+      }
+    },
     "/me": {
       "get": {
         "operationId": "me-get",
@@ -3506,6 +5519,182 @@
         "summary": "Завершить все сессии",
         "tags": [
           "me"
+        ]
+      }
+    },
+    "/media/{token}": {
+      "get": {
+        "operationId": "media-get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Range",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "contentMediaType": "application/octet-stream",
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Содержимое файла."
+          },
+          "206": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "contentMediaType": "application/octet-stream",
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Часть файла (Range)."
+          }
+        },
+        "summary": "Файл из локального хранилища по подписанной ссылке",
+        "tags": [
+          "media"
+        ]
+      },
+      "put": {
+        "description": "Используется, когда сервер работает без S3 (STORAGE_DRIVER=local): ссылку выдаёт /groups/{groupId}/materials/uploads.",
+        "operationId": "media-put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "contentMediaType": "application/octet-stream",
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Загрузка файла в локальное хранилище по подписанной ссылке",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/meta": {
+      "get": {
+        "operationId": "meta",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Ограничения и возможности сервера",
+        "tags": [
+          "meta"
+        ]
+      }
+    },
+    "/uploads/{uploadId}/complete": {
+      "post": {
+        "description": "Проверяет файл и создаёт материал. Повторный вызов вернёт тот же материал.",
+        "operationId": "uploads-complete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "uploadId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Завершить загрузку",
+        "tags": [
+          "materials"
         ]
       }
     }

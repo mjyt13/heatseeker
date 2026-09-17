@@ -18,7 +18,17 @@ var (
 	ErrInvalid      = errors.New("invalid")
 	ErrGone         = errors.New("gone")
 	ErrRateLimited  = errors.New("rate limited")
+	// ErrUnavailable means a feature is switched off or its backend is not
+	// configured on this server.
+	ErrUnavailable = errors.New("unavailable")
+	// ErrTooLarge means an upload exceeds the configured size limit.
+	ErrTooLarge = errors.New("too large")
 )
+
+// Unavailable wraps ErrUnavailable with a reason.
+func Unavailable(reason string) error {
+	return fmt.Errorf("%w: %s", ErrUnavailable, reason)
+}
 
 // ValidationError describes a rejected input field. It unwraps to ErrInvalid.
 type ValidationError struct {

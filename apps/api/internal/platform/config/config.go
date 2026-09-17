@@ -16,22 +16,25 @@ import (
 
 // Config is the fully parsed configuration for both api and worker processes.
 type Config struct {
-	App    App
-	DB     DB
-	Redis  Redis
-	Jobs   Jobs
-	Auth   Auth
-	Groups Groups
-	Events Events
+	App     App
+	DB      DB
+	Redis   Redis
+	Jobs    Jobs
+	Auth    Auth
+	Groups  Groups
+	Events  Events
+	Media   Media
+	Storage Storage
+	GDrive  GDrive
 }
 
 // App holds process-level settings.
 type App struct {
 	Env           string   `env:"APP_ENV" envDefault:"dev"`
-	Port          int      `env:"APP_PORT" envDefault:"8080"`
-	BaseURL       string   `env:"APP_BASE_URL" envDefault:"http://localhost:8080"`
+	Port          int      `env:"APP_PORT" envDefault:"8000"`
+	BaseURL       string   `env:"APP_BASE_URL" envDefault:"http://localhost:8000"`
 	WebBaseURL    string   `env:"WEB_BASE_URL" envDefault:"http://localhost:5173"`
-	CORSOrigins   []string `env:"CORS_ORIGINS" envSeparator:"," envDefault:"http://localhost:5173,http://localhost:8081"`
+	CORSOrigins   []string `env:"CORS_ORIGINS" envSeparator:"," envDefault:"http://localhost:5173,http://localhost:4173"`
 	LogLevel      string   `env:"LOG_LEVEL" envDefault:"info"`
 	EncryptionKey string   `env:"APP_ENCRYPTION_KEY"`
 	// TrustedProxyCount is how many reverse proxies (Caddy, load balancer) sit in
@@ -83,6 +86,51 @@ type Groups struct {
 type Events struct {
 	RetentionDays int `env:"EVENT_LOG_RETENTION_DAYS" envDefault:"90"`
 }
+
+// Media configures how material files are uploaded and served.
+type Media struct {
+	ProxyEnabled         bool     `env:"MEDIA_PROXY_ENABLED" envDefault:"true"`
+	PresignTTLSec        int      `env:"PRESIGN_TTL_SEC" envDefault:"900"`
+	TmpUploadTTLHours    int      `env:"TMP_UPLOAD_TTL_HOURS" envDefault:"24"`
+	UploadMaxSizeMB      int      `env:"UPLOAD_MAX_SIZE_MB" envDefault:"200"`
+	UploadAllowedExt     []string `env:"UPLOAD_ALLOWED_EXT" envSeparator:"," envDefault:"pdf,doc,docx,ppt,pptx,xls,xlsx,rtf,odt,odp,ods,txt,md,csv,png,jpg,jpeg,webp,heic,zip"`
+	HardDeleteAfterDays  int      `env:"MATERIAL_HARD_DELETE_AFTER_DAYS" envDefault:"30"`
+	MaterialHashMaxMB    int      `env:"MATERIAL_HASH_MAX_MB" envDefault:"500"`
+	StreamTokenTTLMinute int      `env:"MEDIA_STREAM_TOKEN_TTL_MIN" envDefault:"60"`
+}
+
+// PresignTTL is the lifetime of direct upload/download URLs.
+func (m Media) PresignTTL() time.Duration { return time.Duration(m.PresignTTLSec) * time.Second }
+
+// UploadMaxBytes is the per-file size limit.
+func (m Media) UploadMaxBytes() int64 { return int64(m.UploadMaxSizeMB) << 20 }
+
+// Storage selects and configures the MediaStore driver.
+type Storage struct {
+	Driver           string `env:"STORAGE_DRIVER" envDefault:"s3"`
+	LocalRoot        string `env:"STORAGE_LOCAL_ROOT" envDefault:"/var/lib/heatseeker/media"`
+	S3Endpoint       string `env:"S3_ENDPOINT"`
+	S3PublicEndpoint string `env:"S3_PUBLIC_ENDPOINT"`
+	S3Region         string `env:"S3_REGION" envDefault:"us-east-1"`
+	S3Bucket         string `env:"S3_BUCKET"`
+	S3AccessKeyID    string `env:"S3_ACCESS_KEY_ID"`
+	S3SecretKey      string `env:"S3_SECRET_ACCESS_KEY"`
+	S3ForcePathStyle bool   `env:"S3_FORCE_PATH_STYLE" envDefault:"true"`
+}
+
+// GDrive configures the service-account Drive integration.
+type GDrive struct {
+	ServiceAccountJSONBase64 string  `env:"GDRIVE_SERVICE_ACCOUNT_JSON_BASE64"`
+	SyncIntervalSec          int     `env:"GDRIVE_SYNC_INTERVAL_SEC" envDefault:"600"`
+	FullRescanIntervalSec    int     `env:"GDRIVE_FULL_RESCAN_INTERVAL_SEC" envDefault:"86400"`
+	ClassifyMinConfidence    float64 `env:"GDRIVE_CLASSIFY_MIN_CONFIDENCE" envDefault:"0.6"`
+	DeletePolicy             string  `env:"GDRIVE_DELETE_POLICY" envDefault:"flag"`
+	FeatureUpload            bool    `env:"FEATURE_DRIVE_UPLOAD" envDefault:"false"`
+	UploadMode               string  `env:"DRIVE_UPLOAD_MODE" envDefault:"service_account"`
+}
+
+// Enabled reports whether a service account key is configured.
+func (g GDrive) Enabled() bool { return strings.TrimSpace(g.ServiceAccountJSONBase64) != "" }
 
 // IsDev reports whether the process runs in development mode.
 func (c *Config) IsDev() bool { return c.App.Env == "dev" }
@@ -141,7 +189,95 @@ func (c *Config) validate() error {
 	if c.Events.RetentionDays <= 0 {
 		errs = append(errs, errors.New("EVENT_LOG_RETENTION_DAYS must be positive"))
 	}
+	errs = append(errs, c.Media.validate()...)
+	errs = append(errs, c.Storage.validate()...)
+	errs = append(errs, c.GDrive.validate()...)
 	return errors.Join(errs...)
+}
+
+func (m *Media) validate() []error {
+	var errs []error
+	if m.PresignTTLSec < 60 || m.PresignTTLSec > 7*24*3600 {
+		errs = append(errs, errors.New("PRESIGN_TTL_SEC must be between 60 and 604800"))
+	}
+	if m.TmpUploadTTLHours <= 0 {
+		errs = append(errs, errors.New("TMP_UPLOAD_TTL_HOURS must be positive"))
+	}
+	if m.UploadMaxSizeMB <= 0 {
+		errs = append(errs, errors.New("UPLOAD_MAX_SIZE_MB must be positive"))
+	}
+	if m.HardDeleteAfterDays < 0 {
+		errs = append(errs, errors.New("MATERIAL_HARD_DELETE_AFTER_DAYS must not be negative"))
+	}
+	if m.StreamTokenTTLMinute <= 0 {
+		errs = append(errs, errors.New("MEDIA_STREAM_TOKEN_TTL_MIN must be positive"))
+	}
+	exts := make([]string, 0, len(m.UploadAllowedExt))
+	for _, e := range m.UploadAllowedExt {
+		if e = strings.ToLower(strings.TrimPrefix(strings.TrimSpace(e), ".")); e != "" {
+			exts = append(exts, e)
+		}
+	}
+	if len(exts) == 0 {
+		errs = append(errs, errors.New("UPLOAD_ALLOWED_EXT must list at least one extension"))
+	}
+	m.UploadAllowedExt = exts
+	return errs
+}
+
+func (s *Storage) validate() []error {
+	var errs []error
+	s.Driver = strings.ToLower(strings.TrimSpace(s.Driver))
+	switch s.Driver {
+	case "s3":
+		for _, kv := range [][2]string{
+			{"S3_ENDPOINT", s.S3Endpoint}, {"S3_BUCKET", s.S3Bucket},
+			{"S3_ACCESS_KEY_ID", s.S3AccessKeyID}, {"S3_SECRET_ACCESS_KEY", s.S3SecretKey},
+		} {
+			if strings.TrimSpace(kv[1]) == "" {
+				errs = append(errs, fmt.Errorf("%s is required when STORAGE_DRIVER=s3", kv[0]))
+			}
+		}
+		if s.S3PublicEndpoint == "" {
+			s.S3PublicEndpoint = s.S3Endpoint
+		}
+	case "local":
+		if strings.TrimSpace(s.LocalRoot) == "" {
+			errs = append(errs, errors.New("STORAGE_LOCAL_ROOT is required when STORAGE_DRIVER=local"))
+		}
+	default:
+		errs = append(errs, fmt.Errorf("STORAGE_DRIVER must be s3|local, got %q", s.Driver))
+	}
+	return errs
+}
+
+func (g *GDrive) validate() []error {
+	var errs []error
+	if g.SyncIntervalSec < 60 {
+		errs = append(errs, errors.New("GDRIVE_SYNC_INTERVAL_SEC must be at least 60"))
+	}
+	if g.FullRescanIntervalSec < g.SyncIntervalSec {
+		errs = append(errs, errors.New("GDRIVE_FULL_RESCAN_INTERVAL_SEC must not be shorter than GDRIVE_SYNC_INTERVAL_SEC"))
+	}
+	if g.ClassifyMinConfidence < 0 || g.ClassifyMinConfidence > 1 {
+		errs = append(errs, errors.New("GDRIVE_CLASSIFY_MIN_CONFIDENCE must be within 0..1"))
+	}
+	g.DeletePolicy = strings.ToLower(strings.TrimSpace(g.DeletePolicy))
+	if g.DeletePolicy != "flag" && g.DeletePolicy != "archive" {
+		errs = append(errs, fmt.Errorf("GDRIVE_DELETE_POLICY must be flag|archive, got %q", g.DeletePolicy))
+	}
+	g.UploadMode = strings.ToLower(strings.TrimSpace(g.UploadMode))
+	switch g.UploadMode {
+	case "service_account":
+	case "user_oauth":
+		errs = append(errs, errors.New("DRIVE_UPLOAD_MODE=user_oauth is not implemented yet; use service_account"))
+	default:
+		errs = append(errs, fmt.Errorf("DRIVE_UPLOAD_MODE must be service_account, got %q", g.UploadMode))
+	}
+	if g.FeatureUpload && !g.Enabled() {
+		errs = append(errs, errors.New("FEATURE_DRIVE_UPLOAD requires GDRIVE_SERVICE_ACCOUNT_JSON_BASE64"))
+	}
+	return errs
 }
 
 func compact(values ...string) []string {

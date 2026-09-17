@@ -44,7 +44,9 @@ services:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-heatseeker}
       MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-heatseeker-dev-secret}
     ports:
-      - "127.0.0.1:9100:9000"   # S3 API
+      # S3 API. To open files from a phone on the same Wi-Fi, set MINIO_BIND=0.0.0.0
+      # (infra/compose/.env) and S3_PUBLIC_ENDPOINT=http://<LAN IP>:9100 in apps/api/.env.
+      - "${MINIO_BIND:-127.0.0.1}:9100:9000"
       - "127.0.0.1:9101:9001"   # web console
     volumes:
       - miniodata:/data

@@ -27,8 +27,13 @@ tasks:
     desc: Stop development infrastructure and wipe its data
     cmds: ["{{.COMPOSE}} down -v"]
 
+  dev:ps:
+    desc: Show development containers and their ports
+    cmds: ["{{.COMPOSE}} ps"]
+
   dev:logs:
-    cmds: ["{{.COMPOSE}} logs -f --tail=100"]
+    desc: Follow container logs (task dev:logs -- postgres)
+    cmds: ["{{.COMPOSE}} logs -f --tail=100 {{.CLI_ARGS}}"]
 
   gen:
     desc: Regenerate everything derived from Go (sqlc, OpenAPI, packages/shared, api-client)

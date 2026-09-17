@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	nethttp "net/http"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -16,7 +18,9 @@ import (
 	"github.com/go-chi/cors"
 
 	"heatseeker/api/internal/app/auth"
+	"heatseeker/api/internal/app/drive"
 	"heatseeker/api/internal/app/groups"
+	"heatseeker/api/internal/app/materials"
 	"heatseeker/api/internal/app/subjects"
 	appsync "heatseeker/api/internal/app/sync"
 	"heatseeker/api/internal/app/tags"
@@ -29,15 +33,17 @@ var Version = "dev"
 // Deps are the collaborators the HTTP layer needs. Services may be nil when
 // the router is built only to emit the OpenAPI document.
 type Deps struct {
-	Cfg      *config.Config
-	Log      *slog.Logger
-	Tokens   *auth.Tokens
-	Auth     *auth.Service
-	Groups   *groups.Service
-	Subjects *subjects.Service
-	Tags     *tags.Service
-	Sync     *appsync.Service
-	Health   func(ctx context.Context) error
+	Cfg       *config.Config
+	Log       *slog.Logger
+	Tokens    *auth.Tokens
+	Auth      *auth.Service
+	Groups    *groups.Service
+	Subjects  *subjects.Service
+	Tags      *tags.Service
+	Sync      *appsync.Service
+	Materials *materials.Service
+	Drive     *drive.Service
+	Health    func(ctx context.Context) error
 }
 
 // Server bundles the router and the huma API (for spec export).
@@ -59,13 +65,18 @@ func NewServer(d Deps) *Server {
 	}
 	r.Use(requestLogger(d.Log))
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(timeoutExceptMedia(60 * time.Second))
 	if d.Cfg != nil {
+		origins := d.Cfg.App.CORSOrigins
+		if d.Cfg.IsDev() {
+			// Dev servers (Expo, Vite) pick another port when theirs is busy.
+			origins = append(slices.Clone(origins), "http://localhost:*", "http://127.0.0.1:*")
+		}
 		r.Use(cors.Handler(cors.Options{
-			AllowedOrigins:   d.Cfg.App.CORSOrigins,
+			AllowedOrigins:   origins,
 			AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-Id", "Idempotency-Key"},
-			ExposedHeaders:   []string{"X-Request-Id"},
+			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-Id", "Idempotency-Key", "Range"},
+			ExposedHeaders:   []string{"X-Request-Id", "Content-Range", "Content-Length", "Accept-Ranges", "Content-Disposition"},
 			AllowCredentials: false,
 			MaxAge:           300,
 		}))
@@ -74,7 +85,7 @@ func NewServer(d Deps) *Server {
 	r.Get("/readyz", healthHandler(d))
 
 	cfg := huma.DefaultConfig("Heatseeker API", Version)
-	cfg.Info.Description = "API ядра Heatseeker: группы, участники, предметы, теги, синхронизация."
+	cfg.Info.Description = "API ядра Heatseeker: группы, участники, предметы, теги, материалы, Google Диск, синхронизация."
 	cfg.Servers = []*huma.Server{{URL: "/api/v1"}}
 	cfg.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 		"bearer": {Type: "http", Scheme: "bearer", BearerFormat: "JWT"},
@@ -93,6 +104,9 @@ func NewServer(d Deps) *Server {
 		registerSubjects(api, d)
 		registerTags(api, d)
 		registerSync(api, d)
+		registerMaterials(api, d)
+		registerDrive(api, d)
+		registerMedia(api, d)
 	})
 	return &Server{Router: r, API: api}
 }
@@ -123,6 +137,26 @@ func (s *Server) ListenAndServe(ctx context.Context, port int, log *slog.Logger)
 		defer cancel()
 		return srv.Shutdown(shutdownCtx)
 	}
+}
+
+// timeoutExceptMedia bounds request time, except for file transfers that
+// legitimately take longer (streams and uploads through the API).
+func timeoutExceptMedia(limit time.Duration) func(nethttp.Handler) nethttp.Handler {
+	return func(next nethttp.Handler) nethttp.Handler {
+		bounded := middleware.Timeout(limit)(next)
+		return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+			if isMediaPath(r.URL.Path) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			bounded.ServeHTTP(w, r)
+		})
+	}
+}
+
+func isMediaPath(path string) bool {
+	return strings.HasPrefix(path, "/api/v1/media/") ||
+		(strings.HasPrefix(path, "/api/v1/materials/") && strings.HasSuffix(path, "/stream"))
 }
 
 func healthHandler(d Deps) nethttp.HandlerFunc {

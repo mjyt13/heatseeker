@@ -3,6 +3,7 @@
     "announcement.send",
     "bookmark.manage",
     "drive.manage",
+    "drive.upload",
     "group.archive",
     "group.read",
     "group.settings",
@@ -48,6 +49,13 @@
       "OWNER",
       "ADMIN",
       "HEADMAN"
+    ],
+    "drive.upload": [
+      "OWNER",
+      "ADMIN",
+      "MODERATOR",
+      "HEADMAN",
+      "STUDENT"
     ],
     "group.archive": [
       "OWNER"
@@ -215,6 +223,7 @@
   "secured": [
     "announcement.send",
     "drive.manage",
+    "drive.upload",
     "group.archive",
     "group.settings",
     "material.moderate",

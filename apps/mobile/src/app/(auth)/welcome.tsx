@@ -46,7 +46,7 @@ export default function WelcomeScreen() {
       />
       <Field
         id="code"
-        label={t('groups.join_code')}
+        label={t('auth.code_optional')}
         value={code}
         onChangeText={setCode}
         autoCapitalize="none"
@@ -56,7 +56,7 @@ export default function WelcomeScreen() {
             ? t('groups.join_question', { name: preview.data.group.name })
             : preview.isError
               ? t('errors.not_found')
-              : undefined
+              : t('auth.code_hint')
         }
       />
       <ErrorText>{register.isError ? describeError(t, register.error) : null}</ErrorText>

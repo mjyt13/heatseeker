@@ -23,6 +23,9 @@ func TestCan(t *testing.T) {
 		{"moderator does not edit schedule", []domain.Role{domain.RoleModerator}, ScheduleEdit, false},
 		{"multi-role union", []domain.Role{domain.RoleStudent, domain.RoleHeadman}, TaskPin, true},
 		{"owner manages members", []domain.Role{domain.RoleOwner}, MemberManage, true},
+		{"student uploads to drive", []domain.Role{domain.RoleStudent}, DriveUpload, true},
+		{"guest cannot upload to drive", []domain.Role{domain.RoleGuest}, DriveUpload, false},
+		{"moderator cannot connect drive", []domain.Role{domain.RoleModerator}, DriveManage, false},
 		{"unknown action", []domain.Role{domain.RoleOwner}, Action("nope"), false},
 		{"no roles", nil, GroupRead, false},
 	}

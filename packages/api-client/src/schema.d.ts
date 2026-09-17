@@ -171,6 +171,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/groups/{groupId}/drive/connection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Подключить папку Google Диска
+         * @description Папка должна быть открыта для service_account_email (для загрузки из приложения — с правами редактора). Первая индексация запускается сразу.
+         */
+        put: operations["drive-connect"];
+        post?: never;
+        /**
+         * Отключить Google Диск
+         * @description Индекс удаляется, материалы остаются.
+         */
+        delete: operations["drive-disconnect"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/drive/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Файлы в индексе Диска
+         * @description Для диагностики: что найдено и что с каждым файлом сделано.
+         */
+        get: operations["drive-items"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/drive/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Подключение Google Диска
+         * @description Адрес сервисного аккаунта, папка, состояние синхронизации и счётчики.
+         */
+        get: operations["drive-status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/drive/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Синхронизировать сейчас */
+        post: operations["drive-sync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/groups/{groupId}/invites": {
         parameters: {
             query?: never;
@@ -217,6 +298,46 @@ export interface paths {
         put?: never;
         /** Сменить код группы */
         post: operations["groups-rotate-join-code"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/materials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Лента материалов
+         * @description Фильтры комбинируются. Пагинация курсором: передайте next_cursor в cursor.
+         */
+        get: operations["materials-list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/materials/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Начать загрузку файла
+         * @description Возвращает адрес, куда отправить файл методом PUT с указанными заголовками. После загрузки вызовите /uploads/{uploadId}/complete.
+         */
+        post: operations["uploads-create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -440,6 +561,131 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/materials/{materialId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Материал с историей версий */
+        get: operations["materials-get"];
+        put?: never;
+        post?: never;
+        /**
+         * Удалить материал
+         * @description Своё — пока его никто не открывал; любое — модератору. Файлы на Google Диске не удаляются.
+         */
+        delete: operations["materials-delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Изменить материал
+         * @description Своё — загрузившему, любое — модератору. Смена предмета или типа считается ручной классификацией.
+         */
+        patch: operations["materials-update"];
+        trace?: never;
+    };
+    "/materials/{materialId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Архивировать материал
+         * @description Своё — загрузившему, любое — модератору.
+         */
+        post: operations["materials-archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/materials/{materialId}/classify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Разобрать материал из «Входящих»
+         * @description Модератор подтверждает предмет и тип; материал уходит из «Входящих».
+         */
+        post: operations["materials-classify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/materials/{materialId}/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ссылки для просмотра и скачивания
+         * @description Ссылки временные (см. expires_at) и не требуют заголовка Authorization.
+         */
+        get: operations["materials-open"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/materials/{materialId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Вернуть материал из архива
+         * @description Удалённый (до окончательной очистки) возвращает только модератор.
+         */
+        post: operations["materials-restore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/materials/{materialId}/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Файл с Google Диска через сервер
+         * @description Ссылка берётся из /materials/{materialId}/open. Поддерживает Range; документы Google отдаются в PDF.
+         */
+        get: operations["materials-stream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -563,6 +809,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/media/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Файл из локального хранилища по подписанной ссылке */
+        get: operations["media-get"];
+        /**
+         * Загрузка файла в локальное хранилище по подписанной ссылке
+         * @description Используется, когда сервер работает без S3 (STORAGE_DRIVER=local): ссылку выдаёт /groups/{groupId}/materials/uploads.
+         */
+        put: operations["media-put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/meta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ограничения и возможности сервера */
+        get: operations["meta"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/uploads/{uploadId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Завершить загрузку
+         * @description Проверяет файл и создаёт материал. Повторный вызов вернёт тот же материал.
+         */
+        post: operations["uploads-complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -584,6 +888,48 @@ export interface components {
              */
             readonly $schema?: string;
             aliases: string[] | null;
+        };
+        ClassificationDTO: {
+            /** Format: double */
+            confidence: number;
+            kind?: string;
+            /** @enum {string} */
+            method?: "auto" | "manual" | "upload";
+            /** Format: int64 */
+            semester?: number;
+            /** @description Чем руководствовался классификатор: path:…, name:…, conflict. */
+            signals?: string[] | null;
+            /** @description Предложенный/подтверждённый предмет. */
+            subject_id?: string;
+            /** Format: int64 */
+            topic?: number;
+        };
+        ClassifyMaterialInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/ClassifyMaterialInputBody.json
+             */
+            readonly $schema?: string;
+            /** @enum {string} */
+            kind?: "LECTURE" | "NOTES" | "REPORT" | "CALC" | "ASSIGNMENT" | "OTHER";
+            /** @description Запомнить папку на Диске как синоним предмета. */
+            learn_alias?: boolean;
+            /**
+             * Format: uuid
+             * @description Пусто — «без предмета».
+             */
+            subject_id?: string;
+        };
+        ConnectDriveInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/ConnectDriveInputBody.json
+             */
+            readonly $schema?: string;
+            /** @description Ссылка на папку Google Диска или её id. */
+            folder: string;
         };
         CreateGroupInputBody: {
             /**
@@ -615,6 +961,31 @@ export interface components {
             max_uses?: number;
             /** @description Роли приглашённого; по умолчанию STUDENT. */
             roles?: string[] | null;
+        };
+        CreateUploadInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/CreateUploadInputBody.json
+             */
+            readonly $schema?: string;
+            description?: string;
+            file_name: string;
+            /** @enum {string} */
+            kind?: "LECTURE" | "NOTES" | "REPORT" | "CALC" | "ASSIGNMENT" | "OTHER";
+            mime?: string;
+            /** Format: int64 */
+            size_bytes: number;
+            /**
+             * Format: uuid
+             * @description Не указан — угадывается по имени файла.
+             */
+            subject_id?: string;
+            tag_ids?: string[] | null;
+            /** @description По умолчанию — из имени файла. */
+            title?: string;
+            /** @description Опубликовать копию в папке группы на Google Диске (нужен защищённый аккаунт). */
+            to_drive?: boolean;
         };
         CredentialsInputBody: {
             /**
@@ -653,6 +1024,103 @@ export interface components {
              */
             readonly $schema?: string;
             items: components["schemas"]["DeviceDTO"][] | null;
+        };
+        DriveConnectionDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/DriveConnectionDTO.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            created_at: string;
+            folder_url: string;
+            id: string;
+            /** @description Только для управляющих Диском. */
+            last_error?: string;
+            /** Format: date-time */
+            last_full_scan_at?: string;
+            /** Format: date-time */
+            last_sync_at?: string;
+            root_folder_id: string;
+            root_folder_name: string;
+            /** @description Папка лежит в общем диске (Google Workspace). */
+            shared_drive: boolean;
+            /** @enum {string} */
+            status: "PENDING" | "SYNCING" | "OK" | "ERROR";
+            /** Format: int32 */
+            sync_interval_sec: number;
+            /** @description Сервисный аккаунт может добавлять файлы в папку. */
+            writable: boolean;
+        };
+        DriveItemDTO: {
+            classification: components["schemas"]["ClassificationDTO"];
+            drive_file_id: string;
+            id: string;
+            last_error?: string;
+            material_id?: string;
+            mime: string;
+            /** Format: date-time */
+            modified_time?: string;
+            name: string;
+            path: string;
+            /** Format: date-time */
+            seen_at: string;
+            /** Format: int64 */
+            size_bytes?: number;
+            /** @enum {string} */
+            state: "NEW" | "LINKED" | "IMPORTED" | "SKIPPED" | "ERROR" | "DELETED";
+            web_view_link?: string;
+        };
+        DriveItemsOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/DriveItemsOutputBody.json
+             */
+            readonly $schema?: string;
+            items: components["schemas"]["DriveItemDTO"][] | null;
+        };
+        DriveStatsDTO: {
+            /** Format: int64 */
+            deleted: number;
+            /** Format: int64 */
+            errors: number;
+            /** Format: int64 */
+            files: number;
+            /** Format: int64 */
+            folders: number;
+            /** Format: int64 */
+            inbox_size: number;
+            /** Format: int64 */
+            linked: number;
+            /** Format: int64 */
+            skipped: number;
+        };
+        DriveStatusDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/DriveStatusDTO.json
+             */
+            readonly $schema?: string;
+            /** @description На сервере настроен сервисный аккаунт. */
+            configured: boolean;
+            connection?: components["schemas"]["DriveConnectionDTO"];
+            /** @description Этому адресу нужно выдать доступ к папке. */
+            service_account_email?: string;
+            stats?: components["schemas"]["DriveStatsDTO"];
+            upload_enabled: boolean;
+        };
+        DriveSyncInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/DriveSyncInputBody.json
+             */
+            readonly $schema?: string;
+            /** @description Полный перескан папки вместо ленты изменений. */
+            full?: boolean;
         };
         ErrorDetail: {
             /** @description Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id' */
@@ -713,6 +1181,12 @@ export interface components {
             payload: unknown;
             /** Format: int64 */
             seq: number;
+        };
+        FeaturesDTO: {
+            /** @description Файлы с Диска можно смотреть через сервер. */
+            drive_proxy: boolean;
+            /** @description Можно публиковать загрузки на Google Диск. */
+            drive_upload: boolean;
         };
         GoogleInputBody: {
             /**
@@ -827,6 +1301,133 @@ export interface components {
              */
             platform?: "IOS" | "ANDROID" | "WEB";
         };
+        MaterialDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/MaterialDTO.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            archived_at?: string;
+            classification: components["schemas"]["ClassificationDTO"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            deleted_at?: string;
+            /** @description Markdown. */
+            description: string;
+            /** Format: int32 */
+            download_count: number;
+            /** @description Текущая версия файла. */
+            file: components["schemas"]["MaterialVersionDTO"];
+            group_id: string;
+            id: string;
+            /** @enum {string} */
+            kind: "LECTURE" | "NOTES" | "REPORT" | "CALC" | "ASSIGNMENT" | "OTHER";
+            /** @description Лежит во «Входящих» модератора. */
+            needs_review: boolean;
+            /** @enum {string} */
+            review_reason?: "LOW_CONFIDENCE" | "REMOVED_FROM_DRIVE";
+            /** Format: date-time */
+            sort_at: string;
+            /** @enum {string} */
+            source: "UPLOAD" | "GDRIVE";
+            /** @enum {string} */
+            status: "ACTIVE" | "ARCHIVED" | "DELETED";
+            subject_id?: string;
+            tag_ids: string[] | null;
+            title: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** @description Нет у файлов, найденных на Диске. */
+            uploader_id?: string;
+        };
+        MaterialDetailsDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/MaterialDetailsDTO.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            archived_at?: string;
+            can_delete: boolean;
+            can_edit: boolean;
+            classification: components["schemas"]["ClassificationDTO"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            deleted_at?: string;
+            /** @description Markdown. */
+            description: string;
+            /** Format: int32 */
+            download_count: number;
+            /** @description Папки на Диске от корня группы. */
+            drive_path?: string[] | null;
+            /** @description Текущая версия файла. */
+            file: components["schemas"]["MaterialVersionDTO"];
+            group_id: string;
+            id: string;
+            /** @enum {string} */
+            kind: "LECTURE" | "NOTES" | "REPORT" | "CALC" | "ASSIGNMENT" | "OTHER";
+            moderator: boolean;
+            /** @description Лежит во «Входящих» модератора. */
+            needs_review: boolean;
+            /** @enum {string} */
+            review_reason?: "LOW_CONFIDENCE" | "REMOVED_FROM_DRIVE";
+            /** Format: date-time */
+            sort_at: string;
+            /** @enum {string} */
+            source: "UPLOAD" | "GDRIVE";
+            /** @enum {string} */
+            status: "ACTIVE" | "ARCHIVED" | "DELETED";
+            subject_id?: string;
+            tag_ids: string[] | null;
+            title: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** @description Нет у файлов, найденных на Диске. */
+            uploader_id?: string;
+            versions: components["schemas"]["MaterialVersionDTO"][] | null;
+        };
+        MaterialVersionDTO: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            drive_modified_time?: string;
+            drive_upload_error?: string;
+            /** @enum {string} */
+            drive_upload_status?: "PENDING" | "DONE" | "FAILED";
+            drive_web_view_link?: string;
+            id: string;
+            mime: string;
+            original_name: string;
+            /** @enum {string} */
+            scan_status: "PENDING" | "CLEAN" | "INFECTED" | "SKIPPED";
+            /** Format: int64 */
+            size_bytes: number;
+            /** @enum {string} */
+            storage: "DRIVE" | "S3" | "LOCAL";
+            uploaded_by?: string;
+            /** Format: int32 */
+            version_no: number;
+        };
+        MaterialsPageOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/MaterialsPageOutputBody.json
+             */
+            readonly $schema?: string;
+            /**
+             * Format: int64
+             * @description Размер «Входящих» (для модераторов и при inbox=true).
+             */
+            inbox_count?: number;
+            items: components["schemas"]["MaterialDTO"][] | null;
+            next_cursor?: string;
+        };
         MemberDTO: {
             membership: components["schemas"]["MembershipDTO"];
             user: components["schemas"]["PublicUserDTO"];
@@ -880,6 +1481,46 @@ export interface components {
             /** @enum {string} */
             status: "ACTIVE" | "PENDING" | "BANNED";
             user_id: string;
+        };
+        MetaOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/MetaOutputBody.json
+             */
+            readonly $schema?: string;
+            features: components["schemas"]["FeaturesDTO"];
+            material_kinds: string[] | null;
+            upload: components["schemas"]["UploadLimitsDTO"];
+        };
+        OpenDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/OpenDTO.json
+             */
+            readonly $schema?: string;
+            /** @description Прямая ссылка на файл в хранилище. */
+            download_url?: string;
+            /** @description Открыть в Google Диске (нужен доступ к папке). */
+            drive_web_view_link?: string;
+            /**
+             * Format: date-time
+             * @description Когда ссылки перестанут работать.
+             */
+            expires_at?: string;
+            file_name: string;
+            material_id: string;
+            mime: string;
+            /** @enum {string} */
+            mode: "LINK" | "CACHE" | "IMPORT";
+            /** Format: int64 */
+            size_bytes: number;
+            /** @enum {string} */
+            storage: "DRIVE" | "S3" | "LOCAL";
+            /** @description Файл с Диска через сервер (поддерживает Range). */
+            stream_url?: string;
+            version_id: string;
         };
         PreviewOutputBody: {
             /**
@@ -1115,6 +1756,23 @@ export interface components {
             public_read?: boolean;
             settings?: unknown;
         };
+        UpdateMaterialInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/UpdateMaterialInputBody.json
+             */
+            readonly $schema?: string;
+            /** @description Убрать предмет. */
+            clear_subject?: boolean;
+            description?: string;
+            /** @enum {string} */
+            kind?: "LECTURE" | "NOTES" | "REPORT" | "CALC" | "ASSIGNMENT" | "OTHER";
+            /** Format: uuid */
+            subject_id?: string;
+            tag_ids?: string[];
+            title?: string;
+        };
         UpdateProfileInputBody: {
             /**
              * Format: uri
@@ -1127,6 +1785,32 @@ export interface components {
             /** @description Произвольные настройки клиента (набор быстрых тегов и т.п.). */
             settings?: unknown;
             timezone?: string;
+        };
+        UploadLimitsDTO: {
+            allowed_ext: string[] | null;
+            /** Format: int64 */
+            max_bytes: number;
+        };
+        UploadTicketDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/UploadTicketDTO.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            expires_at: string;
+            file_name: string;
+            headers: {
+                [key: string]: string;
+            };
+            /** Format: int64 */
+            max_bytes: number;
+            /** @enum {string} */
+            method: "PUT";
+            mime: string;
+            upload_id: string;
+            url: string;
         };
         UserDTO: {
             /**
@@ -1518,6 +2202,169 @@ export interface operations {
             };
         };
     };
+    "drive-connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectDriveInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriveConnectionDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "drive-disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "drive-items": {
+        parameters: {
+            query?: {
+                state?: "NEW" | "LINKED" | "IMPORTED" | "SKIPPED" | "ERROR" | "DELETED";
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriveItemsOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "drive-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriveStatusDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "drive-sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DriveSyncInputBody"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "invites-list": {
         parameters: {
             query?: never;
@@ -1632,6 +2479,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GroupDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "materials-list": {
+        parameters: {
+            query?: {
+                /** @description Только материалы предмета. */
+                subject_id?: string;
+                /** @description Только материалы без предмета. */
+                no_subject?: boolean;
+                /** @description Материалы со всеми указанными тегами (тег предмета = фильтр по предмету). */
+                tag_id?: string[] | null;
+                kind?: "LECTURE" | "NOTES" | "REPORT" | "CALC" | "ASSIGNMENT" | "OTHER";
+                /** @description Только загруженные мной. */
+                mine?: boolean;
+                /** @description «Входящие»: материалы, требующие разбора. */
+                inbox?: boolean;
+                /** @description Архив вместо актуальных. */
+                archived?: boolean;
+                /** @description Поиск по названию и имени файла. */
+                q?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialsPageOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "uploads-create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUploadInputBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadTicketDTO"];
                 };
             };
             /** @description Error */
@@ -2176,6 +3107,265 @@ export interface operations {
             };
         };
     };
+    "materials-get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialDetailsDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "materials-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "materials-update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMaterialInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "materials-archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "materials-classify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassifyMaterialInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "materials-open": {
+        parameters: {
+            query?: {
+                version_id?: string;
+                /** @description Скачать вместо просмотра. */
+                download?: boolean;
+            };
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "materials-restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "materials-stream": {
+        parameters: {
+            query: {
+                /** @description Из ответа /materials/{materialId}/open. */
+                token: string;
+            };
+            header?: {
+                Range?: string;
+            };
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Содержимое файла. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            /** @description Часть файла (Range). */
+            206: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+        };
+    };
     "me-get": {
         parameters: {
             query?: never;
@@ -2408,6 +3598,132 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "media-get": {
+        parameters: {
+            query?: never;
+            header?: {
+                Range?: string;
+            };
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Содержимое файла. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            /** @description Часть файла (Range). */
+            206: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+        };
+    };
+    "media-put": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    meta: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetaOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "uploads-complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uploadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialDTO"];
+                };
             };
             /** @description Error */
             default: {

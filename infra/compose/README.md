@@ -19,13 +19,16 @@ task dev:reset   # остановить и удалить данные
 task dev:logs
 ```
 
+S3 API MinIO по умолчанию слушает только `127.0.0.1`. Для проверки с телефона в той же Wi-Fi —
+`MINIO_BIND=0.0.0.0` в `infra/compose/.env` (не коммитится) и `task dev:up`; консоль остаётся локальной.
+
 Учётные данные по умолчанию: Postgres `heatseeker/heatseeker`, MinIO — из `S3_ACCESS_KEY_ID` /
 `S3_SECRET_ACCESS_KEY` в окружении (иначе `heatseeker` / `heatseeker-dev-secret`).
 
 ## Прод (появится на этапе 6)
 
 `docker-compose.prod.yml`: те же сервисы + `api`, `worker` (один образ `apps/api/Dockerfile`,
-разные команды) + Caddy (TLS, reverse proxy на `127.0.0.1:8080`, `/storage/*` → MinIO).
+разные команды) + Caddy (TLS, reverse proxy на `127.0.0.1:8000`, `/storage/*` → MinIO).
 Опциональные профили: `clamav`, `office` (LibreOffice для превью). Для сервера без
 контейнеров — systemd-юниты для бинарника `heatseeker` и `STORAGE_DRIVER=local`; описание
 появится, когда станут известны параметры сервера (`docs/OPEN-QUESTIONS.md`, №3).

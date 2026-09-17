@@ -1,29 +1,61 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useDeferredValue, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { eventLabelKey, useActivity, useCurrentGroup, useQuickTags, useSession } from '@heatseeker/core';
-import { Button, Chip, EmptyState, H3, ListRow, LoadingScreen, ScrollView, XStack, YStack } from '@heatseeker/ui';
+import { filterFromQuickTag, useInboxCount, useMaterials, useQuickTags } from '@heatseeker/core';
+import {
+  Button,
+  Chip,
+  EmptyState,
+  ErrorText,
+  H3,
+  Input,
+  ListRow,
+  LoadingScreen,
+  ScrollView,
+  Spinner,
+  XStack,
+  YStack,
+} from '@heatseeker/ui';
 
-/** Главный экран: чипы быстрых тегов сверху, лента ниже. */
+import { MaterialRow } from '@/components/materials';
+import { describeError } from '@/lib/errors';
+import { useGroupContext } from '@/lib/group';
+
+/** Главный экран: чипы быстрых тегов, поиск и лента материалов. */
 export default function FeedScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const currentGroupId = useSession((s) => s.currentGroupId);
-  const group = useCurrentGroup();
-  const quickTags = useQuickTags(currentGroupId);
-  const activity = useActivity(currentGroupId, 30);
+  const { groupId, group, permissions, subjectById, memberName } = useGroupContext();
+  const quickTags = useQuickTags(groupId);
   const [selected, setSelected] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const deferredQuery = useDeferredValue(query);
 
-  if (!currentGroupId) return <Redirect href="/(app)/groups" />;
+  const chipFilter = filterFromQuickTag(selected);
+  const filter = { ...chipFilter, q: deferredQuery };
+  const materials = useMaterials(chipFilter ? groupId : null, filter);
+  const moderator = permissions.can('material.moderate');
+  const inbox = useInboxCount(groupId, moderator);
+
+  if (!groupId) return <Redirect href="/(app)/groups" />;
   if (group.isPending) return <LoadingScreen />;
+
+  const items = materials.data?.pages.flatMap((p) => p.items ?? []) ?? [];
+  const inboxCount = inbox.data ?? 0;
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <YStack flex={1} backgroundColor="$background">
-        <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$4" paddingVertical="$2">
+        <XStack
+          alignItems="center"
+          justifyContent="space-between"
+          paddingHorizontal="$4"
+          paddingVertical="$2"
+        >
           <H3 numberOfLines={1} flex={1}>
             {group.data?.group.name ?? '…'}
           </H3>
@@ -37,7 +69,7 @@ export default function FeedScreen() {
           </Button>
         </XStack>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} flexGrow={0}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} flexGrow={0} flexShrink={0}>
           <XStack gap="$2" paddingHorizontal="$4" paddingVertical="$2">
             {(quickTags.data ?? []).map((tag) => (
               <Chip
@@ -51,19 +83,99 @@ export default function FeedScreen() {
           </XStack>
         </ScrollView>
 
-        <ScrollView flex={1} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}>
-          {activity.data && activity.data.length > 0 ? (
-            activity.data.map((e) => (
-              <ListRow
-                key={e.id}
-                title={t(eventLabelKey(e.kind), { defaultValue: e.kind })}
-                subtitle={new Date(e.created_at).toLocaleString()}
+        <XStack paddingHorizontal="$4" paddingBottom="$2">
+          <Input
+            flex={1}
+            size="$3"
+            value={query}
+            onChangeText={setQuery}
+            placeholder={t('materials.search_placeholder')}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+            autoCorrect={false}
+          />
+        </XStack>
+
+        {moderator && inboxCount > 0 ? (
+          <YStack paddingHorizontal="$2">
+            <ListRow
+              leading={<Ionicons name="file-tray-full-outline" size={22} />}
+              title={t('inbox.banner', { count: inboxCount })}
+              trailing={<Ionicons name="chevron-forward" size={18} />}
+              onPress={() => router.push('/(app)/inbox')}
+            />
+          </YStack>
+        ) : null}
+
+        {!chipFilter ? (
+          <EmptyState title={t('common.coming_soon')} hint={t('materials.chip_unsupported')} />
+        ) : materials.isPending ? (
+          <LoadingScreen />
+        ) : (
+          <FlatList
+            data={items}
+            keyExtractor={(m) => m.id}
+            contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 96, flexGrow: 1 }}
+            renderItem={({ item }) => (
+              <MaterialRow
+                material={item}
+                subject={item.subject_id ? subjectById.get(item.subject_id) : undefined}
+                uploaderName={memberName(item.uploader_id)}
+                onPress={() =>
+                  router.push({ pathname: '/(app)/material/[id]', params: { id: item.id } })
+                }
               />
-            ))
-          ) : (
-            <EmptyState title={t('common.empty')} hint={t('feed.empty_hint')} />
-          )}
-        </ScrollView>
+            )}
+            onEndReachedThreshold={0.4}
+            onEndReached={() => {
+              if (materials.hasNextPage && !materials.isFetchingNextPage)
+                void materials.fetchNextPage();
+            }}
+            refreshControl={
+              <RefreshControl
+                refreshing={materials.isRefetching && !materials.isFetchingNextPage}
+                onRefresh={() => void materials.refetch()}
+              />
+            }
+            ListFooterComponent={materials.isFetchingNextPage ? <Spinner margin="$4" /> : null}
+            ListEmptyComponent={
+              materials.isError ? (
+                <YStack padding="$4" gap="$2">
+                  <ErrorText>{describeError(t, materials.error)}</ErrorText>
+                  <Button onPress={() => void materials.refetch()}>{t('common.retry')}</Button>
+                </YStack>
+              ) : (
+                <EmptyState
+                  title={t('common.empty')}
+                  hint={
+                    deferredQuery || selected
+                      ? t('materials.empty_filtered')
+                      : t('materials.empty_hint')
+                  }
+                />
+              )
+            }
+          />
+        )}
+
+        {permissions.can('material.upload') ? (
+          <YStack position="absolute" right="$4" bottom="$4">
+            <Button
+              theme="accent"
+              size="$5"
+              borderRadius="$10"
+              icon={<Ionicons name="cloud-upload-outline" size={20} />}
+              onPress={() =>
+                router.push({
+                  pathname: '/(app)/upload',
+                  params: chipFilter?.subject_id ? { subject: chipFilter.subject_id } : {},
+                })
+              }
+            >
+              {t('materials.upload')}
+            </Button>
+          </YStack>
+        ) : null}
       </YStack>
     </SafeAreaView>
   );

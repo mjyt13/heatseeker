@@ -17,15 +17,18 @@ cmd/heatseeker/        точка входа и проводка (wire.go)
 db/migrations/         goose SQL (встраиваются в бинарник)
 db/queries/            SQL для sqlc
 internal/domain/       сущности, ошибки, интерфейсы репозиториев — без зависимостей
-internal/app/          use cases: access, auth, groups, subjects, tags, sync
+internal/app/          use cases: access, auth, groups, subjects, tags, sync, materials, drive,
+                       classify (чистые функции авторазбора файлов по предметам)
 internal/authz/        матрица прав (источник правды для packages/shared)
-internal/adapters/     postgres (sqlc + транзакции через context), google (id_token)
+internal/adapters/     postgres (sqlc + транзакции через context), google (id_token),
+                       gdrive (Drive v3 + фейк для тестов), media (s3 | local), queue (asynq)
 internal/events/       журнал group_events + in-process шина
 internal/transport/http/  huma-операции, middleware (auth, rate limit), DTO, маппинг ошибок
 internal/jobs/         asynq-задачи и расписание
 internal/bootstrap/    сборка графа сервисов (используется командами и интеграционным тестом)
 internal/gen/          генерация OpenAPI и TypeScript-артефактов
-internal/platform/     config (env), logger, db, redisx, ids (UUIDv7), clock, slug
+internal/platform/     config (env), logger, db, redisx, ids (UUIDv7), clock, slug,
+                       signed (HMAC-ссылки для файлов), filenames
 openapi/               сгенерированная спека (коммитится)
 ```
 
@@ -36,7 +39,7 @@ dev-инфраструктура (`task dev:up` из корня) и `apps/api/.e
 
 ```bash
 task migrate          # применить миграции
-task run:api          # http://localhost:8080/api/v1/docs
+task run:api          # http://localhost:8000/api/v1/docs
 task test             # юнит-тесты
 task test:integration # сквозной тест на живой БД
 task lint             # go vet + golangci-lint

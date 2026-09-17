@@ -33,9 +33,10 @@ sqlc в `apps/api/db/queries/`. Общие правила:
 |---|---|
 | `subjects` | `group_id`, `name`, `short_name`, `teacher`, `teacher_contact`, `color`, `semester`, `aliases` text[] (для классификации; пополняются правками), `archived_at` |
 | `tags` | `group_id`, `name`, `slug` (uniq per group), `color`, `kind` `SUBJECT \| TOPIC \| TYPE \| SYSTEM \| CUSTOM`, `subject_id?` (тег-двойник предмета создаётся автоматически) |
-| `materials` | `group_id`, `subject_id?`, `uploader_id?`, `title`, `description` (md), `kind` `LECTURE \| NOTES \| REPORT \| CALC \| ASSIGNMENT \| OTHER`, `source` `UPLOAD \| GDRIVE`, `status` `ACTIVE \| ARCHIVED \| DELETED`, `current_version_id`, `classification` json `{subject_id, kind, confidence, method}`, `needs_review`, `download_count`, `search` tsvector, `archived_by/at` |
-| `material_versions` | `material_id`, `version_no`, **`storage`** `DRIVE \| S3 \| LOCAL`, `storage_key?`, `cache_expires_at?` (режим CACHE), `drive_file_id?`, `drive_web_view_link?`, `drive_md5?`, `drive_modified_time?`, `original_name`, `mime`, `size_bytes`, `sha256?`, `scan_status` `PENDING \| CLEAN \| INFECTED \| SKIPPED`, `text_key?`, `preview_key?`, `uploaded_by?` |
+| `materials` | `group_id`, `subject_id?`, `uploader_id?`, `title`, `description` (md), `kind` `LECTURE \| NOTES \| REPORT \| CALC \| ASSIGNMENT \| OTHER`, `source` `UPLOAD \| GDRIVE`, `status` `ACTIVE \| ARCHIVED \| DELETED`, `current_version_id`, `classification` json `{subject_id, kind, confidence, method}`, `needs_review`, `review_reason` `LOW_CONFIDENCE \| REMOVED_FROM_DRIVE`, `download_count` (открытия не автором), `sort_at` (время загрузки / создания файла на Диске — порядок ленты), `search` tsvector (generated: `russian` + `simple` по названию), `archived_by/at`, `deleted_by/at` |
+| `material_versions` | `material_id`, `version_no`, **`storage`** `DRIVE \| S3 \| LOCAL`, `storage_key?`, `cache_expires_at?` (режим CACHE), `drive_file_id?`, `drive_web_view_link?`, `drive_md5?`, `drive_modified_time?`, `drive_upload_status?` `PENDING \| DONE \| FAILED` + `drive_upload_error?` (публикация загрузки на Диск), `original_name`, `mime`, `size_bytes`, `sha256?`, `scan_status` `PENDING \| CLEAN \| INFECTED \| SKIPPED`, `text_key?`, `preview_key?`, `uploaded_by?` |
 | `material_tags`, `task_tags`, `proposal_tags` | (`entity_id`, `tag_id`) |
+| `uploads` | `group_id`, `user_id`, `storage` `S3 \| LOCAL`, `storage_key` (`tmp/uploads/…`), `file_name`, `mime`, `size_bytes`, `meta` json (форма материала), `status` `PENDING \| COMPLETED \| EXPIRED`, `material_id?`, `expires_at` — прямые загрузки до `complete` |
 | `media_cache` (проекция/индекс) | `version_id`, `storage_key`, `size`, `last_access_at`, `expires_at` — для вытеснения по TTL/объёму (LRU) |
 
 ## Задачи
@@ -92,8 +93,8 @@ sqlc в `apps/api/db/queries/`. Общие правила:
 
 | Таблица | Поля |
 |---|---|
-| `drive_connections` | `group_id`, `mode` `SERVICE_ACCOUNT`, `root_folder_id`, `drive_id?` (Shared Drive), `status`, `last_sync_at`, `changes_page_token`, `sync_interval_sec`, `writable` bool |
-| `drive_items` | `connection_id`, `drive_file_id` (uniq), `parent_id`, `path_cache`, `name`, `mime`, `md5`, `size`, `modified_time`, `web_view_link`, `material_id?`, `state` `NEW \| LINKED \| IMPORTED \| SKIPPED \| ERROR \| DELETED`, `classification` json, `last_error` |
+| `drive_connections` | `group_id` (uniq — одна папка на группу), `mode` `SERVICE_ACCOUNT`, `root_folder_id`, `root_folder_name`, `drive_id?` (Shared Drive), `status` `PENDING \| SYNCING \| OK \| ERROR`, `last_error`, `sync_started_at`, `last_sync_at`, `last_full_scan_at`, `changes_page_token`, `sync_interval_sec`, `writable` bool |
+| `drive_items` | `connection_id`, `drive_file_id` (uniq в пределах подключения), `parent_id`, `path_cache` (папки от корня через `/`), `name`, `mime`, `is_folder`, `md5`, `size`, `modified_time`, `web_view_link`, `material_id?`, `state` `NEW \| LINKED \| IMPORTED \| SKIPPED \| ERROR \| DELETED` (SKIPPED — неподдерживаемый тип или удалён в приложении: синк его не восстанавливает), `classification` json, `last_error`, `seen_at` (метка прохода полного скана) |
 
 ## ИИ-сервис (схема `ai.*`, этап W2-B)
 
@@ -105,8 +106,9 @@ kind `SUMMARY | STRUCTURE | QA | CLASSIFICATION`, body md), `material_chunks`
 
 - `group_events (group_id, seq)`, `messages (thread_id, seq)`, `messages (group_id, seq)`.
 - Уникальные: `messages (thread_id, client_id)`, `tags (group_id, slug)`,
-  `memberships (user_id, group_id)`, `notifications (dedupe_key)`, `drive_items (drive_file_id)`.
+  `memberships (user_id, group_id)`, `notifications (dedupe_key)`, `drive_items (connection_id, drive_file_id)`,
+  `material_versions (material_id, version_no)`, `drive_connections (group_id)`.
 - GIN: `materials.search`, `subjects.aliases`.
 - `notifications (user_id, read_at)`, `reminders (remind_at, status)`, `tasks (group_id, due_at)`,
   `material_versions (cache_expires_at)`, `media_cache (last_access_at)`,
-  `materials (group_id, status, created_at)`, `threads (group_id, subject_id, last_message_at)`.
+  `materials (group_id, status, sort_at, id)`, `threads (group_id, subject_id, last_message_at)`.

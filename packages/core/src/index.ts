@@ -7,3 +7,7 @@ export * from './queries/groups';
 export * from './queries/subjects';
 export * from './queries/tags';
 export * from './queries/sync';
+export * from './queries/materials';
+export * from './queries/drive';
+export * from './materials';
+export type { MaterialKind } from './types';

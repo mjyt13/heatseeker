@@ -20,6 +20,8 @@ dist/
 *.out
 coverage.*
 apps/api/tmp/
+apps/api/.media/
+.task/
 apps/api/openapi/*.tmp
 
 # --- Node / pnpm / turbo ---
@@ -71,3 +73,6 @@ Thumbs.db
 
 # Expo export check output
 apps/mobile/.expo/
+
+# --- Локальная отладка ---
+.logs/

@@ -146,3 +146,86 @@ type EventRepo interface {
 	OldestSeq(ctx context.Context, groupID uuid.UUID) (int64, error)
 	DeleteBefore(ctx context.Context, t time.Time) (int64, error)
 }
+
+// UpdateMaterialParams is the editable part of a material.
+type UpdateMaterialParams struct {
+	ID             uuid.UUID
+	Title          string
+	Description    string
+	SubjectID      *uuid.UUID
+	Kind           MaterialKind
+	Classification Classification
+	NeedsReview    bool
+	ReviewReason   *ReviewReason
+}
+
+// MaterialRepo persists materials and their versions.
+type MaterialRepo interface {
+	Create(ctx context.Context, m Material) (*Material, error)
+	Get(ctx context.Context, id uuid.UUID) (*Material, error)
+	GetView(ctx context.Context, id uuid.UUID) (*MaterialView, error)
+	List(ctx context.Context, f MaterialFilter) ([]MaterialView, error)
+	CountInbox(ctx context.Context, groupID uuid.UUID) (int64, error)
+	Update(ctx context.Context, p UpdateMaterialParams) (*Material, error)
+	SetStatus(ctx context.Context, id uuid.UUID, status MaterialStatus, actor *uuid.UUID) (*Material, error)
+	IncrementDownloads(ctx context.Context, id uuid.UUID) error
+	SetTags(ctx context.Context, id uuid.UUID, tagIDs []uuid.UUID) error
+	ListPurgeable(ctx context.Context, deletedBefore time.Time, limit int32) ([]Material, error)
+	HardDelete(ctx context.Context, id uuid.UUID) error
+
+	CreateVersion(ctx context.Context, v MaterialVersion) (*MaterialVersion, error)
+	SetCurrentVersion(ctx context.Context, materialID, versionID uuid.UUID) error
+	GetVersion(ctx context.Context, id uuid.UUID) (*MaterialVersion, error)
+	ListVersions(ctx context.Context, materialID uuid.UUID) ([]MaterialVersion, error)
+	// UpdateVersionFile refreshes file metadata of a Drive-backed version in place.
+	UpdateVersionFile(ctx context.Context, v MaterialVersion) error
+	SetVersionDriveUpload(ctx context.Context, versionID uuid.UUID, status DriveUploadStatus, errMsg, fileID, webViewLink *string) error
+	SetVersionHash(ctx context.Context, versionID uuid.UUID, sha256 string) error
+}
+
+// UploadRepo persists pending direct uploads.
+type UploadRepo interface {
+	Create(ctx context.Context, u Upload) (*Upload, error)
+	Get(ctx context.Context, id uuid.UUID) (*Upload, error)
+	// Complete marks a pending upload as completed; false when it was not pending.
+	Complete(ctx context.Context, id, materialID uuid.UUID) (bool, error)
+	ListExpired(ctx context.Context, now time.Time, limit int32) ([]Upload, error)
+	MarkExpired(ctx context.Context, id uuid.UUID) error
+}
+
+// FinishSyncParams records the outcome of a sync run.
+type FinishSyncParams struct {
+	ID          uuid.UUID
+	Status      DriveConnectionStatus
+	LastError   *string
+	PageToken   *string
+	FullScan    bool
+	Succeeded   bool
+	CompletedAt time.Time
+}
+
+// DriveRepo persists Drive connections and their file index.
+type DriveRepo interface {
+	UpsertConnection(ctx context.Context, c DriveConnection) (*DriveConnection, error)
+	GetConnection(ctx context.Context, id uuid.UUID) (*DriveConnection, error)
+	GetConnectionByGroup(ctx context.Context, groupID uuid.UUID) (*DriveConnection, error)
+	DeleteConnection(ctx context.Context, id uuid.UUID) error
+	// ListDue returns connections whose next incremental sync is due at now.
+	ListDue(ctx context.Context, now time.Time) ([]DriveConnection, error)
+	// BeginSync atomically marks a connection SYNCING unless another run holds
+	// it and started after staleBefore.
+	BeginSync(ctx context.Context, id uuid.UUID, now, staleBefore time.Time) (bool, error)
+	FinishSync(ctx context.Context, p FinishSyncParams) error
+
+	GetItem(ctx context.Context, connectionID uuid.UUID, fileID string) (*DriveItem, error)
+	GetItemByMaterial(ctx context.Context, materialID uuid.UUID) (*DriveItem, error)
+	// UpsertItem writes file metadata and seen_at; state, material and
+	// classification are only set on insert.
+	UpsertItem(ctx context.Context, item DriveItem) (*DriveItem, error)
+	UpdateItemState(ctx context.Context, id uuid.UUID, state DriveItemState, materialID *uuid.UUID, c Classification, lastError *string) error
+	ListItems(ctx context.Context, connectionID uuid.UUID, state *DriveItemState, limit, offset int32) ([]DriveItem, error)
+	ListFolders(ctx context.Context, connectionID uuid.UUID) ([]DriveItem, error)
+	ListUnseen(ctx context.Context, connectionID uuid.UUID, before time.Time) ([]DriveItem, error)
+	DeleteItems(ctx context.Context, connectionID uuid.UUID) error
+	Stats(ctx context.Context, connectionID uuid.UUID) (*DriveStats, error)
+}

@@ -42,13 +42,19 @@ var enums = []enumDef{
 	{"DevicePlatform", []string{string(domain.PlatformIOS), string(domain.PlatformAndroid), string(domain.PlatformWeb)}},
 	{"PushProvider", []string{string(domain.PushExpo), string(domain.PushWebPush)}},
 	{"IdentityProvider", []string{string(domain.ProviderGoogle), string(domain.ProviderApple)}},
-	{"EventKind", []string{
-		string(domain.EventGroupCreated), string(domain.EventGroupUpdated), string(domain.EventMemberJoined),
-		string(domain.EventMemberRoles), string(domain.EventMemberStatus), string(domain.EventSubjectCreated),
-		string(domain.EventSubjectUpdated), string(domain.EventSubjectArchived), string(domain.EventSubjectRestored),
-		string(domain.EventTagCreated), string(domain.EventTagUpdated), string(domain.EventTagDeleted),
-		string(domain.EventInviteCreated), string(domain.EventInviteRevoked), string(domain.EventJoinCodeRotated),
-	}},
+	{"EventKind", strsOf(domain.AllEventKinds)},
+	{"MaterialKind", strsOf(domain.AllMaterialKinds)},
+	{"MaterialSource", strsOf([]domain.MaterialSource{domain.SourceUpload, domain.SourceDrive})},
+	{"MaterialStatus", strsOf([]domain.MaterialStatus{domain.MaterialActive, domain.MaterialArchived, domain.MaterialDeleted})},
+	{"ReviewReason", strsOf([]domain.ReviewReason{domain.ReviewLowConfidence, domain.ReviewRemovedFromDrive})},
+	{"StorageKind", strsOf([]domain.StorageKind{domain.StorageDrive, domain.StorageS3, domain.StorageLocal})},
+	{"ScanStatus", strsOf([]domain.ScanStatus{domain.ScanPending, domain.ScanClean, domain.ScanInfected, domain.ScanSkipped})},
+	{"DriveUploadStatus", strsOf([]domain.DriveUploadStatus{domain.DriveUploadPending, domain.DriveUploadDone, domain.DriveUploadFailed})},
+	{"DriveConnectionStatus", strsOf([]domain.DriveConnectionStatus{domain.DrivePending, domain.DriveSyncing, domain.DriveOK, domain.DriveError})},
+	{"DriveItemState", strsOf([]domain.DriveItemState{
+		domain.DriveItemNew, domain.DriveItemLinked, domain.DriveItemImported,
+		domain.DriveItemSkipped, domain.DriveItemError, domain.DriveItemDeleted,
+	})},
 }
 
 // Shared writes permissions.json, permissions.ts and enums.ts into dir.
@@ -143,6 +149,14 @@ func quoted(values []string) string {
 }
 
 func strs(roles []domain.Role) []string { return domain.RolesToStrings(roles) }
+
+func strsOf[T ~string](values []T) []string {
+	out := make([]string, len(values))
+	for i, v := range values {
+		out[i] = string(v)
+	}
+	return out
+}
 
 func strsA(actions []authz.Action) []string {
 	out := make([]string, len(actions))

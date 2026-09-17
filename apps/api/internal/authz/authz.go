@@ -51,6 +51,7 @@ const (
 	ReminderManage   Action = "reminder.manage"
 	BookmarkManage   Action = "bookmark.manage"
 	DriveManage      Action = "drive.manage"
+	DriveUpload      Action = "drive.upload"
 )
 
 // Matrix maps every action to the roles that may perform it.
@@ -90,6 +91,7 @@ var Matrix = map[Action][]domain.Role{
 	ReminderManage:   {domain.RoleOwner, domain.RoleAdmin, domain.RoleModerator, domain.RoleHeadman, domain.RoleStudent, domain.RoleGuest},
 	BookmarkManage:   {domain.RoleOwner, domain.RoleAdmin, domain.RoleModerator, domain.RoleHeadman, domain.RoleStudent, domain.RoleGuest},
 	DriveManage:      {domain.RoleOwner, domain.RoleAdmin, domain.RoleHeadman},
+	DriveUpload:      {domain.RoleOwner, domain.RoleAdmin, domain.RoleModerator, domain.RoleHeadman, domain.RoleStudent},
 }
 
 // SecuredActions require the actor to hold a secured (L2) account, because
@@ -106,6 +108,9 @@ var SecuredActions = map[Action]bool{
 	ScheduleApprove:  true,
 	AnnouncementSend: true,
 	DriveManage:      true,
+	// Files land on Drive under the service account's name: only people who
+	// can be identified later may publish there (AUTH_REQUIRE_SECURED_FOR).
+	DriveUpload: true,
 }
 
 // Can reports whether any of roles grants action.

@@ -11,7 +11,7 @@ import { ApiProvider, useSession } from '@heatseeker/core';
 import { TamaguiProvider, tamaguiConfig } from '@heatseeker/ui';
 
 import { api } from '@/lib/api';
-import { queryClient, queryPersister } from '@/lib/query';
+import { QUERY_CACHE_BUSTER, queryClient, queryPersister } from '@/lib/query';
 import { groupStore, tokenStore } from '@/lib/storage';
 
 void SplashScreen.preventAutoHideAsync();
@@ -27,7 +27,7 @@ export default function RootLayout() {
 
   return (
     <TamaguiProvider config={tamaguiConfig} defaultTheme={colorScheme === 'dark' ? 'dark' : 'light'}>
-      <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: queryPersister }}>
+      <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: queryPersister, buster: QUERY_CACHE_BUSTER }}>
         <ApiProvider client={api}>
           <StatusBar style="auto" />
           <Stack screenOptions={{ headerShown: false }}>

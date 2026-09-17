@@ -12,6 +12,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath \
 
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /out/heatseeker /heatseeker
-EXPOSE 8080
+EXPOSE 8000
 ENTRYPOINT ["/heatseeker"]
 CMD ["api"]

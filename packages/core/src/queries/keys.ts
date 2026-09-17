@@ -1,5 +1,8 @@
+import type { MaterialFilter } from '../materials';
+
 /** Фабрика ключей TanStack Query. Все ключи группы начинаются с ['group', id]. */
 export const keys = {
+  meta: () => ['meta'] as const,
   me: () => ['me'] as const,
   myGroups: () => ['me', 'groups'] as const,
   preview: (code: string) => ['preview', code] as const,
@@ -12,4 +15,7 @@ export const keys = {
   quickTags: (id: string) => ['group', id, 'quick-tags'] as const,
   activity: (id: string) => ['group', id, 'activity'] as const,
   sync: (id: string) => ['group', id, 'sync'] as const,
+  materials: (id: string, filter: MaterialFilter) => ['group', id, 'materials', filter] as const,
+  material: (materialId: string) => ['material', materialId] as const,
+  drive: (id: string) => ['group', id, 'drive'] as const,
 };
