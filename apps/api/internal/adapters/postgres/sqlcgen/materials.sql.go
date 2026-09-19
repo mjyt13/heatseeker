@@ -12,6 +12,22 @@ import (
 	"github.com/google/uuid"
 )
 
+const claimVersionPreview = `-- name: ClaimVersionPreview :one
+UPDATE material_versions SET preview_status = 'PENDING', preview_error = NULL
+WHERE id = $1 AND (preview_status IS NULL OR preview_status = 'FAILED')
+RETURNING id
+`
+
+// Marks a preview as requested unless it is already pending, ready or
+// skipped (a failed one may be retried): the caller enqueues the conversion
+// only when a row comes back.
+func (q *Queries) ClaimVersionPreview(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, claimVersionPreview, id)
+	var id_2 uuid.UUID
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
 const countInbox = `-- name: CountInbox :one
 SELECT count(*) FROM materials WHERE group_id = $1 AND needs_review AND status = 'ACTIVE'
 `
@@ -117,12 +133,12 @@ func (q *Queries) CreateMaterial(ctx context.Context, arg CreateMaterialParams) 
 
 const createMaterialVersion = `-- name: CreateMaterialVersion :one
 INSERT INTO material_versions (id, material_id, version_no, storage, storage_key, drive_file_id, drive_web_view_link,
-                               drive_md5, drive_modified_time, drive_upload_status, original_name, mime, size_bytes,
-                               sha256, scan_status, uploaded_by)
+                               drive_md5, drive_modified_time, drive_revision_id, drive_upload_status, original_name,
+                               mime, size_bytes, sha256, scan_status, uploaded_by)
 VALUES ($1, $2,
         COALESCE((SELECT max(version_no) FROM material_versions WHERE material_id = $2), 0) + 1,
-        $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-RETURNING id, material_id, version_no, storage, storage_key, cache_expires_at, drive_file_id, drive_web_view_link, drive_md5, drive_modified_time, drive_upload_status, drive_upload_error, original_name, mime, size_bytes, sha256, scan_status, text_key, preview_key, uploaded_by, created_at
+        $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+RETURNING id, material_id, version_no, storage, storage_key, cache_expires_at, drive_file_id, drive_web_view_link, drive_md5, drive_modified_time, drive_upload_status, drive_upload_error, original_name, mime, size_bytes, sha256, scan_status, text_key, preview_key, uploaded_by, created_at, drive_revision_id, preview_status, preview_error
 `
 
 type CreateMaterialVersionParams struct {
@@ -134,6 +150,7 @@ type CreateMaterialVersionParams struct {
 	DriveWebViewLink  *string
 	DriveMd5          *string
 	DriveModifiedTime *time.Time
+	DriveRevisionID   *string
 	DriveUploadStatus *string
 	OriginalName      string
 	Mime              string
@@ -153,6 +170,7 @@ func (q *Queries) CreateMaterialVersion(ctx context.Context, arg CreateMaterialV
 		arg.DriveWebViewLink,
 		arg.DriveMd5,
 		arg.DriveModifiedTime,
+		arg.DriveRevisionID,
 		arg.DriveUploadStatus,
 		arg.OriginalName,
 		arg.Mime,
@@ -184,6 +202,9 @@ func (q *Queries) CreateMaterialVersion(ctx context.Context, arg CreateMaterialV
 		&i.PreviewKey,
 		&i.UploadedBy,
 		&i.CreatedAt,
+		&i.DriveRevisionID,
+		&i.PreviewStatus,
+		&i.PreviewError,
 	)
 	return i, err
 }
@@ -258,7 +279,7 @@ func (q *Queries) GetMaterial(ctx context.Context, id uuid.UUID) (GetMaterialRow
 }
 
 const getMaterialVersion = `-- name: GetMaterialVersion :one
-SELECT id, material_id, version_no, storage, storage_key, cache_expires_at, drive_file_id, drive_web_view_link, drive_md5, drive_modified_time, drive_upload_status, drive_upload_error, original_name, mime, size_bytes, sha256, scan_status, text_key, preview_key, uploaded_by, created_at FROM material_versions WHERE id = $1
+SELECT id, material_id, version_no, storage, storage_key, cache_expires_at, drive_file_id, drive_web_view_link, drive_md5, drive_modified_time, drive_upload_status, drive_upload_error, original_name, mime, size_bytes, sha256, scan_status, text_key, preview_key, uploaded_by, created_at, drive_revision_id, preview_status, preview_error FROM material_versions WHERE id = $1
 `
 
 func (q *Queries) GetMaterialVersion(ctx context.Context, id uuid.UUID) (MaterialVersion, error) {
@@ -286,6 +307,9 @@ func (q *Queries) GetMaterialVersion(ctx context.Context, id uuid.UUID) (Materia
 		&i.PreviewKey,
 		&i.UploadedBy,
 		&i.CreatedAt,
+		&i.DriveRevisionID,
+		&i.PreviewStatus,
+		&i.PreviewError,
 	)
 	return i, err
 }
@@ -294,7 +318,7 @@ const getMaterialView = `-- name: GetMaterialView :one
 SELECT m.id, m.group_id, m.subject_id, m.uploader_id, m.title, m.description, m.kind, m.source, m.status,
        m.current_version_id, m.classification, m.needs_review, m.review_reason, m.download_count, m.sort_at,
        m.archived_by, m.archived_at, m.deleted_by, m.deleted_at, m.created_at, m.updated_at,
-       v.id, v.material_id, v.version_no, v.storage, v.storage_key, v.cache_expires_at, v.drive_file_id, v.drive_web_view_link, v.drive_md5, v.drive_modified_time, v.drive_upload_status, v.drive_upload_error, v.original_name, v.mime, v.size_bytes, v.sha256, v.scan_status, v.text_key, v.preview_key, v.uploaded_by, v.created_at
+       v.id, v.material_id, v.version_no, v.storage, v.storage_key, v.cache_expires_at, v.drive_file_id, v.drive_web_view_link, v.drive_md5, v.drive_modified_time, v.drive_upload_status, v.drive_upload_error, v.original_name, v.mime, v.size_bytes, v.sha256, v.scan_status, v.text_key, v.preview_key, v.uploaded_by, v.created_at, v.drive_revision_id, v.preview_status, v.preview_error
 FROM materials m
 JOIN material_versions v ON v.id = m.current_version_id
 WHERE m.id = $1
@@ -371,6 +395,9 @@ func (q *Queries) GetMaterialView(ctx context.Context, id uuid.UUID) (GetMateria
 		&i.MaterialVersion.PreviewKey,
 		&i.MaterialVersion.UploadedBy,
 		&i.MaterialVersion.CreatedAt,
+		&i.MaterialVersion.DriveRevisionID,
+		&i.MaterialVersion.PreviewStatus,
+		&i.MaterialVersion.PreviewError,
 	)
 	return i, err
 }
@@ -434,7 +461,7 @@ func (q *Queries) ListMaterialTags(ctx context.Context, materialIds []uuid.UUID)
 }
 
 const listMaterialVersions = `-- name: ListMaterialVersions :many
-SELECT id, material_id, version_no, storage, storage_key, cache_expires_at, drive_file_id, drive_web_view_link, drive_md5, drive_modified_time, drive_upload_status, drive_upload_error, original_name, mime, size_bytes, sha256, scan_status, text_key, preview_key, uploaded_by, created_at FROM material_versions WHERE material_id = $1 ORDER BY version_no DESC
+SELECT id, material_id, version_no, storage, storage_key, cache_expires_at, drive_file_id, drive_web_view_link, drive_md5, drive_modified_time, drive_upload_status, drive_upload_error, original_name, mime, size_bytes, sha256, scan_status, text_key, preview_key, uploaded_by, created_at, drive_revision_id, preview_status, preview_error FROM material_versions WHERE material_id = $1 ORDER BY version_no DESC
 `
 
 func (q *Queries) ListMaterialVersions(ctx context.Context, materialID uuid.UUID) ([]MaterialVersion, error) {
@@ -468,6 +495,9 @@ func (q *Queries) ListMaterialVersions(ctx context.Context, materialID uuid.UUID
 			&i.PreviewKey,
 			&i.UploadedBy,
 			&i.CreatedAt,
+			&i.DriveRevisionID,
+			&i.PreviewStatus,
+			&i.PreviewError,
 		); err != nil {
 			return nil, err
 		}
@@ -483,7 +513,7 @@ const listMaterials = `-- name: ListMaterials :many
 SELECT m.id, m.group_id, m.subject_id, m.uploader_id, m.title, m.description, m.kind, m.source, m.status,
        m.current_version_id, m.classification, m.needs_review, m.review_reason, m.download_count, m.sort_at,
        m.archived_by, m.archived_at, m.deleted_by, m.deleted_at, m.created_at, m.updated_at,
-       v.id, v.material_id, v.version_no, v.storage, v.storage_key, v.cache_expires_at, v.drive_file_id, v.drive_web_view_link, v.drive_md5, v.drive_modified_time, v.drive_upload_status, v.drive_upload_error, v.original_name, v.mime, v.size_bytes, v.sha256, v.scan_status, v.text_key, v.preview_key, v.uploaded_by, v.created_at
+       v.id, v.material_id, v.version_no, v.storage, v.storage_key, v.cache_expires_at, v.drive_file_id, v.drive_web_view_link, v.drive_md5, v.drive_modified_time, v.drive_upload_status, v.drive_upload_error, v.original_name, v.mime, v.size_bytes, v.sha256, v.scan_status, v.text_key, v.preview_key, v.uploaded_by, v.created_at, v.drive_revision_id, v.preview_status, v.preview_error
 FROM materials m
 JOIN material_versions v ON v.id = m.current_version_id
 WHERE m.group_id = $1
@@ -493,34 +523,38 @@ WHERE m.group_id = $1
   AND ($5::text IS NULL OR m.kind = $5::text)
   AND ($6::uuid IS NULL OR m.uploader_id = $6::uuid)
   AND (NOT $7::boolean OR m.needs_review)
-  AND (cardinality($8::uuid[]) = 0 OR (
+  AND (cardinality($8::text[]) = 0
+       OR (v.mime LIKE ANY ($8::text[])) <> $9::boolean)
+  AND (cardinality($10::uuid[]) = 0 OR (
         SELECT count(*) FROM material_tags mt
-        WHERE mt.material_id = m.id AND mt.tag_id = ANY ($8::uuid[])
-      ) = cardinality($8::uuid[]))
-  AND ($9::text IS NULL
-       OR m.search @@ websearch_to_tsquery('russian', $9::text)
-       OR m.title ILIKE '%' || $10::text || '%' ESCAPE '\'
-       OR v.original_name ILIKE '%' || $10::text || '%' ESCAPE '\')
-  AND ($11::timestamptz IS NULL
-       OR (m.sort_at, m.id) < ($11::timestamptz, $12::uuid))
+        WHERE mt.material_id = m.id AND mt.tag_id = ANY ($10::uuid[])
+      ) = cardinality($10::uuid[]))
+  AND ($11::text IS NULL
+       OR m.search @@ websearch_to_tsquery('russian', $11::text)
+       OR m.title ILIKE '%' || $12::text || '%' ESCAPE '\'
+       OR v.original_name ILIKE '%' || $12::text || '%' ESCAPE '\')
+  AND ($13::timestamptz IS NULL
+       OR (m.sort_at, m.id) < ($13::timestamptz, $14::uuid))
 ORDER BY m.sort_at DESC, m.id DESC
-LIMIT $13
+LIMIT $15
 `
 
 type ListMaterialsParams struct {
-	GroupID     uuid.UUID
-	Status      string
-	SubjectID   *uuid.UUID
-	NoSubject   bool
-	Kind        *string
-	UploaderID  *uuid.UUID
-	Inbox       bool
-	TagIds      []uuid.UUID
-	Query       *string
-	LikePattern *string
-	AfterSortAt *time.Time
-	AfterID     *uuid.UUID
-	MaxRows     int32
+	GroupID      uuid.UUID
+	Status       string
+	SubjectID    *uuid.UUID
+	NoSubject    bool
+	Kind         *string
+	UploaderID   *uuid.UUID
+	Inbox        bool
+	MimePatterns []string
+	MimeExclude  bool
+	TagIds       []uuid.UUID
+	Query        *string
+	LikePattern  *string
+	AfterSortAt  *time.Time
+	AfterID      *uuid.UUID
+	MaxRows      int32
 }
 
 type ListMaterialsRow struct {
@@ -557,6 +591,8 @@ func (q *Queries) ListMaterials(ctx context.Context, arg ListMaterialsParams) ([
 		arg.Kind,
 		arg.UploaderID,
 		arg.Inbox,
+		arg.MimePatterns,
+		arg.MimeExclude,
 		arg.TagIds,
 		arg.Query,
 		arg.LikePattern,
@@ -614,6 +650,9 @@ func (q *Queries) ListMaterials(ctx context.Context, arg ListMaterialsParams) ([
 			&i.MaterialVersion.PreviewKey,
 			&i.MaterialVersion.UploadedBy,
 			&i.MaterialVersion.CreatedAt,
+			&i.MaterialVersion.DriveRevisionID,
+			&i.MaterialVersion.PreviewStatus,
+			&i.MaterialVersion.PreviewError,
 		); err != nil {
 			return nil, err
 		}
@@ -794,6 +833,20 @@ func (q *Queries) SetMaterialStatus(ctx context.Context, arg SetMaterialStatusPa
 	return i, err
 }
 
+const setVersionDriveRevision = `-- name: SetVersionDriveRevision :exec
+UPDATE material_versions SET drive_revision_id = $2 WHERE id = $1
+`
+
+type SetVersionDriveRevisionParams struct {
+	ID              uuid.UUID
+	DriveRevisionID *string
+}
+
+func (q *Queries) SetVersionDriveRevision(ctx context.Context, arg SetVersionDriveRevisionParams) error {
+	_, err := q.db.Exec(ctx, setVersionDriveRevision, arg.ID, arg.DriveRevisionID)
+	return err
+}
+
 const setVersionDriveUpload = `-- name: SetVersionDriveUpload :exec
 UPDATE material_versions
 SET drive_upload_status = $2, drive_upload_error = $3,
@@ -832,6 +885,29 @@ type SetVersionHashParams struct {
 
 func (q *Queries) SetVersionHash(ctx context.Context, arg SetVersionHashParams) error {
 	_, err := q.db.Exec(ctx, setVersionHash, arg.ID, arg.Sha256)
+	return err
+}
+
+const setVersionPreview = `-- name: SetVersionPreview :exec
+UPDATE material_versions
+SET preview_status = $2, preview_key = $3, preview_error = $4
+WHERE id = $1
+`
+
+type SetVersionPreviewParams struct {
+	ID            uuid.UUID
+	PreviewStatus *string
+	PreviewKey    *string
+	PreviewError  *string
+}
+
+func (q *Queries) SetVersionPreview(ctx context.Context, arg SetVersionPreviewParams) error {
+	_, err := q.db.Exec(ctx, setVersionPreview,
+		arg.ID,
+		arg.PreviewStatus,
+		arg.PreviewKey,
+		arg.PreviewError,
+	)
 	return err
 }
 
@@ -920,7 +996,8 @@ func (q *Queries) UpdateMaterial(ctx context.Context, arg UpdateMaterialParams) 
 
 const updateVersionFile = `-- name: UpdateVersionFile :exec
 UPDATE material_versions
-SET original_name = $2, mime = $3, size_bytes = $4, drive_web_view_link = $5, drive_md5 = $6, drive_modified_time = $7
+SET original_name = $2, mime = $3, size_bytes = $4, drive_web_view_link = $5, drive_md5 = $6, drive_modified_time = $7,
+    drive_revision_id = COALESCE($8, drive_revision_id)
 WHERE id = $1
 `
 
@@ -932,6 +1009,7 @@ type UpdateVersionFileParams struct {
 	DriveWebViewLink  *string
 	DriveMd5          *string
 	DriveModifiedTime *time.Time
+	DriveRevisionID   *string
 }
 
 func (q *Queries) UpdateVersionFile(ctx context.Context, arg UpdateVersionFileParams) error {
@@ -943,6 +1021,7 @@ func (q *Queries) UpdateVersionFile(ctx context.Context, arg UpdateVersionFilePa
 		arg.DriveWebViewLink,
 		arg.DriveMd5,
 		arg.DriveModifiedTime,
+		arg.DriveRevisionID,
 	)
 	return err
 }

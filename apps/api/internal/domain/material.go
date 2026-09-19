@@ -1,7 +1,9 @@
 package domain
 
 import (
+	"context"
 	"encoding/json"
+	"io"
 	"time"
 
 	"github.com/google/uuid"
@@ -71,6 +73,43 @@ const (
 	ScanInfected ScanStatus = "INFECTED"
 	ScanSkipped  ScanStatus = "SKIPPED"
 )
+
+// PreviewStatus tracks the PDF preview of an office file.
+type PreviewStatus string
+
+// Preview statuses.
+const (
+	PreviewPending PreviewStatus = "PENDING"
+	PreviewReady   PreviewStatus = "READY"
+	PreviewFailed  PreviewStatus = "FAILED"
+	PreviewSkipped PreviewStatus = "SKIPPED" // too large to convert
+)
+
+// officeMimes are the formats browsers cannot show but LibreOffice converts
+// to PDF. Native Google documents are exported to PDF by Drive instead.
+var officeMimes = map[string]bool{
+	"application/msword": true,
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document":   true,
+	"application/vnd.ms-powerpoint":                                             true,
+	"application/vnd.openxmlformats-officedocument.presentationml.presentation": true,
+	"application/vnd.ms-excel":                                                  true,
+	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":         true,
+	"application/vnd.oasis.opendocument.text":                                   true,
+	"application/vnd.oasis.opendocument.presentation":                           true,
+	"application/vnd.oasis.opendocument.spreadsheet":                            true,
+	"application/rtf": true,
+	"text/rtf":        true,
+}
+
+// NeedsPDFPreview reports whether a file is shown through a PDF preview.
+func NeedsPDFPreview(mime string) bool { return officeMimes[mime] }
+
+// DocumentConverter turns office documents into PDF (Adapter: Gotenberg).
+// fileName carries the extension the converter relies on. A file it cannot
+// convert yields ErrInvalid; other errors are worth retrying.
+type DocumentConverter interface {
+	ConvertToPDF(ctx context.Context, fileName string, r io.Reader) (io.ReadCloser, error)
+}
 
 // DriveUploadStatus tracks a copy of an uploaded file to Google Drive.
 type DriveUploadStatus string
@@ -158,6 +197,8 @@ type MaterialVersion struct {
 	DriveWebViewLink  *string
 	DriveMD5          *string
 	DriveModifiedTime *time.Time
+	// DriveRevisionID is the Drive revision the version was indexed from.
+	DriveRevisionID   *string
 	DriveUploadStatus *DriveUploadStatus
 	DriveUploadError  *string
 	OriginalName      string
@@ -165,8 +206,12 @@ type MaterialVersion struct {
 	SizeBytes         int64
 	SHA256            *string
 	ScanStatus        ScanStatus
-	UploadedBy        *uuid.UUID
-	CreatedAt         time.Time
+	// PDF preview of an office file (nil status: not requested).
+	PreviewStatus *PreviewStatus
+	PreviewKey    *string
+	PreviewError  *string
+	UploadedBy    *uuid.UUID
+	CreatedAt     time.Time
 }
 
 // MaterialView is a material with its current version and tags, as listed.
@@ -185,10 +230,55 @@ type MaterialFilter struct {
 	Kind       *MaterialKind
 	UploaderID *uuid.UUID
 	Inbox      bool
+	FileType   *FileType
 	TagIDs     []uuid.UUID
 	Query      string
 	After      *MaterialCursor
 	Limit      int32
+}
+
+// FileType is a coarse file category for the feed filter (D35).
+type FileType string
+
+// File categories.
+const (
+	FileDocument FileType = "DOCUMENT"
+	FileImage    FileType = "IMAGE"
+	FileAudio    FileType = "AUDIO"
+	FileVideo    FileType = "VIDEO"
+	FileArchive  FileType = "ARCHIVE"
+	FileOther    FileType = "OTHER"
+)
+
+// AllFileTypes lists the categories, exported to packages/shared.
+var AllFileTypes = []FileType{FileDocument, FileImage, FileAudio, FileVideo, FileArchive, FileOther}
+
+// fileTypeMimes maps each category to SQL LIKE patterns over the MIME type.
+var fileTypeMimes = map[FileType][]string{
+	FileDocument: {
+		"application/pdf", "text/%", "application/rtf", "application/msword",
+		"application/vnd.openxmlformats-officedocument.%", "application/vnd.ms-%",
+		"application/vnd.oasis.opendocument.%", "application/vnd.google-apps.%",
+	},
+	FileImage: {"image/%"},
+	FileAudio: {"audio/%"},
+	FileVideo: {"video/%"},
+	FileArchive: {
+		"application/zip", "application/x-zip-compressed", "application/x-7z-compressed",
+		"application/x-rar-compressed", "application/vnd.rar", "application/gzip", "application/x-tar",
+	},
+}
+
+// MimePatterns returns LIKE patterns for the category and whether matching
+// ones must be excluded (OTHER is "none of the known categories").
+func (t FileType) MimePatterns() (patterns []string, exclude bool) {
+	if t != FileOther {
+		return fileTypeMimes[t], false
+	}
+	for _, known := range AllFileTypes {
+		patterns = append(patterns, fileTypeMimes[known]...)
+	}
+	return patterns, true
 }
 
 // MaterialCursor is the keyset position in the feed (sort_at DESC, id DESC).

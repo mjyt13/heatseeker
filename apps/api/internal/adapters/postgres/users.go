@@ -30,6 +30,14 @@ func toUser(u sqlcgen.User) *domain.User {
 	}
 }
 
+func (r *userRepo) GetByRegisterClientID(ctx context.Context, clientID uuid.UUID) (*domain.User, error) {
+	u, err := r.s.queries(ctx).GetUserByRegisterClientID(ctx, &clientID)
+	if err != nil {
+		return nil, mapErr(err, "user")
+	}
+	return toUser(u), nil
+}
+
 func (r *userRepo) Create(ctx context.Context, p domain.CreateUserParams) (*domain.User, error) {
 	var securedAt *time.Time
 	if p.Secured {
@@ -44,6 +52,8 @@ func (r *userRepo) Create(ctx context.Context, p domain.CreateUserParams) (*doma
 		Locale:       p.Locale,
 		Timezone:     p.Timezone,
 		SecuredAt:    securedAt,
+
+		RegisterClientID: p.RegisterClientID,
 	})
 	if err != nil {
 		return nil, mapErr(err, "user")

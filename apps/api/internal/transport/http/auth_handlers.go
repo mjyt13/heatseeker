@@ -26,6 +26,7 @@ type registerInput struct {
 	Body struct {
 		Name       string  `json:"name" minLength:"1" maxLength:"80" doc:"Имя — единственное обязательное поле."`
 		InviteCode *string `json:"invite_code,omitempty" maxLength:"64" doc:"Код приглашения или код группы — сразу вступить."`
+		ClientID   *string `json:"client_id,omitempty" format:"uuid" doc:"Случайный UUID экрана регистрации: повтор запроса в течение 15 минут вернёт тот же аккаунт."`
 		Locale     *string `json:"locale,omitempty" maxLength:"8"`
 		Timezone   *string `json:"timezone,omitempty" maxLength:"64"`
 		DeviceInput
@@ -65,10 +66,18 @@ func registerAuth(api huma.API, d Deps) {
 		Summary: "Регистрация по имени", DefaultStatus: nethttp.StatusCreated,
 		Description: "Создаёт лёгкий аккаунт (уровень L1). Email и пароль не нужны; их можно добавить позже через /me/credentials.",
 	}, func(ctx context.Context, in *registerInput) (*sessionOutput, error) {
-		s, err := d.Auth.Register(ctx, auth.RegisterInput{
+		reg := auth.RegisterInput{
 			Name: in.Body.Name, InviteCode: deref(in.Body.InviteCode), Locale: deref(in.Body.Locale), Timezone: deref(in.Body.Timezone),
 			Device: in.Body.info(),
-		})
+		}
+		if in.Body.ClientID != nil {
+			id, err := parseID("client_id", *in.Body.ClientID)
+			if err != nil {
+				return nil, apiErr(d.Log, err)
+			}
+			reg.ClientID = &id
+		}
+		s, err := d.Auth.Register(ctx, reg)
 		if err != nil {
 			return nil, apiErr(d.Log, err)
 		}

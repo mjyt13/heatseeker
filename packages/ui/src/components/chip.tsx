@@ -37,9 +37,13 @@ export interface ChipProps {
 /** Чип фильтра — быстрые теги на главном экране. */
 export function Chip({ label, selected = false, color, badge, onPress }: ChipProps) {
   return (
-    <ChipFrame selected={selected} onPress={onPress} accessibilityRole="button" accessibilityState={{ selected }}>
+    <ChipFrame selected={selected} onPress={onPress} role="button" aria-pressed={selected}>
       {color ? <XStack width={8} height={8} borderRadius={4} backgroundColor={color} /> : null}
-      <SizableText size="$3" color={selected ? '$color1' : '$color'} fontWeight={selected ? '600' : '400'}>
+      <SizableText
+        size="$3"
+        color={selected ? '$color1' : '$color'}
+        fontWeight={selected ? '600' : '400'}
+      >
         {label}
       </SizableText>
       {badge ? (

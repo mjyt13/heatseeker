@@ -1,11 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
-import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
+import { focusManager, MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
+import { AppState, Platform } from 'react-native';
 
 /**
  * Кеш запросов переживает перезапуск (офлайн-чтение — must-have):
  * данные считаются свежими минуту, хранятся сутки.
  */
+// On native, "focus" is the app coming to the foreground: stale data is then
+// refetched and polling pauses in the background (the web uses page visibility).
+if (Platform.OS !== 'web') {
+  focusManager.setEventListener((setFocused) => {
+    const sub = AppState.addEventListener('change', (state) => setFocused(state === 'active'));
+    return () => sub.remove();
+  });
+}
+
 export const queryClient = new QueryClient({
   // In dev, surface every failed request in the Metro log (screens only show a short message).
   queryCache: new QueryCache({

@@ -5,7 +5,13 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { filterFromQuickTag, useInboxCount, useMaterials, useQuickTags } from '@heatseeker/core';
+import {
+  filterFromQuickTag,
+  useInboxCount,
+  useMaterials,
+  useQuickTags,
+  type FileType,
+} from '@heatseeker/core';
 import {
   Button,
   Chip,
@@ -21,7 +27,7 @@ import {
   YStack,
 } from '@heatseeker/ui';
 
-import { MaterialRow } from '@/components/materials';
+import { FileTypePicker, MaterialRow } from '@/components/materials';
 import { describeError } from '@/lib/errors';
 import { useGroupContext } from '@/lib/group';
 
@@ -33,10 +39,11 @@ export default function FeedScreen() {
   const quickTags = useQuickTags(groupId);
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [fileType, setFileType] = useState<FileType | null>(null);
   const deferredQuery = useDeferredValue(query);
 
   const chipFilter = filterFromQuickTag(selected);
-  const filter = { ...chipFilter, q: deferredQuery };
+  const filter = { ...chipFilter, q: deferredQuery, file_type: fileType ?? undefined };
   const materials = useMaterials(chipFilter ? groupId : null, filter);
   const moderator = permissions.can('material.moderate');
   const inbox = useInboxCount(groupId, moderator);
@@ -69,7 +76,13 @@ export default function FeedScreen() {
           </Button>
         </XStack>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} flexGrow={0} flexShrink={0}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          flexGrow={0}
+          flexShrink={0}
+          keyboardShouldPersistTaps="handled"
+        >
           <XStack gap="$2" paddingHorizontal="$4" paddingVertical="$2">
             {(quickTags.data ?? []).map((tag) => (
               <Chip
@@ -95,6 +108,9 @@ export default function FeedScreen() {
             autoCorrect={false}
           />
         </XStack>
+        <XStack paddingHorizontal="$4" paddingBottom="$2">
+          <FileTypePicker value={fileType} onChange={setFileType} />
+        </XStack>
 
         {moderator && inboxCount > 0 ? (
           <YStack paddingHorizontal="$2">
@@ -115,12 +131,15 @@ export default function FeedScreen() {
           <FlatList
             data={items}
             keyExtractor={(m) => m.id}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             contentContainerStyle={{ paddingHorizontal: 8, paddingBottom: 96, flexGrow: 1 }}
             renderItem={({ item }) => (
               <MaterialRow
                 material={item}
                 subject={item.subject_id ? subjectById.get(item.subject_id) : undefined}
                 uploaderName={memberName(item.uploader_id)}
+                showReview={moderator}
                 onPress={() =>
                   router.push({ pathname: '/(app)/material/[id]', params: { id: item.id } })
                 }
@@ -148,7 +167,7 @@ export default function FeedScreen() {
                 <EmptyState
                   title={t('common.empty')}
                   hint={
-                    deferredQuery || selected
+                    deferredQuery || selected || fileType
                       ? t('materials.empty_filtered')
                       : t('materials.empty_hint')
                   }

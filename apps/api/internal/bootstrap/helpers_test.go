@@ -6,12 +6,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,6 +22,7 @@ import (
 	"heatseeker/api/internal/adapters/media"
 	"heatseeker/api/internal/adapters/queue"
 	"heatseeker/api/internal/bootstrap"
+	"heatseeker/api/internal/domain"
 	"heatseeker/api/internal/platform/config"
 	"heatseeker/api/internal/platform/db"
 )
@@ -30,6 +34,7 @@ type env struct {
 	srv   *httptest.Server
 	c     *client
 	drive *gdrive.Fake
+	oauth *gdrive.FakeOAuth // the publishing account signs in as publisher@example.com
 	queue *queue.Recorder
 }
 
@@ -52,12 +57,13 @@ func testConfig(dsn string) *config.Config {
 	cfg.Media = config.Media{
 		ProxyEnabled: true, PresignTTLSec: 900, TmpUploadTTLHours: 24, UploadMaxSizeMB: 1,
 		UploadAllowedExt: []string{"pdf", "docx", "txt", "png"}, HardDeleteAfterDays: 0, // purge immediately when asked
-		MaterialHashMaxMB: 10, StreamTokenTTLMinute: 60,
+		MaterialHashMaxMB: 10, StreamTokenTTLMinute: 60, OfficePreviewMaxMB: 1,
 	}
 	cfg.Storage.Driver = "local"
+	cfg.App.EncryptionKey = "integration-test-encryption-key-0123456789"
 	cfg.GDrive = config.GDrive{
 		SyncIntervalSec: 600, FullRescanIntervalSec: 86400, ClassifyMinConfidence: 0.6,
-		DeletePolicy: "flag", FeatureUpload: true, UploadMode: "service_account",
+		DeletePolicy: "flag", FeatureUpload: true,
 	}
 	return cfg
 }
@@ -66,7 +72,7 @@ func setup(t *testing.T) *env {
 	t.Helper()
 	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
-		dsn = "postgres://heatseeker:heatseeker@localhost:5433/heatseeker?sslmode=disable"
+		dsn = "postgres://heatseeker:heatseeker@localhost:5433/heatseeker_test?sslmode=disable"
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -80,12 +86,13 @@ func setup(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	fake := gdrive.NewFake()
+	oauth := gdrive.NewFakeOAuth(fake, "publisher@example.com")
 	rec := &queue.Recorder{}
 	// The API base URL is only known once the test server listens, and the
 	// services need it for signed links: start the listener first.
 	srv := httptest.NewUnstartedServer(nil)
 	cfg.App.BaseURL = "http://" + srv.Listener.Addr().String()
-	svc, err := bootstrap.BuildWith(ctx, cfg, log, bootstrap.Options{Queue: rec, DriveClient: fake, Media: store})
+	svc, err := bootstrap.BuildWith(ctx, cfg, log, bootstrap.Options{Queue: rec, DriveClient: fake, DriveAuthorizer: oauth, Converter: fakeConverter{}, Media: store})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +102,7 @@ func setup(t *testing.T) *env {
 		srv.Close()
 		svc.Close()
 	})
-	return &env{cfg: cfg, svc: svc, srv: srv, c: &client{t: t, base: srv.URL + "/api/v1"}, drive: fake, queue: rec}
+	return &env{cfg: cfg, svc: svc, srv: srv, c: &client{t: t, base: srv.URL + "/api/v1"}, drive: fake, oauth: oauth, queue: rec}
 }
 
 type client struct {
@@ -170,4 +177,20 @@ func contains(list []string, v string) bool {
 		}
 	}
 	return false
+}
+
+// fakeConverter stands in for Gotenberg: the "PDF" names the extension and
+// repeats the content; content "broken" is rejected like a corrupt file.
+type fakeConverter struct{}
+
+func (fakeConverter) ConvertToPDF(_ context.Context, fileName string, r io.Reader) (io.ReadCloser, error) {
+	body, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	if string(body) == "broken" {
+		return nil, fmt.Errorf("%w: cannot convert", domain.ErrInvalid)
+	}
+	pdf := "%PDF-1.7 preview of " + strings.ToLower(path.Ext(fileName)) + ": " + string(body)
+	return io.NopCloser(strings.NewReader(pdf)), nil
 }

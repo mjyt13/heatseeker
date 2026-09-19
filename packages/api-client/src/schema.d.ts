@@ -98,6 +98,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/drive/oauth/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Возврат после входа Google
+         * @description Сюда Google перенаправляет браузер; отвечает HTML-страницей с результатом.
+         */
+        get: operations["drive-oauth-callback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/groups": {
         parameters: {
             query?: never;
@@ -130,6 +150,26 @@ export interface paths {
         put?: never;
         /** Вступить по коду приглашения или коду группы */
         post: operations["groups-join"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Найти группу по названию
+         * @description Только открытые группы (join_policy=OPEN), до 20 штук.
+         */
+        get: operations["groups-search"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -215,6 +255,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/groups/{groupId}/drive/publisher": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Подключить аккаунт Google для публикации
+         * @description Возвращает страницу входа Google. Загрузки группы будут публиковаться на Диск от имени этого аккаунта (в «Моём диске» у сервисного аккаунта нет квоты, D34). Аккаунт должен иметь права редактора на папку группы.
+         */
+        post: operations["drive-publisher-start"];
+        /**
+         * Отключить аккаунт Google для публикации
+         * @description Доступ отзывается у Google.
+         */
+        delete: operations["drive-publisher-disconnect"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/groups/{groupId}/drive/status": {
         parameters: {
             query?: never;
@@ -287,6 +351,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/groups/{groupId}/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Вступить в открытую группу
+         * @description Для групп из поиска; повторный вызов возвращает текущее членство.
+         */
+        post: operations["groups-join-open"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/groups/{groupId}/join-code/rotate": {
         parameters: {
             query?: never;
@@ -318,6 +402,26 @@ export interface paths {
         get: operations["materials-list"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/materials/classify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Разобрать несколько материалов
+         * @description Массовое действие во «Входящих»: один предмет (и, при желании, тип) для всех выбранных.
+         */
+        post: operations["materials-classify-bulk"];
         delete?: never;
         options?: never;
         head?: never;
@@ -646,6 +750,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/materials/{materialId}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Запросить PDF-превью офисного файла
+         * @description pptx/docx/xlsx и т.п. браузер не показывает: сервер конвертирует их в PDF (Gotenberg). Повторный запрос не создаёт новую задачу; после неудачи (FAILED) — пробует снова.
+         */
+        post: operations["materials-preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/materials/{materialId}/restore": {
         parameters: {
             query?: never;
@@ -889,6 +1013,38 @@ export interface components {
             readonly $schema?: string;
             aliases: string[] | null;
         };
+        BulkClassifyInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/BulkClassifyInputBody.json
+             */
+            readonly $schema?: string;
+            /**
+             * @description Пусто — тип каждого материала не меняется.
+             * @enum {string}
+             */
+            kind?: "LECTURE" | "NOTES" | "REPORT" | "CALC" | "ASSIGNMENT" | "OTHER";
+            material_ids: string[] | null;
+            /**
+             * Format: uuid
+             * @description Пусто — «без предмета».
+             */
+            subject_id?: string;
+        };
+        BulkClassifyOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/BulkClassifyOutputBody.json
+             */
+            readonly $schema?: string;
+            /**
+             * Format: int64
+             * @description Сколько материалов разобрано (чужие и удалённые пропускаются).
+             */
+            classified: number;
+        };
         ClassificationDTO: {
             /** Format: double */
             confidence: number;
@@ -903,6 +1059,50 @@ export interface components {
             subject_id?: string;
             /** Format: int64 */
             topic?: number;
+        };
+        ClassifiedDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/ClassifiedDTO.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            archived_at?: string;
+            classification: components["schemas"]["ClassificationDTO"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            deleted_at?: string;
+            /** @description Markdown. */
+            description: string;
+            /** Format: int32 */
+            download_count: number;
+            /** @description Текущая версия файла. */
+            file: components["schemas"]["MaterialVersionDTO"];
+            group_id: string;
+            id: string;
+            /** @enum {string} */
+            kind: "LECTURE" | "NOTES" | "REPORT" | "CALC" | "ASSIGNMENT" | "OTHER";
+            /** @description Синоним, добавленный предмету из имени папки на Диске; похожие файлы разберутся автоматически. */
+            learned_alias?: string;
+            /** @description Лежит во «Входящих» модератора. */
+            needs_review: boolean;
+            /** @enum {string} */
+            review_reason?: "LOW_CONFIDENCE" | "REMOVED_FROM_DRIVE";
+            /** Format: date-time */
+            sort_at: string;
+            /** @enum {string} */
+            source: "UPLOAD" | "GDRIVE";
+            /** @enum {string} */
+            status: "ACTIVE" | "ARCHIVED" | "DELETED";
+            subject_id?: string;
+            tag_ids: string[] | null;
+            title: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** @description Нет у файлов, найденных на Диске. */
+            uploader_id?: string;
         };
         ClassifyMaterialInputBody: {
             /**
@@ -1038,6 +1238,8 @@ export interface components {
             id: string;
             /** @description Только для управляющих Диском. */
             last_error?: string;
+            /** @description Код ошибки (как в type ошибок API, без префикса), если он есть. */
+            last_error_code?: string;
             /** Format: date-time */
             last_full_scan_at?: string;
             /** Format: date-time */
@@ -1081,6 +1283,24 @@ export interface components {
             readonly $schema?: string;
             items: components["schemas"]["DriveItemDTO"][] | null;
         };
+        DrivePublisherDTO: {
+            /** Format: date-time */
+            connected_at: string;
+            connected_by?: string;
+            email: string;
+            /** @description Google отклонил доступ: аккаунт нужно подключить заново. */
+            last_error?: string;
+        };
+        DrivePublisherStartOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/DrivePublisherStartOutputBody.json
+             */
+            readonly $schema?: string;
+            /** @description Страница входа Google: открыть в браузере. После входа Google вернёт на /drive/oauth/callback. */
+            auth_url: string;
+        };
         DriveStatsDTO: {
             /** Format: int64 */
             deleted: number;
@@ -1104,9 +1324,15 @@ export interface components {
              * @example /api/v1/schemas/DriveStatusDTO.json
              */
             readonly $schema?: string;
+            /** @description Загрузки сейчас можно копировать в папку группы. */
+            can_publish: boolean;
             /** @description На сервере настроен сервисный аккаунт. */
             configured: boolean;
             connection?: components["schemas"]["DriveConnectionDTO"];
+            /** @description Подключённый аккаунт; только для управляющих Диском. */
+            publisher?: components["schemas"]["DrivePublisherDTO"];
+            /** @description На сервере можно подключить аккаунт Google для публикации (D34). */
+            publisher_available: boolean;
             /** @description Этому адресу нужно выдать доступ к папке. */
             service_account_email?: string;
             stats?: components["schemas"]["DriveStatsDTO"];
@@ -1232,6 +1458,26 @@ export interface components {
             public_read: boolean;
             settings: unknown;
             slug: string;
+        };
+        GroupSearchItemDTO: {
+            /** Format: uuid */
+            id: string;
+            /** @description Я уже состою в группе. */
+            is_member: boolean;
+            /** @enum {string} */
+            kind: "MASTERS" | "DPO" | "OTHER";
+            /** Format: int64 */
+            member_count: number;
+            name: string;
+        };
+        GroupSearchOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/GroupSearchOutputBody.json
+             */
+            readonly $schema?: string;
+            items: components["schemas"]["GroupSearchItemDTO"][] | null;
         };
         GroupWithMembershipDTO: {
             /**
@@ -1391,6 +1637,19 @@ export interface components {
             uploader_id?: string;
             versions: components["schemas"]["MaterialVersionDTO"][] | null;
         };
+        MaterialPreviewOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/MaterialPreviewOutputBody.json
+             */
+            readonly $schema?: string;
+            /**
+             * @description READY — превью в preview_url ответа /open; PENDING — готовится, опрашивайте материал.
+             * @enum {string}
+             */
+            preview_status: "PENDING" | "READY" | "SKIPPED";
+        };
         MaterialVersionDTO: {
             /** Format: date-time */
             created_at: string;
@@ -1403,6 +1662,11 @@ export interface components {
             id: string;
             mime: string;
             original_name: string;
+            /**
+             * @description PDF-превью офисного файла: NONE — не запрошено (POST /materials/{materialId}/preview). Нет поля — файл показывается как есть.
+             * @enum {string}
+             */
+            preview_status?: "NONE" | "PENDING" | "READY" | "FAILED" | "SKIPPED";
             /** @enum {string} */
             scan_status: "PENDING" | "CLEAN" | "INFECTED" | "SKIPPED";
             /** Format: int64 */
@@ -1514,6 +1778,13 @@ export interface components {
             mime: string;
             /** @enum {string} */
             mode: "LINK" | "CACHE" | "IMPORT";
+            /**
+             * @description Как у версии; нет поля — файл показывается как есть.
+             * @enum {string}
+             */
+            preview_status?: "NONE" | "PENDING" | "READY" | "FAILED" | "SKIPPED";
+            /** @description PDF-превью офисного файла, когда оно готово: для «Смотреть». */
+            preview_url?: string;
             /** Format: int64 */
             size_bytes: number;
             /** @enum {string} */
@@ -1595,6 +1866,11 @@ export interface components {
              * @example /api/v1/schemas/RegisterInputBody.json
              */
             readonly $schema?: string;
+            /**
+             * Format: uuid
+             * @description Случайный UUID экрана регистрации: повтор запроса в течение 15 минут вернёт тот же аккаунт.
+             */
+            client_id?: string;
             device_name?: string;
             /** @description Код приглашения или код группы — сразу вступить. */
             invite_code?: string;
@@ -2006,6 +2282,40 @@ export interface operations {
             };
         };
     };
+    "drive-oauth-callback": {
+        parameters: {
+            query?: {
+                code?: string;
+                state?: string;
+                /** @description Приходит от Google, если вход отменён. */
+                error?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Аккаунт подключён. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Не удалось подключить. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+        };
+    };
     "groups-create": {
         parameters: {
             query?: never;
@@ -2088,6 +2398,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GroupWithMembershipDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "groups-search": {
+        parameters: {
+            query?: {
+                /** @description Часть названия; пусто — все открытые группы. */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupSearchOutputBody"];
                 };
             };
             /** @description Error */
@@ -2301,6 +2643,66 @@ export interface operations {
             };
         };
     };
+    "drive-publisher-start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DrivePublisherStartOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "drive-publisher-disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "drive-status": {
         parameters: {
             query?: never;
@@ -2461,6 +2863,37 @@ export interface operations {
             };
         };
     };
+    "groups-join-open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupWithMembershipDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "groups-rotate-join-code": {
         parameters: {
             query?: never;
@@ -2502,6 +2935,8 @@ export interface operations {
                 /** @description Материалы со всеми указанными тегами (тег предмета = фильтр по предмету). */
                 tag_id?: string[] | null;
                 kind?: "LECTURE" | "NOTES" | "REPORT" | "CALC" | "ASSIGNMENT" | "OTHER";
+                /** @description Тип файла по MIME (D35). */
+                file_type?: "DOCUMENT" | "IMAGE" | "AUDIO" | "VIDEO" | "ARCHIVE" | "OTHER";
                 /** @description Только загруженные мной. */
                 mine?: boolean;
                 /** @description «Входящие»: материалы, требующие разбора. */
@@ -2528,6 +2963,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MaterialsPageOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "materials-classify-bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkClassifyInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkClassifyOutputBody"];
                 };
             };
             /** @description Error */
@@ -3252,7 +3722,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MaterialDTO"];
+                    "application/json": components["schemas"]["ClassifiedDTO"];
                 };
             };
             /** @description Error */
@@ -3288,6 +3758,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OpenDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "materials-preview": {
+        parameters: {
+            query?: {
+                /** @description Версия; по умолчанию текущая. */
+                version_id?: string;
+            };
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialPreviewOutputBody"];
                 };
             };
             /** @description Error */

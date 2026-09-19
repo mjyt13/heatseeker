@@ -34,7 +34,9 @@ export default function ActivityScreen() {
         ? payload.title
         : typeof payload.name === 'string'
           ? payload.name
-          : null;
+          : typeof payload.count === 'number'
+            ? t('activity.files', { count: payload.count })
+            : null;
     return [what, who, new Date(e.created_at).toLocaleString()].filter(Boolean).join(' · ');
   };
 

@@ -124,6 +124,13 @@ type GroupWithMembership struct {
 	Membership Membership
 }
 
+// GroupSearchHit is a group found by name, as seen by the searching user.
+type GroupSearchHit struct {
+	Group       Group
+	MemberCount int64
+	IsMember    bool
+}
+
 // Member is a membership joined with the user's public profile.
 type Member struct {
 	Membership Membership

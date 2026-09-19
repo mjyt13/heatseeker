@@ -112,6 +112,20 @@ func (r *groupRepo) ListForUser(ctx context.Context, userID uuid.UUID) ([]domain
 	return out, nil
 }
 
+func (r *groupRepo) SearchOpen(ctx context.Context, userID uuid.UUID, query string, limit int32) ([]domain.GroupSearchHit, error) {
+	rows, err := r.s.queries(ctx).SearchOpenGroups(ctx, sqlcgen.SearchOpenGroupsParams{
+		UserID: userID, Pattern: likeEscaper.Replace(query), Query: query, MaxResults: limit,
+	})
+	if err != nil {
+		return nil, mapErr(err, "group")
+	}
+	out := make([]domain.GroupSearchHit, len(rows))
+	for i, row := range rows {
+		out[i] = domain.GroupSearchHit{Group: *toGroup(row.Group), MemberCount: row.MemberCount, IsMember: row.IsMember}
+	}
+	return out, nil
+}
+
 func (r *groupRepo) Update(ctx context.Context, p domain.UpdateGroupParams) (*domain.Group, error) {
 	g, err := r.s.queries(ctx).UpdateGroup(ctx, sqlcgen.UpdateGroupParams{
 		ID:         p.ID,

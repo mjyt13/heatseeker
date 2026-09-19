@@ -35,6 +35,8 @@ WHERE m.group_id = sqlc.arg(group_id)
   AND (sqlc.narg(kind)::text IS NULL OR m.kind = sqlc.narg(kind)::text)
   AND (sqlc.narg(uploader_id)::uuid IS NULL OR m.uploader_id = sqlc.narg(uploader_id)::uuid)
   AND (NOT sqlc.arg(inbox)::boolean OR m.needs_review)
+  AND (cardinality(sqlc.arg(mime_patterns)::text[]) = 0
+       OR (v.mime LIKE ANY (sqlc.arg(mime_patterns)::text[])) <> sqlc.arg(mime_exclude)::boolean)
   AND (cardinality(sqlc.arg(tag_ids)::uuid[]) = 0 OR (
         SELECT count(*) FROM material_tags mt
         WHERE mt.material_id = m.id AND mt.tag_id = ANY (sqlc.arg(tag_ids)::uuid[])
@@ -102,11 +104,11 @@ DELETE FROM materials WHERE id = $1;
 
 -- name: CreateMaterialVersion :one
 INSERT INTO material_versions (id, material_id, version_no, storage, storage_key, drive_file_id, drive_web_view_link,
-                               drive_md5, drive_modified_time, drive_upload_status, original_name, mime, size_bytes,
-                               sha256, scan_status, uploaded_by)
+                               drive_md5, drive_modified_time, drive_revision_id, drive_upload_status, original_name,
+                               mime, size_bytes, sha256, scan_status, uploaded_by)
 VALUES ($1, $2,
         COALESCE((SELECT max(version_no) FROM material_versions WHERE material_id = $2), 0) + 1,
-        $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 RETURNING *;
 
 -- name: SetCurrentVersion :exec
@@ -120,8 +122,12 @@ SELECT * FROM material_versions WHERE material_id = $1 ORDER BY version_no DESC;
 
 -- name: UpdateVersionFile :exec
 UPDATE material_versions
-SET original_name = $2, mime = $3, size_bytes = $4, drive_web_view_link = $5, drive_md5 = $6, drive_modified_time = $7
+SET original_name = $2, mime = $3, size_bytes = $4, drive_web_view_link = $5, drive_md5 = $6, drive_modified_time = $7,
+    drive_revision_id = COALESCE(sqlc.narg(drive_revision_id), drive_revision_id)
 WHERE id = $1;
+
+-- name: SetVersionDriveRevision :exec
+UPDATE material_versions SET drive_revision_id = $2 WHERE id = $1;
 
 -- name: SetVersionDriveUpload :exec
 UPDATE material_versions
@@ -132,3 +138,16 @@ WHERE id = $1;
 
 -- name: SetVersionHash :exec
 UPDATE material_versions SET sha256 = $2 WHERE id = $1;
+
+-- name: ClaimVersionPreview :one
+-- Marks a preview as requested unless it is already pending, ready or
+-- skipped (a failed one may be retried): the caller enqueues the conversion
+-- only when a row comes back.
+UPDATE material_versions SET preview_status = 'PENDING', preview_error = NULL
+WHERE id = $1 AND (preview_status IS NULL OR preview_status = 'FAILED')
+RETURNING id;
+
+-- name: SetVersionPreview :exec
+UPDATE material_versions
+SET preview_status = $2, preview_key = sqlc.narg(preview_key), preview_error = sqlc.narg(preview_error)
+WHERE id = $1;

@@ -15,6 +15,7 @@ import (
 
 	"heatseeker/api/internal/adapters/gdrive"
 	googleadapter "heatseeker/api/internal/adapters/google"
+	"heatseeker/api/internal/adapters/gotenberg"
 	"heatseeker/api/internal/adapters/media"
 	"heatseeker/api/internal/adapters/postgres"
 	"heatseeker/api/internal/adapters/queue"
@@ -33,6 +34,7 @@ import (
 	"heatseeker/api/internal/platform/config"
 	"heatseeker/api/internal/platform/db"
 	"heatseeker/api/internal/platform/redisx"
+	"heatseeker/api/internal/platform/secretbox"
 	httptransport "heatseeker/api/internal/transport/http"
 )
 
@@ -60,8 +62,12 @@ type Services struct {
 type Options struct {
 	Queue       domain.JobQueue
 	DriveClient domain.DriveClient
-	Media       domain.MediaStore
-	Clock       clock.Clock
+	// DriveAuthorizer connects the publishing Google account (D34).
+	DriveAuthorizer domain.DriveAuthorizer
+	// Converter makes PDF previews of office files.
+	Converter domain.DocumentConverter
+	Media     domain.MediaStore
+	Clock     clock.Clock
 }
 
 // Build connects to Postgres and wires every service from configuration.
@@ -95,6 +101,15 @@ func BuildWith(ctx context.Context, cfg *config.Config, log *slog.Logger, opts O
 			return fail(err)
 		}
 		opts.DriveClient = client
+		checkDrive(ctx, client, log)
+	}
+	if opts.DriveAuthorizer == nil && cfg.PublisherOAuthEnabled() {
+		opts.DriveAuthorizer = gdrive.NewOAuth(cfg.Auth.GoogleClientID, cfg.Auth.GoogleClientSecret, cfg.GDrive.OAuthRedirectURL)
+		// This exact URL must be listed in the OAuth client's redirect URIs.
+		log.Info("google drive publishing account can be connected", "redirect_url", cfg.GDrive.OAuthRedirectURL)
+	}
+	if opts.Converter == nil && cfg.Media.OfficePreviewURL != "" {
+		opts.Converter = gotenberg.New(cfg.Media.OfficePreviewURL)
 	}
 	if opts.Queue == nil {
 		redisOpt, err := redisx.AsynqOpt(cfg.Redis.URL)
@@ -105,12 +120,15 @@ func BuildWith(ctx context.Context, cfg *config.Config, log *slog.Logger, opts O
 		closers = append(closers, func() { _ = q.Close() })
 		opts.Queue = q
 	}
-	svc := wire(pool, cfg, log, opts)
+	svc, err := wire(pool, cfg, log, opts)
+	if err != nil {
+		return fail(err)
+	}
 	svc.closers = closers
 	return svc, nil
 }
 
-func wire(pool *pgxpool.Pool, cfg *config.Config, log *slog.Logger, opts Options) *Services {
+func wire(pool *pgxpool.Pool, cfg *config.Config, log *slog.Logger, opts Options) (*Services, error) {
 	store := postgres.NewStore(pool)
 	clk := opts.Clock
 	if clk == nil {
@@ -136,33 +154,47 @@ func wire(pool *pgxpool.Pool, cfg *config.Config, log *slog.Logger, opts Options
 
 	materialsSvc := materials.NewService(materials.Deps{
 		Materials: store.Materials(), Uploads: store.Uploads(), Subjects: store.Subjects(), Tags: store.Tags(),
-		Drive: store.Drive(), Store: opts.Media, Client: opts.DriveClient, Access: acc, Events: publisher,
+		Drive: store.Drive(), Store: opts.Media, Client: opts.DriveClient, Converter: opts.Converter, Access: acc, Events: publisher,
 		Tx: store, Queue: opts.Queue, Clock: clk, Log: log,
 	}, materials.Settings{
-		APIBaseURL:         strings.TrimRight(cfg.App.BaseURL, "/") + "/api/v1",
-		PresignTTL:         cfg.Media.PresignTTL(),
-		UploadTTL:          time.Duration(cfg.Media.TmpUploadTTLHours) * time.Hour,
-		MaxUploadBytes:     cfg.Media.UploadMaxBytes(),
-		AllowedExt:         cfg.Media.UploadAllowedExt,
-		HardDeleteAfter:    time.Duration(cfg.Media.HardDeleteAfterDays) * 24 * time.Hour,
-		ProxyEnabled:       cfg.Media.ProxyEnabled,
-		StreamTTL:          time.Duration(cfg.Media.StreamTokenTTLMinute) * time.Minute,
-		DriveUploadEnabled: cfg.GDrive.FeatureUpload,
-		HashMaxBytes:       int64(cfg.Media.MaterialHashMaxMB) << 20,
-		MinConfidence:      cfg.GDrive.ClassifyMinConfidence,
-		SigningSecret:      cfg.Auth.JWTAccessSecret,
+		APIBaseURL:          strings.TrimRight(cfg.App.BaseURL, "/") + "/api/v1",
+		PresignTTL:          cfg.Media.PresignTTL(),
+		UploadTTL:           time.Duration(cfg.Media.TmpUploadTTLHours) * time.Hour,
+		MaxUploadBytes:      cfg.Media.UploadMaxBytes(),
+		AllowedExt:          cfg.Media.UploadAllowedExt,
+		HardDeleteAfter:     time.Duration(cfg.Media.HardDeleteAfterDays) * 24 * time.Hour,
+		ProxyEnabled:        cfg.Media.ProxyEnabled,
+		StreamTTL:           time.Duration(cfg.Media.StreamTokenTTLMinute) * time.Minute,
+		DriveUploadEnabled:  cfg.GDrive.FeatureUpload,
+		DrivePublisherOAuth: opts.DriveAuthorizer != nil,
+		HashMaxBytes:        int64(cfg.Media.MaterialHashMaxMB) << 20,
+		PreviewMaxBytes:     int64(cfg.Media.OfficePreviewMaxMB) << 20,
+		MinConfidence:       cfg.GDrive.ClassifyMinConfidence,
+		SigningSecret:       cfg.Auth.JWTAccessSecret,
 	})
+	// The publishing account's refresh token is sealed with APP_ENCRYPTION_KEY
+	// (config validation requires it together with the OAuth client).
+	var secrets *secretbox.Box
+	if opts.DriveAuthorizer != nil {
+		var err error
+		if secrets, err = secretbox.New(cfg.App.EncryptionKey); err != nil {
+			return nil, fmt.Errorf("APP_ENCRYPTION_KEY: %w", err)
+		}
+	}
 	driveSvc := drive.NewService(drive.Deps{
 		Repo: store.Drive(), Materials: store.Materials(), Subjects: store.Subjects(), Users: store.Users(),
-		Store: opts.Media, Client: opts.DriveClient, Access: acc, Events: publisher, Tx: store,
-		Queue: opts.Queue, Clock: clk, Log: log,
+		Store: opts.Media, Client: opts.DriveClient, Authorizer: opts.DriveAuthorizer, Secrets: secrets,
+		Access: acc, Events: publisher, Tx: store, Queue: opts.Queue, Clock: clk, Log: log,
 	}, drive.Settings{
 		SyncInterval:       time.Duration(cfg.GDrive.SyncIntervalSec) * time.Second,
 		FullRescanInterval: time.Duration(cfg.GDrive.FullRescanIntervalSec) * time.Second,
 		MinConfidence:      cfg.GDrive.ClassifyMinConfidence,
 		DeletePolicy:       cfg.GDrive.DeletePolicy,
 		UploadEnabled:      cfg.GDrive.FeatureUpload,
+		StateSecret:        cfg.Auth.JWTAccessSecret,
 	})
+
+	bus.Subscribe(driveSvc.OnEvent)
 
 	return &Services{
 		Pool:      pool,
@@ -178,6 +210,23 @@ func wire(pool *pgxpool.Pool, cfg *config.Config, log *slog.Logger, opts Options
 		Drive:     driveSvc,
 		Media:     opts.Media,
 		Queue:     opts.Queue,
+	}, nil
+}
+
+// checkDrive reports a misconfigured service account at startup instead of at
+// the first folder connection. It never fails the start: Drive may recover.
+func checkDrive(ctx context.Context, client *gdrive.Client, log *slog.Logger) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	err := client.Ping(ctx)
+	switch {
+	case err == nil:
+		log.Info("google drive ready", "service_account", client.ServiceAccountEmail())
+	case domain.ErrorCode(err) == domain.CodeDriveAPIDisabled:
+		log.Warn("google drive API is disabled: enable it in the Cloud console (see docs/GOOGLE-DRIVE.md)",
+			"service_account", client.ServiceAccountEmail(), "err", err)
+	default:
+		log.Warn("google drive check failed", "service_account", client.ServiceAccountEmail(), "err", err)
 	}
 }
 

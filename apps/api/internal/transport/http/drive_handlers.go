@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"errors"
 	nethttp "net/http"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -42,6 +43,18 @@ type driveItemsOutput struct {
 	Body struct {
 		Items []DriveItemDTO `json:"items"`
 	}
+}
+
+type drivePublisherStartOutput struct {
+	Body struct {
+		AuthURL string `json:"auth_url" doc:"Страница входа Google: открыть в браузере. После входа Google вернёт на /drive/oauth/callback."`
+	}
+}
+
+type driveOAuthCallbackInput struct {
+	Code  string `query:"code"`
+	State string `query:"state"`
+	Error string `query:"error" doc:"Приходит от Google, если вход отменён."`
 }
 
 func registerDrive(api huma.API, d Deps) {
@@ -128,5 +141,61 @@ func registerDrive(api huma.API, d Deps) {
 			out.Body.Items[i] = toDriveItemDTO(&items[i])
 		}
 		return out, nil
+	})
+
+	huma.Register(api, huma.Operation{
+		OperationID: "drive-publisher-start", Method: nethttp.MethodPost, Path: "/groups/{groupId}/drive/publisher", Tags: []string{"drive"}, Security: bearer,
+		Summary: "Подключить аккаунт Google для публикации",
+		Description: "Возвращает страницу входа Google. Загрузки группы будут публиковаться на Диск от имени этого аккаунта " +
+			"(в «Моём диске» у сервисного аккаунта нет квоты, D34). Аккаунт должен иметь права редактора на папку группы.",
+	}, func(ctx context.Context, in *groupIDInput) (*drivePublisherStartOutput, error) {
+		p, groupID, err := principalAndID(ctx, "groupId", in.GroupID)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		authURL, err := d.Drive.StartPublisher(ctx, p.UserID, groupID)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		out := &drivePublisherStartOutput{}
+		out.Body.AuthURL = authURL
+		return out, nil
+	})
+
+	huma.Register(api, huma.Operation{
+		OperationID: "drive-publisher-disconnect", Method: nethttp.MethodDelete, Path: "/groups/{groupId}/drive/publisher", Tags: []string{"drive"}, Security: bearer,
+		Summary: "Отключить аккаунт Google для публикации", Description: "Доступ отзывается у Google.", DefaultStatus: nethttp.StatusNoContent,
+	}, func(ctx context.Context, in *groupIDInput) (*emptyOutput, error) {
+		p, groupID, err := principalAndID(ctx, "groupId", in.GroupID)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		if err := d.Drive.DisconnectPublisher(ctx, p.UserID, groupID); err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		return &emptyOutput{}, nil
+	})
+
+	huma.Register(api, huma.Operation{
+		OperationID: "drive-oauth-callback", Method: nethttp.MethodGet, Path: "/drive/oauth/callback", Tags: []string{"drive"},
+		Summary:     "Возврат после входа Google",
+		Description: "Сюда Google перенаправляет браузер; отвечает HTML-страницей с результатом.",
+		Responses: map[string]*huma.Response{
+			"200": {Description: "Аккаунт подключён.", Content: map[string]*huma.MediaType{"text/html": {Schema: &huma.Schema{Type: "string"}}}},
+			"400": {Description: "Не удалось подключить.", Content: map[string]*huma.MediaType{"text/html": {Schema: &huma.Schema{Type: "string"}}}},
+		},
+	}, func(ctx context.Context, in *driveOAuthCallbackInput) (*huma.StreamResponse, error) {
+		if in.Error != "" || in.Code == "" || in.State == "" {
+			return oauthPage(nethttp.StatusBadRequest, oauthResult{Cancelled: in.Error == "access_denied", Failed: true}), nil
+		}
+		pub, err := d.Drive.FinishPublisher(ctx, in.State, in.Code)
+		if err != nil {
+			code := domain.ErrorCode(err)
+			if code == "" {
+				d.Log.Warn("connect drive publisher", "err", err)
+			}
+			return oauthPage(nethttp.StatusBadRequest, oauthResult{Failed: true, Code: code, Expired: errors.Is(err, domain.ErrGone)}), nil
+		}
+		return oauthPage(nethttp.StatusOK, oauthResult{Email: pub.Email}), nil
 	})
 }

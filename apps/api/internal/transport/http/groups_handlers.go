@@ -43,6 +43,25 @@ type previewOutput struct {
 	}
 }
 
+type groupSearchInput struct {
+	Q string `query:"q" maxLength:"80" doc:"Часть названия; пусто — все открытые группы."`
+}
+
+// GroupSearchItemDTO is a group found by name: only what a stranger may see.
+type GroupSearchItemDTO struct {
+	ID          string `json:"id" format:"uuid"`
+	Name        string `json:"name"`
+	Kind        string `json:"kind" enum:"MASTERS,DPO,OTHER"`
+	MemberCount int64  `json:"member_count"`
+	IsMember    bool   `json:"is_member" doc:"Я уже состою в группе."`
+}
+
+type groupSearchOutput struct {
+	Body struct {
+		Items []GroupSearchItemDTO `json:"items"`
+	}
+}
+
 type membersOutput struct {
 	Body struct {
 		Items    []MemberDTO `json:"items"`
@@ -150,6 +169,48 @@ func registerGroups(api huma.API, d Deps) {
 			return nil, apiErr(d.Log, err)
 		}
 		gm, err := d.Groups.Join(ctx, p.UserID, in.Code)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		return &groupWithMembershipOutput{Body: toGroupWithMembershipDTO(*gm)}, nil
+	})
+
+	huma.Register(api, huma.Operation{
+		OperationID: "groups-search", Method: nethttp.MethodGet, Path: "/groups/search", Tags: []string{"groups"}, Security: bearer,
+		Summary: "Найти группу по названию", Description: "Только открытые группы (join_policy=OPEN), до 20 штук.",
+	}, func(ctx context.Context, in *groupSearchInput) (*groupSearchOutput, error) {
+		p, err := principalFrom(ctx)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		hits, err := d.Groups.Search(ctx, p.UserID, in.Q)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		out := &groupSearchOutput{}
+		out.Body.Items = make([]GroupSearchItemDTO, len(hits))
+		for i, h := range hits {
+			out.Body.Items[i] = GroupSearchItemDTO{
+				ID: h.Group.ID.String(), Name: h.Group.Name, Kind: string(h.Group.Kind),
+				MemberCount: h.MemberCount, IsMember: h.IsMember,
+			}
+		}
+		return out, nil
+	})
+
+	huma.Register(api, huma.Operation{
+		OperationID: "groups-join-open", Method: nethttp.MethodPost, Path: "/groups/{groupId}/join", Tags: []string{"groups"}, Security: bearer,
+		Summary: "Вступить в открытую группу", Description: "Для групп из поиска; повторный вызов возвращает текущее членство.",
+	}, func(ctx context.Context, in *groupIDInput) (*groupWithMembershipOutput, error) {
+		p, err := principalFrom(ctx)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		groupID, err := parseID("groupId", in.GroupID)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		gm, err := d.Groups.JoinOpen(ctx, p.UserID, groupID)
 		if err != nil {
 			return nil, apiErr(d.Log, err)
 		}

@@ -45,6 +45,7 @@ WHERE id = sqlc.arg(id)
 UPDATE drive_connections
 SET status = sqlc.arg(status),
     last_error = sqlc.narg(last_error),
+    last_error_code = sqlc.narg(last_error_code),
     sync_started_at = NULL,
     changes_page_token = COALESCE(sqlc.narg(page_token), changes_page_token),
     -- a failed run still counts as an attempt, so the scheduler backs off
@@ -107,3 +108,37 @@ SELECT
   count(*) FILTER (WHERE state = 'DELETED')::bigint AS deleted,
   count(*) FILTER (WHERE state = 'ERROR')::bigint AS errors
 FROM drive_items WHERE connection_id = $1;
+
+-- name: ListReclassifyCandidates :many
+-- Drive files waiting in the Inbox only because the classifier was unsure:
+-- new subjects or aliases may resolve them. Manual decisions are left alone.
+SELECT i.* FROM drive_items i
+JOIN drive_connections c ON c.id = i.connection_id
+JOIN materials m ON m.id = i.material_id AND m.group_id = c.group_id
+WHERE c.group_id = $1
+  AND NOT i.is_folder
+  AND i.state = 'LINKED'
+  AND m.source = 'GDRIVE'
+  AND m.status = 'ACTIVE'
+  AND m.needs_review
+  AND m.review_reason = 'LOW_CONFIDENCE'
+  AND coalesce(m.classification ->> 'method', 'auto') = 'auto'
+ORDER BY i.path_cache, i.name;
+
+-- name: UpsertDrivePublisher :one
+INSERT INTO drive_publishers (group_id, google_email, refresh_token_enc, scopes, connected_by)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (group_id) DO UPDATE
+SET google_email = EXCLUDED.google_email, refresh_token_enc = EXCLUDED.refresh_token_enc,
+    scopes = EXCLUDED.scopes, connected_by = EXCLUDED.connected_by, last_error = NULL,
+    created_at = now()
+RETURNING *;
+
+-- name: GetDrivePublisher :one
+SELECT * FROM drive_publishers WHERE group_id = $1;
+
+-- name: DeleteDrivePublisher :exec
+DELETE FROM drive_publishers WHERE group_id = $1;
+
+-- name: SetDrivePublisherError :exec
+UPDATE drive_publishers SET last_error = $2 WHERE group_id = $1;

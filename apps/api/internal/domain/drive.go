@@ -37,6 +37,16 @@ type DriveFile struct {
 	DriveID       string
 	CanAddChild   bool
 	AppProperties map[string]string
+	// HeadRevisionID is the current content revision (binary files only).
+	HeadRevisionID string
+}
+
+// DriveRevision is a stored revision of a binary Drive file.
+type DriveRevision struct {
+	ID           string
+	MD5          string
+	Size         int64
+	ModifiedTime time.Time
 }
 
 // IsFolder reports whether the file is a folder.
@@ -104,7 +114,62 @@ type DriveClient interface {
 	Download(ctx context.Context, fileID, rangeHeader string) (*DriveContent, error)
 	// Export converts a native Google document (to PDF by default).
 	Export(ctx context.Context, fileID, mime string) (*DriveContent, error)
+	// ListRevisions returns the revisions Google still keeps for a binary file.
+	ListRevisions(ctx context.Context, fileID string) ([]DriveRevision, error)
+	// DownloadRevision streams the content of one revision (Range passed through).
+	DownloadRevision(ctx context.Context, fileID, revisionID, rangeHeader string) (*DriveContent, error)
 	Upload(ctx context.Context, u DriveUpload) (*DriveFile, error)
+}
+
+// DrivePublisher is the Google account that publishes uploads to the group's
+// Drive folder (D34). The refresh token is sealed; only the Drive service
+// opens it.
+type DrivePublisher struct {
+	GroupID         uuid.UUID
+	Email           string
+	RefreshTokenEnc []byte
+	Scopes          string
+	LastError       *string
+	ConnectedBy     *uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
+// Usable reports whether uploads can go through the account: Google has not
+// rejected its token.
+func (p *DrivePublisher) Usable() bool { return p != nil && p.LastError == nil }
+
+// CanPublishToDrive reports whether uploads can be copied to the connected
+// folder: by the publishing account, or by the service account inside a
+// shared drive (it has no storage quota in "My Drive"). pub is nil when no
+// account is connected or the server cannot use one.
+func CanPublishToDrive(conn *DriveConnection, pub *DrivePublisher) bool {
+	if conn == nil {
+		return false
+	}
+	return pub.Usable() || (conn.Writable && conn.DriveID != nil)
+}
+
+// DriveGrant is the result of a completed Google sign-in for publishing.
+type DriveGrant struct {
+	RefreshToken string
+	Email        string
+	Scopes       string
+}
+
+// DriveAuthorizer runs the OAuth flow of the publishing account and builds a
+// Drive client acting on its behalf.
+type DriveAuthorizer interface {
+	// AuthURL is the Google consent page; state comes back to the callback.
+	AuthURL(state string) string
+	// Exchange trades the callback's code for a refresh token. It fails with
+	// CodeDriveScopeMissing when the user did not grant Drive access.
+	Exchange(ctx context.Context, code string) (*DriveGrant, error)
+	// Client acts as the account; a revoked token surfaces as
+	// CodeDrivePublisherRevoked on the first call.
+	Client(ctx context.Context, refreshToken string) (DriveClient, error)
+	// Revoke invalidates the refresh token at Google.
+	Revoke(ctx context.Context, refreshToken string) error
 }
 
 // DriveConnectionStatus is the sync state of a connection.
@@ -127,6 +192,7 @@ type DriveConnection struct {
 	DriveID          *string
 	Status           DriveConnectionStatus
 	LastError        *string
+	LastErrorCode    *string
 	SyncStartedAt    *time.Time
 	LastSyncAt       *time.Time
 	LastFullScanAt   *time.Time

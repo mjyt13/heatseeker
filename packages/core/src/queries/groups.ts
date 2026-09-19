@@ -7,6 +7,7 @@ import { useSession } from '../session';
 import { keys } from './keys';
 
 type Preview = components['schemas']['PreviewOutputBody'];
+export type GroupSearchItem = components['schemas']['GroupSearchItemDTO'];
 type MembersBody = components['schemas']['MembersOutputBody'];
 
 /** Группы текущего пользователя. */
@@ -49,14 +50,31 @@ export function useGroupPreview(code: string | null | undefined) {
   });
 }
 
+/** Открытые группы по части названия (пустая строка — все открытые). */
+export function useGroupSearch(query: string, enabled = true) {
+  const api = useApi();
+  const status = useSession((s) => s.status);
+  const q = query.trim();
+  return useQuery({
+    queryKey: keys.groupSearch(q),
+    enabled: enabled && status === 'authenticated',
+    staleTime: 30_000,
+    placeholderData: (previous) => previous,
+    queryFn: async (): Promise<GroupSearchItem[]> =>
+      unwrap(await api.GET('/groups/search', { params: { query: q ? { q } : {} } })).items ?? [],
+  });
+}
+
 /** Создать группу; становится текущей. */
 export function useCreateGroup() {
   const api = useApi();
   const qc = useQueryClient();
   const setCurrentGroup = useSession((s) => s.setCurrentGroup);
   return useMutation({
-    mutationFn: async (body: { name: string; kind?: 'MASTERS' | 'DPO' | 'OTHER' }): Promise<GroupWithMembership> =>
-      unwrap(await api.POST('/groups', { body })),
+    mutationFn: async (body: {
+      name: string;
+      kind?: 'MASTERS' | 'DPO' | 'OTHER';
+    }): Promise<GroupWithMembership> => unwrap(await api.POST('/groups', { body })),
     onSuccess: async (gm) => {
       qc.setQueryData(keys.group(gm.group.id), gm);
       await qc.invalidateQueries({ queryKey: keys.myGroups() });
@@ -81,6 +99,40 @@ export function useJoinGroup() {
   });
 }
 
+/** Вступить в открытую группу из поиска; группа становится текущей. */
+export function useJoinOpenGroup() {
+  const api = useApi();
+  const qc = useQueryClient();
+  const setCurrentGroup = useSession((s) => s.setCurrentGroup);
+  return useMutation({
+    mutationFn: async (groupId: string): Promise<GroupWithMembership> =>
+      unwrap(await api.POST('/groups/{groupId}/join', { params: { path: { groupId } } })),
+    onSuccess: async (gm) => {
+      qc.setQueryData(keys.group(gm.group.id), gm);
+      await qc.invalidateQueries({ queryKey: keys.myGroups() });
+      await qc.invalidateQueries({ queryKey: ['groups', 'search'] });
+      await setCurrentGroup(gm.group.id);
+    },
+  });
+}
+
+/** Сменить код группы (старый перестаёт работать). */
+export function useRotateJoinCode(groupId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      unwrap(
+        await api.POST('/groups/{groupId}/join-code/rotate', { params: { path: { groupId } } }),
+      ),
+    onSuccess: (group) => {
+      qc.setQueryData<GroupWithMembership>(keys.group(groupId), (prev) =>
+        prev ? { ...prev, group } : prev,
+      );
+    },
+  });
+}
+
 /** Участники группы. */
 export function useMembers(groupId: string | null | undefined) {
   const api = useApi();
@@ -88,6 +140,8 @@ export function useMembers(groupId: string | null | undefined) {
     queryKey: keys.members(groupId ?? ''),
     enabled: !!groupId,
     queryFn: async (): Promise<MembersBody> =>
-      unwrap(await api.GET('/groups/{groupId}/members', { params: { path: { groupId: groupId! } } })),
+      unwrap(
+        await api.GET('/groups/{groupId}/members', { params: { path: { groupId: groupId! } } }),
+      ),
   });
 }

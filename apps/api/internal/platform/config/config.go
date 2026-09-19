@@ -66,6 +66,7 @@ type Auth struct {
 	RefreshTokenTTLDays   int           `env:"REFRESH_TOKEN_TTL_DAYS" envDefault:"180"`
 	RefreshTokenPepper    string        `env:"REFRESH_TOKEN_PEPPER,required"`
 	GoogleClientID        string        `env:"GOOGLE_OAUTH_CLIENT_ID"`
+	GoogleClientSecret    string        `env:"GOOGLE_OAUTH_CLIENT_SECRET"`
 	GoogleAndroidClientID string        `env:"GOOGLE_OAUTH_ANDROID_CLIENT_ID"`
 	GoogleIOSClientID     string        `env:"GOOGLE_OAUTH_IOS_CLIENT_ID"`
 	RequireSecuredFor     []string      `env:"AUTH_REQUIRE_SECURED_FOR" envSeparator:"," envDefault:"admin,moderation,headman,drive_upload"`
@@ -93,10 +94,14 @@ type Media struct {
 	PresignTTLSec        int      `env:"PRESIGN_TTL_SEC" envDefault:"900"`
 	TmpUploadTTLHours    int      `env:"TMP_UPLOAD_TTL_HOURS" envDefault:"24"`
 	UploadMaxSizeMB      int      `env:"UPLOAD_MAX_SIZE_MB" envDefault:"200"`
-	UploadAllowedExt     []string `env:"UPLOAD_ALLOWED_EXT" envSeparator:"," envDefault:"pdf,doc,docx,ppt,pptx,xls,xlsx,rtf,odt,odp,ods,txt,md,csv,png,jpg,jpeg,webp,heic,zip"`
+	UploadAllowedExt     []string `env:"UPLOAD_ALLOWED_EXT" envSeparator:"," envDefault:"pdf,doc,docx,ppt,pptx,xls,xlsx,rtf,odt,odp,ods,txt,md,csv,png,jpg,jpeg,webp,heic,zip,mp3,m4a,ogg,flac,wav,mp4,mov,webm,mkv"`
 	HardDeleteAfterDays  int      `env:"MATERIAL_HARD_DELETE_AFTER_DAYS" envDefault:"30"`
 	MaterialHashMaxMB    int      `env:"MATERIAL_HASH_MAX_MB" envDefault:"500"`
 	StreamTokenTTLMinute int      `env:"MEDIA_STREAM_TOKEN_TTL_MIN" envDefault:"60"`
+	// OfficePreviewURL is the Gotenberg endpoint that turns office files into
+	// PDF previews; empty disables previews (files are downloaded instead).
+	OfficePreviewURL   string `env:"OFFICE_PREVIEW_URL"`
+	OfficePreviewMaxMB int    `env:"OFFICE_PREVIEW_MAX_MB" envDefault:"50"`
 }
 
 // PresignTTL is the lifetime of direct upload/download URLs.
@@ -126,7 +131,19 @@ type GDrive struct {
 	ClassifyMinConfidence    float64 `env:"GDRIVE_CLASSIFY_MIN_CONFIDENCE" envDefault:"0.6"`
 	DeletePolicy             string  `env:"GDRIVE_DELETE_POLICY" envDefault:"flag"`
 	FeatureUpload            bool    `env:"FEATURE_DRIVE_UPLOAD" envDefault:"false"`
-	UploadMode               string  `env:"DRIVE_UPLOAD_MODE" envDefault:"service_account"`
+	// OAuthRedirectURL is where Google returns after the publishing account
+	// signs in (D34). Empty: localhost in development (Google accepts no LAN
+	// IPs), APP_BASE_URL otherwise.
+	OAuthRedirectURL string `env:"GDRIVE_OAUTH_REDIRECT_URL"`
+}
+
+// DriveOAuthCallbackPath is the API route Google redirects to.
+const DriveOAuthCallbackPath = "/api/v1/drive/oauth/callback"
+
+// PublisherOAuthEnabled reports whether a publishing Google account can be
+// connected: an OAuth web client is configured next to the service account.
+func (c *Config) PublisherOAuthEnabled() bool {
+	return c.GDrive.Enabled() && c.Auth.GoogleClientID != "" && c.Auth.GoogleClientSecret != ""
 }
 
 // Enabled reports whether a service account key is configured.
@@ -192,6 +209,19 @@ func (c *Config) validate() error {
 	errs = append(errs, c.Media.validate()...)
 	errs = append(errs, c.Storage.validate()...)
 	errs = append(errs, c.GDrive.validate()...)
+	if c.Auth.GoogleClientSecret != "" && c.Auth.GoogleClientID == "" {
+		errs = append(errs, errors.New("GOOGLE_OAUTH_CLIENT_SECRET requires GOOGLE_OAUTH_CLIENT_ID"))
+	}
+	if c.PublisherOAuthEnabled() && c.App.EncryptionKey == "" {
+		errs = append(errs, errors.New("APP_ENCRYPTION_KEY is required to store the publishing Google account's token (GOOGLE_OAUTH_CLIENT_SECRET is set)"))
+	}
+	if c.GDrive.OAuthRedirectURL == "" {
+		base := strings.TrimRight(c.App.BaseURL, "/")
+		if c.IsDev() {
+			base = fmt.Sprintf("http://localhost:%d", c.App.Port)
+		}
+		c.GDrive.OAuthRedirectURL = base + DriveOAuthCallbackPath
+	}
 	return errors.Join(errs...)
 }
 
@@ -211,6 +241,13 @@ func (m *Media) validate() []error {
 	}
 	if m.StreamTokenTTLMinute <= 0 {
 		errs = append(errs, errors.New("MEDIA_STREAM_TOKEN_TTL_MIN must be positive"))
+	}
+	m.OfficePreviewURL = strings.TrimRight(strings.TrimSpace(m.OfficePreviewURL), "/")
+	if m.OfficePreviewURL != "" && !strings.HasPrefix(m.OfficePreviewURL, "http://") && !strings.HasPrefix(m.OfficePreviewURL, "https://") {
+		errs = append(errs, errors.New("OFFICE_PREVIEW_URL must be an http(s) URL"))
+	}
+	if m.OfficePreviewMaxMB <= 0 {
+		errs = append(errs, errors.New("OFFICE_PREVIEW_MAX_MB must be positive"))
 	}
 	exts := make([]string, 0, len(m.UploadAllowedExt))
 	for _, e := range m.UploadAllowedExt {
@@ -265,14 +302,6 @@ func (g *GDrive) validate() []error {
 	g.DeletePolicy = strings.ToLower(strings.TrimSpace(g.DeletePolicy))
 	if g.DeletePolicy != "flag" && g.DeletePolicy != "archive" {
 		errs = append(errs, fmt.Errorf("GDRIVE_DELETE_POLICY must be flag|archive, got %q", g.DeletePolicy))
-	}
-	g.UploadMode = strings.ToLower(strings.TrimSpace(g.UploadMode))
-	switch g.UploadMode {
-	case "service_account":
-	case "user_oauth":
-		errs = append(errs, errors.New("DRIVE_UPLOAD_MODE=user_oauth is not implemented yet; use service_account"))
-	default:
-		errs = append(errs, fmt.Errorf("DRIVE_UPLOAD_MODE must be service_account, got %q", g.UploadMode))
 	}
 	if g.FeatureUpload && !g.Enabled() {
 		errs = append(errs, errors.New("FEATURE_DRIVE_UPLOAD requires GDRIVE_SERVICE_ACCOUNT_JSON_BASE64"))

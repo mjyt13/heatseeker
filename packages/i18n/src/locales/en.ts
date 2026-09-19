@@ -4,6 +4,7 @@ export default {
     "name": "Heatseeker"
   },
   "common": {
+    "close": "Close",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -33,6 +34,7 @@ export default {
     "name_placeholder": "First and last name",
     "continue": "Continue",
     "have_account": "Already have a secured account? Sign in",
+    "dev_api": "API (dev): {{url}}",
     "login_title": "Sign in",
     "email": "Email",
     "password": "Password",
@@ -44,7 +46,9 @@ export default {
     "logout_all": "Sign out everywhere",
     "password_hint": "At least {{min}} characters",
     "code_optional": "Group code (optional)",
-    "code_hint": "If you have a code or an invite link. Without one you can create or join a group after signing in."
+    "code_hint": "If you have an invite code. Without one you can find the group by name after signing in.",
+    "password_show": "Show",
+    "password_hide": "Hide"
   },
   "groups": {
     "title": "Groups",
@@ -63,7 +67,26 @@ export default {
     "members": "Members",
     "invites": "Invites",
     "settings": "Group settings",
-    "switch": "Switch group"
+    "switch": "Switch group",
+    "mine": "My groups",
+    "find": "Find a group",
+    "find_placeholder": "Group name",
+    "find_empty": "Nothing found. Check the name or ask your headman for a code.",
+    "join_action": "Join",
+    "member_badge": "You're in",
+    "have_code": "Have an invite code?",
+    "code_hint": "The code comes from an invitation; it is not the group name.",
+    "code_not_found": "The code didn't work",
+    "invite_title": "Invite to the group",
+    "invite_hint": "The group can be found by name. The code is for those who prefer it.",
+    "code": "Group code",
+    "copy_code": "Copy",
+    "copied": "Copied",
+    "share_code": "Share",
+    "share_message": "Join “{{name}}” on Heatseeker: find it by name or enter the code {{code}}",
+    "rotate_code": "New code",
+    "rotate_confirm": "The old code will stop working. Continue?",
+    "no_code": "Invitation only"
   },
   "roles": {
     "OWNER": "Owner",
@@ -95,10 +118,13 @@ export default {
     "archived": "Archived",
     "manage": "Group subjects",
     "saved": "Subject saved",
-    "aliases_hint": "Comma-separated: how the subject is called in folders and files"
+    "aliases_hint": "How the subject is called in Drive folders and files. Inbox files will be sorted again.",
+    "alias_placeholder": "E.g. “Calculus” or “Smith lectures”",
+    "alias_add": "Add",
+    "alias_remove": "Remove alias “{{alias}}”"
   },
   "errors": {
-    "network": "Could not reach the server",
+    "network": "Server unreachable: {{server}}",
     "unauthorized": "Session expired — sign in again",
     "forbidden": "Not enough permissions",
     "not_found": "Not found",
@@ -108,7 +134,22 @@ export default {
     "unknown": "Something went wrong",
     "too_large": "File is too large",
     "unavailable": "This feature is unavailable on the server",
-    "range": "Could not read part of the file"
+    "range": "Could not read part of the file",
+    "codes": {
+      "drive_not_configured": "Google Drive is not configured on the server (no service account key)",
+      "drive_api_disabled": "Google Drive API is not enabled in the server's Cloud project — enable it in Google Cloud Console",
+      "drive_auth_failed": "Google rejected the service account key — check the key on the server",
+      "folder_link": "Paste a link to a Google Drive folder",
+      "folder_not_shared": "The folder was not found or is not shared with {{email}}",
+      "not_a_folder": "The link points to a file, not a folder",
+      "folder_trashed": "The folder is in the trash",
+      "version_unavailable": "This version is no longer available: Google Drive keeps old file versions for about 30 days. Open the current version.",
+      "drive_oauth_not_configured": "Connecting a Google account is not configured on the server (GOOGLE_OAUTH_CLIENT_ID and SECRET)",
+      "drive_scope_missing": "Google did not grant Drive access — tick the Google Drive item when signing in",
+      "drive_publisher_no_access": "This Google account cannot edit the group folder",
+      "drive_publisher_revoked": "Google revoked the publishing account — reconnect it on the Drive screen",
+      "drive_publisher_required": "To publish to \"My Drive\", the head has to connect their Google account on the Drive screen"
+    }
   },
   "feed": {
     "empty_hint": "Group materials will appear here."
@@ -137,12 +178,25 @@ export default {
     "material_added": "New material",
     "material_updated": "Material changed",
     "material_classified": "Material sorted",
+    "material_bulk_classified": "Several materials sorted",
     "material_archived": "Material archived",
     "material_restored": "Material restored",
     "material_deleted": "Material deleted",
     "drive_connected": "Google Drive folder connected",
     "drive_disconnected": "Google Drive disconnected",
-    "drive_synced": "Google Drive synced"
+    "drive_synced": "Google Drive synced",
+    "drive_reclassified": "Files sorted automatically",
+    "drive_publisher_connected": "Google account for publishing connected",
+    "drive_publisher_disconnected": "Google account for publishing disconnected"
+  },
+  "file_types": {
+    "ALL": "All files",
+    "DOCUMENT": "Documents",
+    "IMAGE": "Images",
+    "AUDIO": "Audio",
+    "VIDEO": "Video",
+    "ARCHIVE": "Archives",
+    "OTHER": "Other"
   },
   "units": {
     "b": "B",
@@ -157,6 +211,15 @@ export default {
     "CALC": "Calculation",
     "ASSIGNMENT": "Assignment",
     "OTHER": "Other"
+  },
+  "player": {
+    "listen_audio": "Listen",
+    "listen_video": "Watch",
+    "play": "Play",
+    "pause": "Pause",
+    "rewind": "Back {{seconds}} s",
+    "forward": "Forward {{seconds}} s",
+    "loading": "Loading…"
   },
   "materials": {
     "title": "Materials",
@@ -173,6 +236,12 @@ export default {
     "tags": "Tags",
     "description": "Description",
     "versions": "Versions",
+    "preview_preparing": "Preparing the preview…",
+    "preview_problem": {
+      "timeout": "The preview is still being prepared — try again in a minute or download the file.",
+      "too_large": "The file is too large to view in the app — download it.",
+      "failed": "Could not prepare a preview of this file — download it."
+    },
     "version_n": "Version {{n}}",
     "drive_path": "Drive folder",
     "opened_times_one": "Opened {{count}} time",
@@ -203,6 +272,8 @@ export default {
     "picked": "{{name}} · {{size}}",
     "to_drive": "Publish to the group's Google Drive folder",
     "to_drive_needs_secure": "Secure your account under “More” to publish to Drive.",
+    "to_drive_needs_publisher": "Publishing to Google Drive appears once the head connects their Google account (More → Google Drive). The file is kept in the app.",
+    "to_drive_publisher_revoked": "Publishing to Google Drive stopped: Google revoked the head's account — it has to be reconnected (More → Google Drive).",
     "subject_auto": "Detect from file name",
     "kind_auto": "Detect from file name",
     "send": "Upload",
@@ -220,7 +291,19 @@ export default {
     "empty": "All sorted",
     "confirm": "Confirm",
     "learn_alias": "Remember folder “{{folder}}” for this subject",
-    "choose_subject": "Choose a subject"
+    "choose_subject": "Choose a subject",
+    "select": "Select",
+    "select_done": "Done",
+    "select_all": "Select all loaded",
+    "selected_one": "{{count}} material selected",
+    "selected_other": "{{count}} materials selected",
+    "bulk_kind_keep": "Keep kind",
+    "bulk_apply": "Sort selected",
+    "bulk_done_one": "{{count}} material sorted",
+    "bulk_done_other": "{{count}} materials sorted",
+    "learned": "Folder “{{alias}}” is now an alias of “{{subject}}”. Similar files will be sorted automatically.",
+    "undo": "Undo",
+    "undone": "Alias “{{alias}}” removed"
   },
   "drive": {
     "title": "Google Drive",
@@ -247,13 +330,29 @@ export default {
     "never": "never",
     "read_only": "The service account can only read the folder — publishing from the app is unavailable.",
     "writable": "Publishing from the app is available",
+    "needs_publisher": "Publishing from the app starts once a Google account is connected (below).",
     "shared_drive": "Shared drive",
     "stats": "Files: {{files}} · folders: {{folders}} · skipped: {{skipped}} · in inbox: {{inbox}}",
     "needs_manage": "Headmen and admins with a secured account can connect Drive.",
-    "items": "Indexed files"
+    "items": "Indexed files",
+    "publisher": {
+      "title": "Publishing uploads to Drive",
+      "hint": "The service account cannot store files in \"My Drive\" — it has no storage of its own. Connect the folder owner's Google account: uploads will appear on Drive on its behalf and in its quota.",
+      "hint_shared": "The folder is in a shared drive — the service account publishes by itself. You can still connect a Google account so files are created on its behalf.",
+      "connect": "Connect a Google account",
+      "reconnect": "Reconnect",
+      "disconnect": "Disconnect",
+      "disconnect_confirm": "Disconnect {{email}}? Access is revoked at Google and publishing to \"My Drive\" stops.",
+      "active": "Uploads are published on behalf of this account",
+      "revoked": "Google revoked access — reconnect the account",
+      "after_sign_in": "Come back here after signing in to Google — the status will refresh.",
+      "dev_hint": "In development Google returns to localhost: connect from a browser on the computer (the web version of the app)."
+    }
   },
   "activity": {
-    "title": "Group activity"
+    "title": "Group activity",
+    "files_one": "{{count}} file",
+    "files_other": "{{count}} files"
   },
   "more": {
     "section_group": "Group",

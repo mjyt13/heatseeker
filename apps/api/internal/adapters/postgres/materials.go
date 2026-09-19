@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -81,14 +82,21 @@ func toVersion(v sqlcgen.MaterialVersion) *domain.MaterialVersion {
 		DriveWebViewLink:  v.DriveWebViewLink,
 		DriveMD5:          v.DriveMd5,
 		DriveModifiedTime: v.DriveModifiedTime,
+		DriveRevisionID:   v.DriveRevisionID,
 		DriveUploadError:  v.DriveUploadError,
 		OriginalName:      v.OriginalName,
 		Mime:              v.Mime,
 		SizeBytes:         v.SizeBytes,
 		SHA256:            v.Sha256,
 		ScanStatus:        domain.ScanStatus(v.ScanStatus),
+		PreviewKey:        v.PreviewKey,
+		PreviewError:      v.PreviewError,
 		UploadedBy:        v.UploadedBy,
 		CreatedAt:         v.CreatedAt,
+	}
+	if v.PreviewStatus != nil {
+		ps := domain.PreviewStatus(*v.PreviewStatus)
+		out.PreviewStatus = &ps
 	}
 	if v.DriveUploadStatus != nil {
 		st := domain.DriveUploadStatus(*v.DriveUploadStatus)
@@ -177,6 +185,10 @@ func (r *materialRepo) List(ctx context.Context, f domain.MaterialFilter) ([]dom
 	}
 	if params.TagIds == nil {
 		params.TagIds = []uuid.UUID{}
+	}
+	params.MimePatterns = []string{}
+	if f.FileType != nil {
+		params.MimePatterns, params.MimeExclude = f.FileType.MimePatterns()
 	}
 	if f.Kind != nil {
 		k := string(*f.Kind)
@@ -308,6 +320,7 @@ func (r *materialRepo) CreateVersion(ctx context.Context, v domain.MaterialVersi
 		DriveWebViewLink:  v.DriveWebViewLink,
 		DriveMd5:          v.DriveMD5,
 		DriveModifiedTime: v.DriveModifiedTime,
+		DriveRevisionID:   v.DriveRevisionID,
 		DriveUploadStatus: uploadStatus,
 		OriginalName:      v.OriginalName,
 		Mime:              v.Mime,
@@ -355,6 +368,31 @@ func (r *materialRepo) UpdateVersionFile(ctx context.Context, v domain.MaterialV
 		DriveWebViewLink:  v.DriveWebViewLink,
 		DriveMd5:          v.DriveMD5,
 		DriveModifiedTime: v.DriveModifiedTime,
+		DriveRevisionID:   v.DriveRevisionID,
+	}), "material version")
+}
+
+func (r *materialRepo) ClaimVersionPreview(ctx context.Context, versionID uuid.UUID) (bool, error) {
+	_, err := r.s.queries(ctx).ClaimVersionPreview(ctx, versionID)
+	switch err = mapErr(err, "material version"); {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, domain.ErrNotFound): // already requested or tried
+		return false, nil
+	}
+	return false, err
+}
+
+func (r *materialRepo) SetVersionPreview(ctx context.Context, versionID uuid.UUID, status domain.PreviewStatus, key, errMsg *string) error {
+	st := string(status)
+	return mapErr(r.s.queries(ctx).SetVersionPreview(ctx, sqlcgen.SetVersionPreviewParams{
+		ID: versionID, PreviewStatus: &st, PreviewKey: key, PreviewError: errMsg,
+	}), "material version")
+}
+
+func (r *materialRepo) SetVersionDriveRevision(ctx context.Context, versionID uuid.UUID, revisionID string) error {
+	return mapErr(r.s.queries(ctx).SetVersionDriveRevision(ctx, sqlcgen.SetVersionDriveRevisionParams{
+		ID: versionID, DriveRevisionID: &revisionID,
 	}), "material version")
 }
 

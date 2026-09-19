@@ -35,7 +35,7 @@ func (r SyncResult) changed() bool { return r.Added+r.Updated+r.Removed > 0 }
 // safe to run concurrently: only one run holds a connection at a time.
 func (s *Service) Sync(ctx context.Context, connID uuid.UUID, forceFull bool) (*SyncResult, error) {
 	if s.Client == nil {
-		return nil, domain.Unavailable("Google Drive is not configured on this server")
+		return nil, errNotConfigured()
 	}
 	conn, err := s.Repo.GetConnection(ctx, connID)
 	if errors.Is(err, domain.ErrNotFound) {
@@ -107,11 +107,20 @@ func (s *Service) Sync(ctx context.Context, connID uuid.UUID, forceFull bool) (*
 
 func (s *Service) fail(ctx context.Context, conn *domain.DriveConnection, full bool, cause error) error {
 	msg := cause.Error()
-	if len(msg) > 500 {
-		msg = msg[:500]
+	if runes := []rune(msg); len(runes) > 500 {
+		msg = string(runes[:500])
+	}
+	var code *string
+	switch c := domain.ErrorCode(cause); {
+	case c != "":
+		code = &c
+	case errors.Is(cause, domain.ErrNotFound), errors.Is(cause, domain.ErrForbidden):
+		// The root folder was deleted or unshared from the service account.
+		c = domain.CodeFolderNotShared
+		code = &c
 	}
 	err := s.Repo.FinishSync(context.WithoutCancel(ctx), domain.FinishSyncParams{
-		ID: conn.ID, Status: domain.DriveError, LastError: &msg, FullScan: full, CompletedAt: s.Clock.Now(),
+		ID: conn.ID, Status: domain.DriveError, LastError: &msg, LastErrorCode: code, FullScan: full, CompletedAt: s.Clock.Now(),
 	})
 	if err != nil {
 		s.Log.Error("record drive sync failure", "connection", conn.ID, "err", err)
@@ -142,7 +151,7 @@ func (r *syncRun) fullScan(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("root folder: %w", err)
 	}
 	if root.Trashed {
-		return "", domain.Invalid("folder", "the connected folder was moved to the trash")
+		return "", domain.WithCode(domain.CodeFolderTrashed, domain.Invalid("folder", "the connected folder was moved to the trash"))
 	}
 	scanStart := s.Clock.Now()
 	type node struct {
@@ -587,7 +596,7 @@ func (r *syncRun) removed(ctx context.Context, item *domain.DriveItem) error {
 func driveVersion(f *domain.DriveFile) domain.MaterialVersion {
 	v := domain.MaterialVersion{
 		Storage: domain.StorageDrive, DriveFileID: &f.ID, DriveWebViewLink: strPtr(f.WebViewLink),
-		DriveMD5: strPtr(f.MD5), DriveModifiedTime: timePtr(f.ModifiedTime),
+		DriveMD5: strPtr(f.MD5), DriveModifiedTime: timePtr(f.ModifiedTime), DriveRevisionID: strPtr(f.HeadRevisionID),
 		OriginalName: f.Name, Mime: f.MimeType, ScanStatus: domain.ScanSkipped,
 	}
 	if !f.IsGoogleDoc() {

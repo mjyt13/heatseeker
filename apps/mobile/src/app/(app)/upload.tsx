@@ -74,11 +74,18 @@ export default function UploadScreen() {
 
   const driveAvailable =
     !!meta.data?.features.drive_upload &&
-    !!drive.data?.connection?.writable &&
+    !!drive.data?.can_publish &&
     ctx.permissions.can('drive.upload');
+  // A folder is connected, but nobody can write to it yet (no publishing
+  // account for "My Drive", or Google revoked it).
+  const driveBlocked =
+    !!meta.data?.features.drive_upload &&
+    !!drive.data?.connection &&
+    !drive.data.can_publish &&
+    !!drive.data.publisher_available;
   const driveNeedsSecure =
     !!meta.data?.features.drive_upload &&
-    !!drive.data?.connection?.writable &&
+    !!drive.data?.can_publish &&
     ctx.permissions.needsSecuring('drive.upload');
 
   const pick = async () => {
@@ -172,6 +179,12 @@ export default function UploadScreen() {
           </XStack>
         ) : driveNeedsSecure ? (
           <Paragraph color="$color10">{t('upload.to_drive_needs_secure')}</Paragraph>
+        ) : driveBlocked ? (
+          <Paragraph color="$color10">
+            {drive.data?.publisher?.last_error
+              ? t('upload.to_drive_publisher_revoked')
+              : t('upload.to_drive_needs_publisher')}
+          </Paragraph>
         ) : null}
 
         <Separator />

@@ -65,3 +65,63 @@ func Forbidden(reason string) error {
 func Conflict(reason string) error {
 	return fmt.Errorf("%w: %s", ErrConflict, reason)
 }
+
+// ErrorPrefix is the RFC 7807 problem type used for coded errors:
+// "urn:heatseeker:error:<code>". Clients translate the code.
+const ErrorPrefix = "urn:heatseeker:error:"
+
+// Machine-readable error codes (see ErrorPrefix). Keep in sync with the i18n
+// keys errors.codes.* in packages/i18n.
+const (
+	CodeDriveNotConfigured = "drive_not_configured"
+	CodeDriveAPIDisabled   = "drive_api_disabled"
+	CodeDriveAuthFailed    = "drive_auth_failed"
+	CodeFolderLink         = "folder_link"
+	CodeFolderNotShared    = "folder_not_shared"
+	CodeNotAFolder         = "not_a_folder"
+	CodeFolderTrashed      = "folder_trashed"
+	// CodeVersionUnavailable: Google Drive no longer keeps the revision of an
+	// older version (revisions expire after ~30 days unless kept forever).
+	CodeVersionUnavailable = "version_unavailable"
+	// Publishing through the head's Google account (D34).
+	CodeDriveOAuthNotConfigured = "drive_oauth_not_configured"
+	CodeDriveScopeMissing       = "drive_scope_missing"
+	CodeDrivePublisherNoAccess  = "drive_publisher_no_access"
+	CodeDrivePublisherRevoked   = "drive_publisher_revoked"
+	CodeDrivePublisherRequired  = "drive_publisher_required"
+)
+
+// AllErrorCodes lists the codes, exported to packages/shared.
+var AllErrorCodes = []string{
+	CodeDriveNotConfigured, CodeDriveAPIDisabled, CodeDriveAuthFailed,
+	CodeFolderLink, CodeFolderNotShared, CodeNotAFolder, CodeFolderTrashed, CodeVersionUnavailable,
+	CodeDriveOAuthNotConfigured, CodeDriveScopeMissing, CodeDrivePublisherNoAccess,
+	CodeDrivePublisherRevoked, CodeDrivePublisherRequired,
+}
+
+// codedError attaches a machine-readable code to an error without changing
+// its message or what it unwraps to.
+type codedError struct {
+	code string
+	err  error
+}
+
+func (e *codedError) Error() string { return e.err.Error() }
+func (e *codedError) Unwrap() error { return e.err }
+
+// WithCode tags err with a machine-readable code.
+func WithCode(code string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return &codedError{code: code, err: err}
+}
+
+// ErrorCode returns the outermost code attached with WithCode, or "".
+func ErrorCode(err error) string {
+	var ce *codedError
+	if errors.As(err, &ce) {
+		return ce.code
+	}
+	return ""
+}

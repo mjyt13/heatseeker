@@ -6,8 +6,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useInboxCount, useLogout, useMe, useSetCredentials } from '@heatseeker/core';
 import { LIMITS } from '@heatseeker/shared';
-import { Avatar, Button, ErrorText, Field, H4, ListRow, Paragraph, Screen, ScreenTitle, Separator, YStack } from '@heatseeker/ui';
+import {
+  Avatar,
+  Button,
+  ErrorText,
+  Field,
+  H4,
+  ListRow,
+  Paragraph,
+  Screen,
+  ScreenTitle,
+  Separator,
+  YStack,
+} from '@heatseeker/ui';
 
+import { InviteCard } from '@/components/invite-card';
 import { describeError } from '@/lib/errors';
 import { useGroupContext } from '@/lib/group';
 import { tokenStore } from '@/lib/storage';
@@ -35,7 +48,7 @@ export default function MoreScreen() {
           <ListRow
             leading={<Avatar name={user.name} size={44} />}
             title={user.name}
-            subtitle={user.secured ? t('auth.secured') : user.email ?? null}
+            subtitle={user.secured ? t('auth.secured') : (user.email ?? null)}
           />
         ) : null}
 
@@ -68,6 +81,16 @@ export default function MoreScreen() {
           </YStack>
         ) : null}
 
+        {ctx.group.data ? (
+          <>
+            <Separator />
+            <InviteCard
+              group={ctx.group.data.group}
+              canRotate={ctx.permissions.can('group.settings')}
+            />
+          </>
+        ) : null}
+
         <Separator />
 
         {user && !user.secured ? (
@@ -80,14 +103,19 @@ export default function MoreScreen() {
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
-              keyboardType="email-address"
+              type="email"
+              autoComplete="email"
             />
             <Field
               id="secure-password"
               label={t('auth.password')}
               value={password}
               onChangeText={setPassword}
-              secureTextEntry
+              password={{
+                show: t('auth.password_show'),
+                hide: t('auth.password_hide'),
+                isNew: true,
+              }}
               hint={t('auth.password_hint', { min: LIMITS.passwordMin })}
             />
             <ErrorText>{secure.isError ? describeError(t, secure.error) : null}</ErrorText>

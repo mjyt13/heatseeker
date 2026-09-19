@@ -137,10 +137,27 @@ func (s *Service) checkDriveUpload(ctx context.Context, allowed, secured bool, g
 	if err != nil {
 		return err
 	}
-	if !conn.Writable {
-		return domain.Unavailable("the service account can only read the group's Drive folder")
+	var pub *domain.DrivePublisher
+	if s.cfg.DrivePublisherOAuth {
+		pub, err = s.Drive.GetPublisher(ctx, groupID)
+		if errors.Is(err, domain.ErrNotFound) {
+			pub = nil
+		} else if err != nil {
+			return err
+		}
 	}
-	return nil
+	if domain.CanPublishToDrive(conn, pub) {
+		return nil
+	}
+	switch {
+	case conn.DriveID != nil:
+		return domain.Unavailable("the service account can only read the group's Drive folder")
+	case pub != nil:
+		return domain.WithCode(domain.CodeDrivePublisherRevoked,
+			domain.Unavailable(fmt.Sprintf("Google rejected the publishing account %s: reconnect it on the Drive screen", pub.Email)))
+	}
+	return domain.WithCode(domain.CodeDrivePublisherRequired,
+		domain.Unavailable(`publishing to "My Drive" needs the head's Google account connected on the Drive screen`))
 }
 
 // CompleteUpload checks the stored file and turns the upload into a
@@ -247,6 +264,13 @@ func (s *Service) CompleteUpload(ctx context.Context, actorID, uploadID uuid.UUI
 		if err := s.Materials.SetCurrentVersion(ctx, m.ID, versionID); err != nil {
 			return err
 		}
+		// Office files are converted to a PDF preview right away.
+		previewing := s.wantsPreview(v.Mime, v.SizeBytes)
+		if previewing {
+			if _, err := s.Materials.ClaimVersionPreview(ctx, versionID); err != nil {
+				return err
+			}
+		}
 		if len(meta.TagIDs) > 0 {
 			if err := s.Materials.SetTags(ctx, m.ID, meta.TagIDs); err != nil {
 				return err
@@ -264,6 +288,9 @@ func (s *Service) CompleteUpload(ctx context.Context, actorID, uploadID uuid.UUI
 			s.enqueue(domain.Job{Type: domain.JobMaterialHash, Payload: payload, Queue: "low", MaxRetry: 3})
 			if toDrive {
 				s.enqueue(domain.Job{Type: domain.JobDriveUpload, Payload: payload, Queue: "default", MaxRetry: 5})
+			}
+			if previewing {
+				s.enqueuePreview(m.ID, versionID)
 			}
 		})
 		return s.emit(ctx, u.GroupID, domain.EventMaterialAdded, &actorID, m.ID, map[string]any{
@@ -371,6 +398,11 @@ func (s *Service) PurgeDeleted(ctx context.Context) (int, error) {
 		for _, v := range versions {
 			if v.StorageKey != nil && v.Storage != domain.StorageDrive {
 				if err := s.Store.Delete(ctx, *v.StorageKey); err != nil && !errors.Is(err, domain.ErrNotFound) {
+					return 0, err
+				}
+			}
+			if v.PreviewKey != nil {
+				if err := s.Store.Delete(ctx, *v.PreviewKey); err != nil && !errors.Is(err, domain.ErrNotFound) {
 					return 0, err
 				}
 			}

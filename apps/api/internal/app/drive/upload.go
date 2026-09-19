@@ -16,8 +16,9 @@ import (
 // ErrPermanent marks failures that retrying will not fix.
 var ErrPermanent = errors.New("permanent failure")
 
-// UploadVersion publishes an uploaded file to the group's Drive folder on
-// behalf of the service account (method A, docs/PLAN.md §6.3).
+// UploadVersion publishes an uploaded file to the group's Drive folder: on
+// behalf of the group's publishing Google account when one is connected (D34),
+// otherwise by the service account, which can only write into shared drives.
 func (s *Service) UploadVersion(ctx context.Context, materialID, versionID uuid.UUID) error {
 	v, err := s.Materials.GetVersion(ctx, versionID)
 	if errors.Is(err, domain.ErrNotFound) {
@@ -58,8 +59,23 @@ func (s *Service) UploadVersion(ctx context.Context, materialID, versionID uuid.
 	if err != nil {
 		return err
 	}
-	if !conn.Writable {
-		return fail("the service account can only read the group's Drive folder")
+	pub, client, err := s.publisher(ctx, m.GroupID)
+	if err != nil {
+		return fail("cannot use the publishing Google account: " + err.Error())
+	}
+	if !pub.Usable() {
+		client = s.Client
+		switch {
+		case !conn.Writable:
+			return fail("the service account can only read the group's Drive folder")
+		case conn.DriveID != nil:
+			// A shared drive: the service account uploads by itself.
+		case pub != nil:
+			return fail(fmt.Sprintf("Google rejected the publishing account %s: reconnect it on the Drive screen", pub.Email))
+		default:
+			return fail("publishing to \"My Drive\" needs the head's Google account: connect it on the Drive screen")
+		}
+		pub = nil
 	}
 	parentID, path, err := s.uploadFolder(ctx, conn, m.SubjectID)
 	if err != nil {
@@ -80,7 +96,7 @@ func (s *Service) UploadVersion(ctx context.Context, materialID, versionID uuid.
 	}
 	defer func() { _ = body.Close() }()
 
-	file, err := s.Client.Upload(ctx, domain.DriveUpload{
+	file, err := client.Upload(ctx, domain.DriveUpload{
 		Name:        v.OriginalName,
 		MimeType:    v.Mime,
 		ParentID:    parentID,
@@ -92,8 +108,18 @@ func (s *Service) UploadVersion(ctx context.Context, materialID, versionID uuid.
 		Body: body,
 	})
 	switch {
+	case pub != nil && domain.ErrorCode(err) == domain.CodeDrivePublisherRevoked:
+		msg := err.Error()
+		if serr := s.Repo.SetPublisherError(ctx, m.GroupID, &msg); serr != nil {
+			return serr
+		}
+		return fail(fmt.Sprintf("Google rejected the publishing account %s: reconnect it on the Drive screen", pub.Email))
+	case pub != nil && errors.Is(err, domain.ErrDriveQuota):
+		return fail(fmt.Sprintf("the Google Drive of %s is full", pub.Email))
+	case pub != nil && (errors.Is(err, domain.ErrForbidden) || errors.Is(err, domain.ErrNotFound)):
+		return fail(fmt.Sprintf("%s cannot write to the group's Drive folder", pub.Email))
 	case errors.Is(err, domain.ErrDriveQuota):
-		return fail("Google Drive refused the file: the service account has no storage quota. Use a shared drive (Google Workspace) for the group folder")
+		return fail("Google Drive refused the file: the service account has no storage quota. Connect the head's Google account or use a shared drive")
 	case errors.Is(err, domain.ErrForbidden), errors.Is(err, domain.ErrNotFound):
 		return fail("the service account cannot write to the group's Drive folder")
 	case err != nil:

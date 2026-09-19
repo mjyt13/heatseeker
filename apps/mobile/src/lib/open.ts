@@ -8,7 +8,8 @@ import type { MaterialOpen } from '@heatseeker/api-client';
  * браузере; иначе — ссылкой на Google Диск (откроется приложение Диска).
  */
 export async function showMaterial(links: MaterialOpen, preferDrive = false): Promise<void> {
-  const direct = links.download_url ?? links.stream_url;
+  // Office files are viewed through their PDF preview once it is ready.
+  const direct = links.preview_url ?? links.download_url ?? links.stream_url;
   if (preferDrive && links.drive_web_view_link) {
     await Linking.openURL(links.drive_web_view_link);
     return;

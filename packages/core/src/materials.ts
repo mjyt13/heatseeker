@@ -1,4 +1,4 @@
-import type { Material, MaterialKind } from './types';
+import type { FileType, Material, MaterialKind } from './types';
 
 /** Параметры ленты материалов (соответствуют query-параметрам API). */
 export interface MaterialFilter {
@@ -6,6 +6,7 @@ export interface MaterialFilter {
   no_subject?: boolean;
   tag_id?: string[];
   kind?: MaterialKind;
+  file_type?: FileType;
   mine?: boolean;
   inbox?: boolean;
   archived?: boolean;
@@ -31,6 +32,7 @@ export function normalizeFilter(filter: MaterialFilter): MaterialFilter {
   if (filter.no_subject) out.no_subject = true;
   if (filter.tag_id?.length) out.tag_id = [...filter.tag_id].sort();
   if (filter.kind) out.kind = filter.kind;
+  if (filter.file_type) out.file_type = filter.file_type;
   if (filter.mine) out.mine = true;
   if (filter.inbox) out.inbox = true;
   if (filter.archived) out.archived = true;
@@ -61,13 +63,16 @@ export function formatBytes(
   };
 }
 
-export type FileIcon = 'pdf' | 'doc' | 'sheet' | 'slides' | 'image' | 'archive' | 'text' | 'file';
+export type FileIcon =
+  'pdf' | 'doc' | 'sheet' | 'slides' | 'image' | 'audio' | 'video' | 'archive' | 'text' | 'file';
 
 /** Тип иконки по MIME (включая нативные документы Google). */
 export function fileIcon(mime: string): FileIcon {
   if (mime === 'application/pdf') return 'pdf';
   if (mime.startsWith('image/')) return 'image';
-  if (mime === 'application/zip') return 'archive';
+  if (mime.startsWith('audio/')) return 'audio';
+  if (mime.startsWith('video/')) return 'video';
+  if (/zip|x-7z|rar|gzip|x-tar/.test(mime)) return 'archive';
   if (mime.startsWith('text/')) return 'text';
   if (/spreadsheet|excel|google-apps\.spreadsheet/.test(mime)) return 'sheet';
   if (/presentation|powerpoint|google-apps\.presentation/.test(mime)) return 'slides';

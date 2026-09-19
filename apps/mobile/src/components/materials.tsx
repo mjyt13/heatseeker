@@ -2,7 +2,14 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 
 import type { Material, Subject } from '@heatseeker/api-client';
-import { fileIcon, formatBytes, type FileIcon, type MaterialKind } from '@heatseeker/core';
+import {
+  fileIcon,
+  formatBytes,
+  type FileIcon,
+  type FileType,
+  type MaterialKind,
+} from '@heatseeker/core';
+import { FILE_TYPES } from '@heatseeker/shared';
 import { Chip, ListRow, Paragraph, ScrollView, XStack, YStack, useTheme } from '@heatseeker/ui';
 
 import { subjectLabel } from '@/lib/group';
@@ -15,6 +22,8 @@ const icons: Record<FileIcon, IconName> = {
   sheet: 'grid-outline',
   slides: 'easel-outline',
   image: 'image-outline',
+  audio: 'musical-notes-outline',
+  video: 'videocam-outline',
   archive: 'archive-outline',
   text: 'reader-outline',
   file: 'document-attach-outline',
@@ -48,17 +57,25 @@ export interface MaterialRowProps {
   material: Material;
   subject?: Subject;
   uploaderName?: string;
+  /** Показывать «требует разбора» (только тем, кто разбирает «Входящие»). */
+  showReview?: boolean;
   onPress?: () => void;
 }
 
 /** Строка ленты: тип файла, название, предмет · тип · источник. */
-export function MaterialRow({ material, subject, uploaderName, onPress }: MaterialRowProps) {
+export function MaterialRow({
+  material,
+  subject,
+  uploaderName,
+  showReview = true,
+  onPress,
+}: MaterialRowProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const formatSize = useFormatSize();
+  const review = showReview && material.needs_review;
   const parts = [
-    subjectLabel(subject) ??
-      (material.needs_review ? t('materials.needs_review') : t('materials.no_subject')),
+    subjectLabel(subject) ?? (review ? t('materials.needs_review') : t('materials.no_subject')),
     t(`kinds.${material.kind}`),
     material.source === 'GDRIVE'
       ? t('materials.source_drive')
@@ -73,7 +90,7 @@ export function MaterialRow({ material, subject, uploaderName, onPress }: Materi
       title={material.title}
       subtitle={parts.join(' · ')}
       trailing={
-        material.needs_review ? (
+        review ? (
           <Ionicons name="alert-circle-outline" size={18} color={theme.yellow10?.val} />
         ) : undefined
       }
@@ -95,7 +112,13 @@ export function SubjectPicker({
   emptyLabel: string;
 }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} flexGrow={0} flexShrink={0}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      flexGrow={0}
+      flexShrink={0}
+      keyboardShouldPersistTaps="handled"
+    >
       <XStack gap="$2" paddingVertical="$1">
         <Chip label={emptyLabel} selected={value === null} onPress={() => onChange(null)} />
         {subjects
@@ -134,6 +157,42 @@ export function KindPicker({
         <Chip key={k} label={t(`kinds.${k}`)} selected={value === k} onPress={() => onChange(k)} />
       ))}
     </XStack>
+  );
+}
+
+/** Фильтр ленты по типу файла (null — все файлы). */
+export function FileTypePicker({
+  value,
+  onChange,
+}: {
+  value: FileType | null;
+  onChange: (type: FileType | null) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      flexGrow={0}
+      flexShrink={0}
+      keyboardShouldPersistTaps="handled"
+    >
+      <XStack gap="$2" paddingVertical="$1">
+        <Chip
+          label={t('file_types.ALL')}
+          selected={value === null}
+          onPress={() => onChange(null)}
+        />
+        {FILE_TYPES.map((ft) => (
+          <Chip
+            key={ft}
+            label={t(`file_types.${ft}`)}
+            selected={value === ft}
+            onPress={() => onChange(value === ft ? null : ft)}
+          />
+        ))}
+      </XStack>
+    </ScrollView>
   );
 }
 

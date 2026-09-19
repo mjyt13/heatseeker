@@ -1,10 +1,14 @@
 import { expect, test } from 'vitest';
 
+import { ERROR_CODES, EVENT_KINDS, FILE_TYPES } from '@heatseeker/shared';
+
 import { resolveLocale, resources } from '../src';
 
 function keys(obj: Record<string, unknown>, prefix = ''): string[] {
   return Object.entries(obj).flatMap(([k, v]) =>
-    v && typeof v === 'object' ? keys(v as Record<string, unknown>, `${prefix}${k}.`) : [`${prefix}${k}`],
+    v && typeof v === 'object'
+      ? keys(v as Record<string, unknown>, `${prefix}${k}.`)
+      : [`${prefix}${k}`],
   );
 }
 
@@ -20,4 +24,28 @@ test('resolveLocale', () => {
   expect(resolveLocale('en_US')).toBe('en');
   expect(resolveLocale('de')).toBe('ru');
   expect(resolveLocale(undefined)).toBe('ru');
+});
+
+test('every plural has an _other form (fallback when plural rules are unavailable)', () => {
+  for (const [lng, { translation }] of Object.entries(resources)) {
+    const all = new Set(keys(translation));
+    const bases = [...all].filter((k) => k.endsWith('_one')).map((k) => k.slice(0, -'_one'.length));
+    const missing = bases.filter((b) => !all.has(`${b}_other`));
+    expect(missing, lng).toEqual([]);
+    if (lng === 'ru') {
+      expect(bases.filter((b) => !all.has(`${b}_few`) || !all.has(`${b}_many`))).toEqual([]);
+    }
+  }
+});
+
+test('server enums have labels: event kinds, error codes, file types', () => {
+  for (const [lng, { translation }] of Object.entries(resources)) {
+    const all = new Set(keys(translation));
+    const missing = [
+      ...EVENT_KINDS.map((k) => `events.${k.replace('.', '_')}`),
+      ...ERROR_CODES.map((c) => `errors.codes.${c}`),
+      ...FILE_TYPES.map((f) => `file_types.${f}`),
+    ].filter((k) => !all.has(k));
+    expect(missing, lng).toEqual([]);
+  }
 });

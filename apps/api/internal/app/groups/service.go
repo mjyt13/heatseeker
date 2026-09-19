@@ -149,6 +149,22 @@ func (s *Service) Preview(ctx context.Context, code string) (*Preview, error) {
 	return &Preview{Group: *group, Roles: roles, MemberCount: count, ViaInvite: invite != nil}, nil
 }
 
+// SearchLimit caps the number of groups returned by Search.
+const SearchLimit = 20
+
+// Search finds open groups by name for the "join a group" screen (D33). An
+// empty query lists every open group, so a single-group install shows it at once.
+func (s *Service) Search(ctx context.Context, userID uuid.UUID, query string) ([]domain.GroupSearchHit, error) {
+	if _, err := s.access.User(ctx, userID); err != nil {
+		return nil, err
+	}
+	query = strings.Join(strings.Fields(query), " ")
+	if utf8.RuneCountInString(query) > 80 {
+		return nil, domain.Invalid("q", "must be at most 80 characters")
+	}
+	return s.groups.SearchOpen(ctx, userID, query, SearchLimit)
+}
+
 // Join adds the user to the group referenced by an invite code or a group join
 // code. Joining twice is idempotent.
 func (s *Service) Join(ctx context.Context, userID uuid.UUID, code string) (*domain.GroupWithMembership, error) {
@@ -161,40 +177,72 @@ func (s *Service) Join(ctx context.Context, userID uuid.UUID, code string) (*dom
 		if err != nil {
 			return err
 		}
-		existing, err := s.members.Get(ctx, userID, group.ID)
-		switch {
-		case err == nil:
-			if existing.Status == domain.MembershipBanned {
-				return domain.Forbidden("you are banned from this group")
-			}
-			out = &domain.GroupWithMembership{Group: *group, Membership: *existing}
-			return nil
-		case !errors.Is(err, domain.ErrNotFound):
-			return err
-		}
-		via := domain.JoinedViaLink
-		if invite != nil {
-			via = domain.JoinedViaInvite
-			if _, err := s.invites.IncrementUses(ctx, invite.ID); err != nil {
-				return err
-			}
-		}
-		m, err := s.members.Create(ctx, domain.Membership{
-			ID: ids.New(), UserID: userID, GroupID: group.ID, Roles: roles, Status: domain.MembershipActive, JoinedVia: via,
-		})
-		if err != nil {
-			return err
-		}
-		if err := s.emit(ctx, group.ID, domain.EventMemberJoined, &userID, "membership", &m.ID, map[string]any{"user_id": userID, "roles": roles, "via": via}); err != nil {
-			return err
-		}
-		out = &domain.GroupWithMembership{Group: *group, Membership: *m}
-		return nil
+		out, err = s.addMember(ctx, userID, group, roles, invite)
+		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
+}
+
+// JoinOpen adds the user to an open group found by search (D33). Joining twice
+// is idempotent; invitation-only groups are refused.
+func (s *Service) JoinOpen(ctx context.Context, userID, groupID uuid.UUID) (*domain.GroupWithMembership, error) {
+	if _, err := s.access.User(ctx, userID); err != nil {
+		return nil, err
+	}
+	var out *domain.GroupWithMembership
+	err := s.tx.RunInTx(ctx, func(ctx context.Context) error {
+		group, err := s.groups.Get(ctx, groupID)
+		if err != nil {
+			return err
+		}
+		if group.ArchivedAt != nil {
+			return domain.NotFound("group")
+		}
+		if group.JoinPolicy != domain.JoinOpen {
+			return domain.Forbidden("this group joins by invitation only")
+		}
+		out, err = s.addMember(ctx, userID, group, []domain.Role{domain.RoleStudent}, nil)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// addMember creates the membership (or returns the existing one) inside the
+// caller's transaction. invite is nil when joining by group code or search.
+func (s *Service) addMember(ctx context.Context, userID uuid.UUID, group *domain.Group, roles []domain.Role, invite *domain.Invite) (*domain.GroupWithMembership, error) {
+	existing, err := s.members.Get(ctx, userID, group.ID)
+	switch {
+	case err == nil:
+		if existing.Status == domain.MembershipBanned {
+			return nil, domain.Forbidden("you are banned from this group")
+		}
+		return &domain.GroupWithMembership{Group: *group, Membership: *existing}, nil
+	case !errors.Is(err, domain.ErrNotFound):
+		return nil, err
+	}
+	via := domain.JoinedViaLink
+	if invite != nil {
+		via = domain.JoinedViaInvite
+		if _, err := s.invites.IncrementUses(ctx, invite.ID); err != nil {
+			return nil, err
+		}
+	}
+	m, err := s.members.Create(ctx, domain.Membership{
+		ID: ids.New(), UserID: userID, GroupID: group.ID, Roles: roles, Status: domain.MembershipActive, JoinedVia: via,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := s.emit(ctx, group.ID, domain.EventMemberJoined, &userID, "membership", &m.ID, map[string]any{"user_id": userID, "roles": roles, "via": via}); err != nil {
+		return nil, err
+	}
+	return &domain.GroupWithMembership{Group: *group, Membership: *m}, nil
 }
 
 // resolveCode maps a code to (group, roles, invite). Invite codes win over

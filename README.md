@@ -53,7 +53,7 @@ Google Диск (необязательно) — [`docs/GOOGLE-DRIVE.md`](docs/G
 
 ```bash
 # терминал 1 — инфраструктура и миграции
-task dev:up              # Postgres :5433, Redis :6379, MinIO :9100 (консоль :9101), asynqmon :8082
+task dev:up              # Postgres :5433, Redis :6379, MinIO :9100 (консоль :9101), asynqmon :8082, Gotenberg :3030
 task dev:ps              # проверить, что все четыре контейнера Up
 task api:migrate         # применить новые миграции (без изменений — ничего не делает)
 mkdir -p .logs           # логи для отладки (*.log в .gitignore)
@@ -75,6 +75,7 @@ script -q -f -c "pnpm -F mobile start --clear" .logs/mobile.log
 | Swagger API | <http://localhost:8000/api/v1/docs> |
 | Проверка API | <http://localhost:8000/healthz> |
 | Очереди (asynqmon) | <http://localhost:8082> |
+| Превью офисных файлов (Gotenberg) | <http://localhost:3030/health> |
 | MinIO (консоль) | <http://localhost:9101> (по умолчанию `heatseeker` / `heatseeker-dev-secret`) |
 
 Остановить: `Ctrl+C` в терминалах 2–4, затем `task dev:down` (данные сохраняются;
@@ -82,34 +83,27 @@ script -q -f -c "pnpm -F mobile start --clear" .logs/mobile.log
 
 ### На телефоне (Expo Go)
 
-Телефон и компьютер — в одной Wi-Fi-сети. `<IP>` — адрес компьютера (`ip -4 addr`, например
-`192.168.0.104`); Expo показывает его в `exp://<IP>:4173`.
+Телефон и компьютер — в одной Wi-Fi-сети.
 
-1. `apps/mobile/.env.local` (не коммитится; Expo читает его сам):
-   ```
-   EXPO_PUBLIC_API_URL=http://<IP>:8000/api/v1
-   ```
-2. Чтобы с телефона открывались и загружались файлы — открыть MinIO в сеть и отдавать ссылки с IP:
-   ```
-   # infra/compose/.env (не коммитится), затем task dev:up
-   MINIO_BIND=0.0.0.0
-
-   # apps/api/.env
-   APP_BASE_URL=http://<IP>:8000
-   S3_PUBLIC_ENDPOINT=http://<IP>:9100
-   CORS_ORIGINS=http://localhost:5173,http://localhost:4173,http://<IP>:4173
-   ```
-   `APP_BASE_URL` нужен и для файлов с Диска: они открываются через API. `CORS_ORIGINS` — только
-   если открывать веб по `http://<IP>:4173`. Без MinIO: `STORAGE_DRIVER=local` +
-   `STORAGE_LOCAL_ROOT=./.media` (файлы отдаёт сам API).
-3. Перезапустить API и воркер, Expo — с `--clear` (значения `EXPO_PUBLIC_*` вшиваются в бандл).
-   Без `.env.local` веб, открытый по `http://<IP>:4173`, тоже ходит на `localhost:8000`, а телефон
-   до сервера не достучится вовсе.
+1. Один раз — открыть MinIO в сеть, чтобы с телефона открывались и загружались файлы:
+   `MINIO_BIND=0.0.0.0` в `infra/compose/.env` (не коммитится), затем `task dev:up`. Без MinIO:
+   `STORAGE_DRIVER=local` + `STORAGE_LOCAL_ROOT=./.media` в `apps/api/.env` (файлы отдаёт сам API).
+2. **`task dev:ip`** — после каждой смены сети. Находит адрес компьютера в Wi-Fi/LAN (VPN-туннели,
+   контейнеры и мосты пропускает; выбрать вручную — `task dev:ip -- 192.168.x.y`) и прописывает его:
+   - `apps/api/.env` — `APP_BASE_URL` (ссылки на файлы с Диска идут через API) и
+     `S3_PUBLIC_ENDPOINT` (ссылки на MinIO), IP в `CORS_ORIGINS`;
+   - `apps/mobile/.env.local` — `REACT_NATIVE_PACKAGER_HOSTNAME` (адрес, который Expo показывает в
+     `exp://…`; без него при включённом VPN Expo может выбрать адрес туннеля) и хост
+     `EXPO_PUBLIC_API_URL`, если он задан.
+3. Перезапустить API и воркер, Expo — с `--clear`.
 4. Открыть в Expo Go `exp://<IP>:4173` (или QR из терминала).
 5. Проверка сети: на телефоне в браузере открыть `http://<IP>:8000/healthz` — должен ответить `{"status":"ok",…}`.
    Нет ответа — другая сеть, «изоляция клиентов» на роутере или файрвол на компьютере.
 
-IP меняется при переподключении к Wi-Fi — тогда поправить `apps/mobile/.env.local` и `apps/api/.env`.
+Адрес API приложение берёт само: на телефоне — IP из `exp://<IP>:4173`, в вебе — хост страницы,
+порт `8000`; текущий адрес виден внизу первого экрана («API (dev): …»). `EXPO_PUBLIC_API_URL` в
+`apps/mobile/.env.local` нужен только для особых случаев (другой порт, туннель). CORS в dev пропускает
+`localhost` и адреса локальной сети на любом порту.
 
 ### Логи
 
@@ -126,9 +120,9 @@ IP меняется при переподключении к Wi-Fi — тогд�
 | API падает при старте с ошибкой БД/Redis | `task dev:ps` — контейнеры не подняты; `task dev:up` |
 | `relation … does not exist` | `task api:migrate` |
 | Expo не показывает QR | вывод Expo перенаправлен (`\| tee`) — запускать через `script`, как выше |
-| CORS в браузере | страница открыта не с `localhost` → добавить адрес в `CORS_ORIGINS`; при остановленном API браузер тоже пишет «CORS» — проверить `/healthz` |
+| CORS в браузере | адрес не локальный → добавить в `CORS_ORIGINS`; при остановленном API браузер тоже пишет «CORS» — проверить `/healthz` |
 | Файл на телефоне открывается как `localhost` | `APP_BASE_URL` / `S3_PUBLIC_ENDPOINT` не на IP, MinIO без `MINIO_BIND=0.0.0.0` |
-| Телефон не заходит | `EXPO_PUBLIC_API_URL` в `apps/mobile/.env.local`, Expo с `--clear`, `healthz` с телефона |
+| Телефон не заходит («Сервер недоступен: …») | сменилась сеть → `task dev:ip`, перезапуск API и Expo; адрес внизу первого экрана, `healthz` с телефона по этому адресу |
 | «Папка не открыта для сервисного аккаунта» | папка не расшарена на `client_email` **или** не включён Google Drive API (см. [`docs/GOOGLE-DRIVE.md`](docs/GOOGLE-DRIVE.md)) |
 | Диск подключён, файлов нет | не запущен воркер; очереди — в asynqmon |
 | Порт занят | `ss -ltnp \| grep <порт>`; API — `APP_PORT`, Expo — `--port` в `apps/mobile/package.json` |

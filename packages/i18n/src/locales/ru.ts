@@ -4,6 +4,7 @@ export default {
     "name": "Heatseeker"
   },
   "common": {
+    "close": "Закрыть",
     "save": "Сохранить",
     "cancel": "Отмена",
     "delete": "Удалить",
@@ -33,6 +34,7 @@ export default {
     "name_placeholder": "Имя и фамилия",
     "continue": "Продолжить",
     "have_account": "Уже есть защищённый аккаунт? Войти",
+    "dev_api": "API (dev): {{url}}",
     "login_title": "Вход",
     "email": "Электронная почта",
     "password": "Пароль",
@@ -44,7 +46,9 @@ export default {
     "logout_all": "Выйти на всех устройствах",
     "password_hint": "Не короче {{min}} символов",
     "code_optional": "Код группы (необязательно)",
-    "code_hint": "Если есть код или ссылка-приглашение. Без кода группу можно создать или найти после входа."
+    "code_hint": "Если есть код из приглашения. Без кода группу можно найти по названию после входа.",
+    "password_show": "Показать",
+    "password_hide": "Скрыть"
   },
   "groups": {
     "title": "Группы",
@@ -55,6 +59,7 @@ export default {
     "members_count_one": "{{count}} участник",
     "members_count_few": "{{count}} участника",
     "members_count_many": "{{count}} участников",
+    "members_count_other": "{{count}} участника",
     "name": "Название группы",
     "kind": {
       "MASTERS": "Магистратура",
@@ -64,7 +69,26 @@ export default {
     "members": "Участники",
     "invites": "Приглашения",
     "settings": "Настройки группы",
-    "switch": "Сменить группу"
+    "switch": "Сменить группу",
+    "mine": "Мои группы",
+    "find": "Найти группу",
+    "find_placeholder": "Название группы",
+    "find_empty": "Ничего не нашлось. Проверьте название или попросите код у старосты.",
+    "join_action": "Вступить",
+    "member_badge": "Вы в группе",
+    "have_code": "Есть код приглашения?",
+    "code_hint": "Код — это строка из приглашения, а не название группы.",
+    "code_not_found": "Код не подошёл",
+    "invite_title": "Пригласить в группу",
+    "invite_hint": "Группу можно найти по названию. Код — для тех, кому так удобнее.",
+    "code": "Код группы",
+    "copy_code": "Скопировать",
+    "copied": "Скопировано",
+    "share_code": "Поделиться",
+    "share_message": "Вступай в группу «{{name}}» в Heatseeker: найди её по названию или введи код {{code}}",
+    "rotate_code": "Сменить код",
+    "rotate_confirm": "Старый код перестанет работать. Сменить?",
+    "no_code": "Вступление только по приглашениям"
   },
   "roles": {
     "OWNER": "Владелец",
@@ -96,10 +120,13 @@ export default {
     "archived": "В архиве",
     "manage": "Предметы группы",
     "saved": "Предмет сохранён",
-    "aliases_hint": "Через запятую: как предмет называют в папках и файлах"
+    "aliases_hint": "Как предмет называют в папках и файлах на Диске. Файлы из «Входящих» разберутся заново.",
+    "alias_placeholder": "Например, «Матан» или «Лекции Иванова»",
+    "alias_add": "Добавить",
+    "alias_remove": "Удалить синоним «{{alias}}»"
   },
   "errors": {
-    "network": "Не удалось связаться с сервером",
+    "network": "Сервер недоступен: {{server}}",
     "unauthorized": "Сессия истекла — войди снова",
     "forbidden": "Недостаточно прав",
     "not_found": "Не найдено",
@@ -109,7 +136,22 @@ export default {
     "unknown": "Что-то пошло не так",
     "too_large": "Файл слишком большой",
     "unavailable": "Функция сейчас недоступна на сервере",
-    "range": "Не удалось прочитать часть файла"
+    "range": "Не удалось прочитать часть файла",
+    "codes": {
+      "drive_not_configured": "На сервере не настроен Google Диск (нет ключа сервисного аккаунта)",
+      "drive_api_disabled": "В облачном проекте сервера не включён Google Drive API — включите его в Google Cloud Console",
+      "drive_auth_failed": "Google отклонил ключ сервисного аккаунта — проверьте ключ на сервере",
+      "folder_link": "Вставьте ссылку на папку Google Диска",
+      "folder_not_shared": "Папка не найдена или не открыта для {{email}}",
+      "not_a_folder": "Ссылка ведёт на файл, а нужна папка",
+      "folder_trashed": "Папка в корзине",
+      "version_unavailable": "Эта версия больше недоступна: Google Диск хранит старые версии файлов около 30 дней. Откройте текущую версию.",
+      "drive_oauth_not_configured": "На сервере не настроено подключение аккаунта Google (GOOGLE_OAUTH_CLIENT_ID и SECRET)",
+      "drive_scope_missing": "Google не выдал доступ к Диску — при входе отметьте пункт про Google Диск",
+      "drive_publisher_no_access": "У этого аккаунта Google нет прав редактора на папку группы",
+      "drive_publisher_revoked": "Google отозвал доступ аккаунта для публикации — подключите его заново на экране «Диск»",
+      "drive_publisher_required": "Чтобы публиковать в «Мой диск», староста должен подключить свой аккаунт Google на экране «Диск»"
+    }
   },
   "feed": {
     "empty_hint": "Материалы группы появятся здесь."
@@ -138,12 +180,25 @@ export default {
     "material_added": "Новый материал",
     "material_updated": "Материал изменён",
     "material_classified": "Материал разобран",
+    "material_bulk_classified": "Разобрано несколько материалов",
     "material_archived": "Материал в архиве",
     "material_restored": "Материал восстановлен",
     "material_deleted": "Материал удалён",
     "drive_connected": "Подключена папка Google Диска",
     "drive_disconnected": "Google Диск отключён",
-    "drive_synced": "Синхронизация с Google Диском"
+    "drive_synced": "Синхронизация с Google Диском",
+    "drive_reclassified": "Файлы разобраны автоматически",
+    "drive_publisher_connected": "Подключён аккаунт Google для публикации",
+    "drive_publisher_disconnected": "Аккаунт Google для публикации отключён"
+  },
+  "file_types": {
+    "ALL": "Все файлы",
+    "DOCUMENT": "Документы",
+    "IMAGE": "Картинки",
+    "AUDIO": "Аудио",
+    "VIDEO": "Видео",
+    "ARCHIVE": "Архивы",
+    "OTHER": "Другое"
   },
   "units": {
     "b": "Б",
@@ -158,6 +213,15 @@ export default {
     "CALC": "Расчёт",
     "ASSIGNMENT": "Задание",
     "OTHER": "Другое"
+  },
+  "player": {
+    "listen_audio": "Слушать",
+    "listen_video": "Смотреть",
+    "play": "Воспроизвести",
+    "pause": "Пауза",
+    "rewind": "Назад на {{seconds}} с",
+    "forward": "Вперёд на {{seconds}} с",
+    "loading": "Загрузка…"
   },
   "materials": {
     "title": "Материалы",
@@ -174,11 +238,18 @@ export default {
     "tags": "Теги",
     "description": "Описание",
     "versions": "Версии",
+    "preview_preparing": "Готовлю просмотр…",
+    "preview_problem": {
+      "timeout": "Просмотр ещё готовится — попробуйте через минуту или скачайте файл.",
+      "too_large": "Файл слишком большой для просмотра в приложении — скачайте его.",
+      "failed": "Не удалось подготовить просмотр этого файла — скачайте его."
+    },
     "version_n": "Версия {{n}}",
     "drive_path": "Папка на Диске",
     "opened_times_one": "Открыт {{count}} раз",
     "opened_times_few": "Открыт {{count}} раза",
     "opened_times_many": "Открыт {{count}} раз",
+    "opened_times_other": "Открыт {{count}} раза",
     "open_in_drive": "Открыть в Google Диске",
     "open_in_app": "Смотреть",
     "archived_badge": "В архиве",
@@ -205,6 +276,8 @@ export default {
     "picked": "{{name}} · {{size}}",
     "to_drive": "Опубликовать в папке группы на Google Диске",
     "to_drive_needs_secure": "Чтобы публиковать на Диск, защити аккаунт в разделе «Ещё».",
+    "to_drive_needs_publisher": "Публикация на Google Диск появится, когда староста подключит свой аккаунт Google («Ещё → Google Диск»). Файл сохранится в приложении.",
+    "to_drive_publisher_revoked": "Публикация на Google Диск остановлена: Google отозвал доступ аккаунта старосты — его нужно подключить заново («Ещё → Google Диск»).",
     "subject_auto": "Определить по имени файла",
     "kind_auto": "Определить по имени файла",
     "send": "Загрузить",
@@ -220,10 +293,27 @@ export default {
     "banner_one": "{{count}} материал ждёт разбора",
     "banner_few": "{{count}} материала ждут разбора",
     "banner_many": "{{count}} материалов ждут разбора",
+    "banner_other": "{{count}} материала ждут разбора",
     "empty": "Всё разобрано",
     "confirm": "Подтвердить",
     "learn_alias": "Запомнить папку «{{folder}}» для этого предмета",
-    "choose_subject": "Выбери предмет"
+    "choose_subject": "Выбери предмет",
+    "select": "Выбрать",
+    "select_done": "Готово",
+    "select_all": "Выбрать все загруженные",
+    "selected_one": "Выбран {{count}} материал",
+    "selected_few": "Выбрано {{count}} материала",
+    "selected_many": "Выбрано {{count}} материалов",
+    "selected_other": "Выбрано {{count}} материала",
+    "bulk_kind_keep": "Не менять тип",
+    "bulk_apply": "Разобрать выбранные",
+    "bulk_done_one": "Разобран {{count}} материал",
+    "bulk_done_few": "Разобрано {{count}} материала",
+    "bulk_done_many": "Разобрано {{count}} материалов",
+    "bulk_done_other": "Разобрано {{count}} материала",
+    "learned": "Папка «{{alias}}» теперь синоним предмета «{{subject}}». Похожие файлы разберутся автоматически.",
+    "undo": "Отменить",
+    "undone": "Синоним «{{alias}}» удалён"
   },
   "drive": {
     "title": "Google Диск",
@@ -250,13 +340,31 @@ export default {
     "never": "ещё не было",
     "read_only": "Сервисный аккаунт может только читать папку — публикация из приложения недоступна.",
     "writable": "Публикация из приложения доступна",
+    "needs_publisher": "Публикация из приложения появится, когда будет подключён аккаунт Google (ниже).",
     "shared_drive": "Общий диск",
     "stats": "Файлов: {{files}} · папок: {{folders}} · пропущено: {{skipped}} · во «Входящих»: {{inbox}}",
     "needs_manage": "Подключать Диск могут староста и админ с защищённым аккаунтом.",
-    "items": "Файлы в индексе"
+    "items": "Файлы в индексе",
+    "publisher": {
+      "title": "Публикация загрузок на Диск",
+      "hint": "Сервисный аккаунт не может сохранять файлы в «Мой диск» — у него нет своего места. Подключите аккаунт Google владельца папки: загрузки будут появляться на Диске от его имени и в его квоте.",
+      "hint_shared": "Папка в общем диске — сервисный аккаунт публикует сам. Аккаунт Google можно подключить, чтобы файлы создавались от его имени.",
+      "connect": "Подключить аккаунт Google",
+      "reconnect": "Подключить заново",
+      "disconnect": "Отключить",
+      "disconnect_confirm": "Отключить аккаунт {{email}}? Доступ будет отозван у Google, публикация в «Мой диск» остановится.",
+      "active": "Загрузки публикуются от имени этого аккаунта",
+      "revoked": "Google отозвал доступ — подключите аккаунт заново",
+      "after_sign_in": "После входа в Google вернитесь сюда — статус обновится.",
+      "dev_hint": "В режиме разработки Google возвращает на localhost: подключайте из браузера на компьютере (веб-версия приложения)."
+    }
   },
   "activity": {
-    "title": "Активность группы"
+    "title": "Активность группы",
+    "files_one": "{{count}} файл",
+    "files_few": "{{count}} файла",
+    "files_many": "{{count}} файлов",
+    "files_other": "{{count}} файла"
   },
   "more": {
     "section_group": "Группа",

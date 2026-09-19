@@ -51,6 +51,15 @@ func (q *Queries) DeleteDriveItems(ctx context.Context, connectionID uuid.UUID) 
 	return err
 }
 
+const deleteDrivePublisher = `-- name: DeleteDrivePublisher :exec
+DELETE FROM drive_publishers WHERE group_id = $1
+`
+
+func (q *Queries) DeleteDrivePublisher(ctx context.Context, groupID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteDrivePublisher, groupID)
+	return err
+}
+
 const driveItemStats = `-- name: DriveItemStats :one
 SELECT
   count(*) FILTER (WHERE NOT is_folder AND state <> 'DELETED')::bigint AS files,
@@ -89,29 +98,32 @@ const finishDriveSync = `-- name: FinishDriveSync :exec
 UPDATE drive_connections
 SET status = $1,
     last_error = $2,
+    last_error_code = $3,
     sync_started_at = NULL,
-    changes_page_token = COALESCE($3, changes_page_token),
+    changes_page_token = COALESCE($4, changes_page_token),
     -- a failed run still counts as an attempt, so the scheduler backs off
-    last_sync_at = $4::timestamptz,
-    last_full_scan_at = CASE WHEN $5::boolean AND $6::boolean
-                             THEN $4::timestamptz ELSE last_full_scan_at END
-WHERE id = $7
+    last_sync_at = $5::timestamptz,
+    last_full_scan_at = CASE WHEN $6::boolean AND $7::boolean
+                             THEN $5::timestamptz ELSE last_full_scan_at END
+WHERE id = $8
 `
 
 type FinishDriveSyncParams struct {
-	Status      string
-	LastError   *string
-	PageToken   *string
-	CompletedAt time.Time
-	FullScan    bool
-	Succeeded   bool
-	ID          uuid.UUID
+	Status        string
+	LastError     *string
+	LastErrorCode *string
+	PageToken     *string
+	CompletedAt   time.Time
+	FullScan      bool
+	Succeeded     bool
+	ID            uuid.UUID
 }
 
 func (q *Queries) FinishDriveSync(ctx context.Context, arg FinishDriveSyncParams) error {
 	_, err := q.db.Exec(ctx, finishDriveSync,
 		arg.Status,
 		arg.LastError,
+		arg.LastErrorCode,
 		arg.PageToken,
 		arg.CompletedAt,
 		arg.FullScan,
@@ -122,7 +134,7 @@ func (q *Queries) FinishDriveSync(ctx context.Context, arg FinishDriveSyncParams
 }
 
 const getDriveConnection = `-- name: GetDriveConnection :one
-SELECT id, group_id, mode, root_folder_id, root_folder_name, drive_id, status, last_error, sync_started_at, last_sync_at, last_full_scan_at, changes_page_token, sync_interval_sec, writable, created_by, created_at, updated_at FROM drive_connections WHERE id = $1
+SELECT id, group_id, mode, root_folder_id, root_folder_name, drive_id, status, last_error, sync_started_at, last_sync_at, last_full_scan_at, changes_page_token, sync_interval_sec, writable, created_by, created_at, updated_at, last_error_code FROM drive_connections WHERE id = $1
 `
 
 func (q *Queries) GetDriveConnection(ctx context.Context, id uuid.UUID) (DriveConnection, error) {
@@ -146,12 +158,13 @@ func (q *Queries) GetDriveConnection(ctx context.Context, id uuid.UUID) (DriveCo
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LastErrorCode,
 	)
 	return i, err
 }
 
 const getDriveConnectionByGroup = `-- name: GetDriveConnectionByGroup :one
-SELECT id, group_id, mode, root_folder_id, root_folder_name, drive_id, status, last_error, sync_started_at, last_sync_at, last_full_scan_at, changes_page_token, sync_interval_sec, writable, created_by, created_at, updated_at FROM drive_connections WHERE group_id = $1
+SELECT id, group_id, mode, root_folder_id, root_folder_name, drive_id, status, last_error, sync_started_at, last_sync_at, last_full_scan_at, changes_page_token, sync_interval_sec, writable, created_by, created_at, updated_at, last_error_code FROM drive_connections WHERE group_id = $1
 `
 
 func (q *Queries) GetDriveConnectionByGroup(ctx context.Context, groupID uuid.UUID) (DriveConnection, error) {
@@ -175,6 +188,7 @@ func (q *Queries) GetDriveConnectionByGroup(ctx context.Context, groupID uuid.UU
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LastErrorCode,
 	)
 	return i, err
 }
@@ -240,6 +254,26 @@ func (q *Queries) GetDriveItemByMaterial(ctx context.Context, materialID *uuid.U
 		&i.Classification,
 		&i.LastError,
 		&i.SeenAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getDrivePublisher = `-- name: GetDrivePublisher :one
+SELECT group_id, google_email, refresh_token_enc, scopes, last_error, connected_by, created_at, updated_at FROM drive_publishers WHERE group_id = $1
+`
+
+func (q *Queries) GetDrivePublisher(ctx context.Context, groupID uuid.UUID) (DrivePublisher, error) {
+	row := q.db.QueryRow(ctx, getDrivePublisher, groupID)
+	var i DrivePublisher
+	err := row.Scan(
+		&i.GroupID,
+		&i.GoogleEmail,
+		&i.RefreshTokenEnc,
+		&i.Scopes,
+		&i.LastError,
+		&i.ConnectedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -351,7 +385,7 @@ func (q *Queries) ListDriveItems(ctx context.Context, arg ListDriveItemsParams) 
 }
 
 const listDueDriveConnections = `-- name: ListDueDriveConnections :many
-SELECT c.id, c.group_id, c.mode, c.root_folder_id, c.root_folder_name, c.drive_id, c.status, c.last_error, c.sync_started_at, c.last_sync_at, c.last_full_scan_at, c.changes_page_token, c.sync_interval_sec, c.writable, c.created_by, c.created_at, c.updated_at FROM drive_connections c
+SELECT c.id, c.group_id, c.mode, c.root_folder_id, c.root_folder_name, c.drive_id, c.status, c.last_error, c.sync_started_at, c.last_sync_at, c.last_full_scan_at, c.changes_page_token, c.sync_interval_sec, c.writable, c.created_by, c.created_at, c.updated_at, c.last_error_code FROM drive_connections c
 JOIN groups g ON g.id = c.group_id AND g.archived_at IS NULL
 WHERE c.status <> 'SYNCING'
   AND (c.last_sync_at IS NULL
@@ -384,6 +418,64 @@ func (q *Queries) ListDueDriveConnections(ctx context.Context, now time.Time) ([
 			&i.SyncIntervalSec,
 			&i.Writable,
 			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.LastErrorCode,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listReclassifyCandidates = `-- name: ListReclassifyCandidates :many
+SELECT i.id, i.connection_id, i.drive_file_id, i.parent_id, i.path_cache, i.name, i.mime, i.is_folder, i.md5, i.size_bytes, i.modified_time, i.web_view_link, i.material_id, i.state, i.classification, i.last_error, i.seen_at, i.created_at, i.updated_at FROM drive_items i
+JOIN drive_connections c ON c.id = i.connection_id
+JOIN materials m ON m.id = i.material_id AND m.group_id = c.group_id
+WHERE c.group_id = $1
+  AND NOT i.is_folder
+  AND i.state = 'LINKED'
+  AND m.source = 'GDRIVE'
+  AND m.status = 'ACTIVE'
+  AND m.needs_review
+  AND m.review_reason = 'LOW_CONFIDENCE'
+  AND coalesce(m.classification ->> 'method', 'auto') = 'auto'
+ORDER BY i.path_cache, i.name
+`
+
+// Drive files waiting in the Inbox only because the classifier was unsure:
+// new subjects or aliases may resolve them. Manual decisions are left alone.
+func (q *Queries) ListReclassifyCandidates(ctx context.Context, groupID uuid.UUID) ([]DriveItem, error) {
+	rows, err := q.db.Query(ctx, listReclassifyCandidates, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DriveItem{}
+	for rows.Next() {
+		var i DriveItem
+		if err := rows.Scan(
+			&i.ID,
+			&i.ConnectionID,
+			&i.DriveFileID,
+			&i.ParentID,
+			&i.PathCache,
+			&i.Name,
+			&i.Mime,
+			&i.IsFolder,
+			&i.Md5,
+			&i.SizeBytes,
+			&i.ModifiedTime,
+			&i.WebViewLink,
+			&i.MaterialID,
+			&i.State,
+			&i.Classification,
+			&i.LastError,
+			&i.SeenAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -446,6 +538,20 @@ func (q *Queries) ListUnseenDriveItems(ctx context.Context, arg ListUnseenDriveI
 	return items, nil
 }
 
+const setDrivePublisherError = `-- name: SetDrivePublisherError :exec
+UPDATE drive_publishers SET last_error = $2 WHERE group_id = $1
+`
+
+type SetDrivePublisherErrorParams struct {
+	GroupID   uuid.UUID
+	LastError *string
+}
+
+func (q *Queries) SetDrivePublisherError(ctx context.Context, arg SetDrivePublisherErrorParams) error {
+	_, err := q.db.Exec(ctx, setDrivePublisherError, arg.GroupID, arg.LastError)
+	return err
+}
+
 const updateDriveItemState = `-- name: UpdateDriveItemState :exec
 UPDATE drive_items
 SET state = $2, material_id = $3, classification = $4, last_error = $5
@@ -489,7 +595,7 @@ SET root_folder_id = EXCLUDED.root_folder_id,
     last_full_scan_at = CASE WHEN drive_connections.root_folder_id = EXCLUDED.root_folder_id
                              THEN drive_connections.last_full_scan_at ELSE NULL END,
     last_error = NULL
-RETURNING id, group_id, mode, root_folder_id, root_folder_name, drive_id, status, last_error, sync_started_at, last_sync_at, last_full_scan_at, changes_page_token, sync_interval_sec, writable, created_by, created_at, updated_at
+RETURNING id, group_id, mode, root_folder_id, root_folder_name, drive_id, status, last_error, sync_started_at, last_sync_at, last_full_scan_at, changes_page_token, sync_interval_sec, writable, created_by, created_at, updated_at, last_error_code
 `
 
 type UpsertDriveConnectionParams struct {
@@ -533,6 +639,7 @@ func (q *Queries) UpsertDriveConnection(ctx context.Context, arg UpsertDriveConn
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LastErrorCode,
 	)
 	return i, err
 }
@@ -613,6 +720,46 @@ func (q *Queries) UpsertDriveItem(ctx context.Context, arg UpsertDriveItemParams
 		&i.Classification,
 		&i.LastError,
 		&i.SeenAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertDrivePublisher = `-- name: UpsertDrivePublisher :one
+INSERT INTO drive_publishers (group_id, google_email, refresh_token_enc, scopes, connected_by)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (group_id) DO UPDATE
+SET google_email = EXCLUDED.google_email, refresh_token_enc = EXCLUDED.refresh_token_enc,
+    scopes = EXCLUDED.scopes, connected_by = EXCLUDED.connected_by, last_error = NULL,
+    created_at = now()
+RETURNING group_id, google_email, refresh_token_enc, scopes, last_error, connected_by, created_at, updated_at
+`
+
+type UpsertDrivePublisherParams struct {
+	GroupID         uuid.UUID
+	GoogleEmail     string
+	RefreshTokenEnc []byte
+	Scopes          string
+	ConnectedBy     *uuid.UUID
+}
+
+func (q *Queries) UpsertDrivePublisher(ctx context.Context, arg UpsertDrivePublisherParams) (DrivePublisher, error) {
+	row := q.db.QueryRow(ctx, upsertDrivePublisher,
+		arg.GroupID,
+		arg.GoogleEmail,
+		arg.RefreshTokenEnc,
+		arg.Scopes,
+		arg.ConnectedBy,
+	)
+	var i DrivePublisher
+	err := row.Scan(
+		&i.GroupID,
+		&i.GoogleEmail,
+		&i.RefreshTokenEnc,
+		&i.Scopes,
+		&i.LastError,
+		&i.ConnectedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

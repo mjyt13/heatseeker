@@ -31,3 +31,4 @@ export * from './components/chip';
 export * from './components/screen';
 export * from './components/form';
 export * from './components/list';
+export * from './components/confirm';

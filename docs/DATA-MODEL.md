@@ -14,7 +14,7 @@ sqlc в `apps/api/db/queries/`. Общие правила:
 
 | Таблица | Поля |
 |---|---|
-| `users` | `name` (обязательно), `email?` (uniq nullable), `password_hash?`, `locale`, `timezone`, `avatar_key?`, `global_role` `USER \| SUPERADMIN`, `secured_at?` (когда добавлены credentials — уровень L2), `deleted_at` |
+| `users` | `name` (обязательно), `email?` (uniq nullable), `password_hash?`, `locale`, `timezone`, `avatar_key?`, `global_role` `USER \| SUPERADMIN`, `secured_at?` (когда добавлены credentials — уровень L2), `register_client_id?` (uniq nullable: UUID экрана регистрации — повтор `POST /auth/register` в течение 15 минут возвращает тот же незащищённый аккаунт), `deleted_at` |
 | `auth_identities` | `user_id`, `provider` `GOOGLE \| APPLE`, `provider_user_id` (uniq per provider), `email`, `google_refresh_token_enc?` (только если дан scope для загрузки на Диск; AES-GCM) |
 | `refresh_tokens` | `user_id`, `device_id`, `token_hash`, `expires_at`, `revoked_at` |
 | `devices` | `user_id`, `platform` `IOS \| ANDROID \| WEB`, `push_provider` `EXPO \| WEBPUSH`, `push_token` / `subscription` json, `last_seen_at`, `enabled` |
@@ -34,7 +34,7 @@ sqlc в `apps/api/db/queries/`. Общие правила:
 | `subjects` | `group_id`, `name`, `short_name`, `teacher`, `teacher_contact`, `color`, `semester`, `aliases` text[] (для классификации; пополняются правками), `archived_at` |
 | `tags` | `group_id`, `name`, `slug` (uniq per group), `color`, `kind` `SUBJECT \| TOPIC \| TYPE \| SYSTEM \| CUSTOM`, `subject_id?` (тег-двойник предмета создаётся автоматически) |
 | `materials` | `group_id`, `subject_id?`, `uploader_id?`, `title`, `description` (md), `kind` `LECTURE \| NOTES \| REPORT \| CALC \| ASSIGNMENT \| OTHER`, `source` `UPLOAD \| GDRIVE`, `status` `ACTIVE \| ARCHIVED \| DELETED`, `current_version_id`, `classification` json `{subject_id, kind, confidence, method}`, `needs_review`, `review_reason` `LOW_CONFIDENCE \| REMOVED_FROM_DRIVE`, `download_count` (открытия не автором), `sort_at` (время загрузки / создания файла на Диске — порядок ленты), `search` tsvector (generated: `russian` + `simple` по названию), `archived_by/at`, `deleted_by/at` |
-| `material_versions` | `material_id`, `version_no`, **`storage`** `DRIVE \| S3 \| LOCAL`, `storage_key?`, `cache_expires_at?` (режим CACHE), `drive_file_id?`, `drive_web_view_link?`, `drive_md5?`, `drive_modified_time?`, `drive_upload_status?` `PENDING \| DONE \| FAILED` + `drive_upload_error?` (публикация загрузки на Диск), `original_name`, `mime`, `size_bytes`, `sha256?`, `scan_status` `PENDING \| CLEAN \| INFECTED \| SKIPPED`, `text_key?`, `preview_key?`, `uploaded_by?` |
+| `material_versions` | `material_id`, `version_no`, **`storage`** `DRIVE \| S3 \| LOCAL`, `storage_key?`, `cache_expires_at?` (режим CACHE), `drive_file_id?`, `drive_web_view_link?`, `drive_md5?`, `drive_modified_time?`, `drive_revision_id?` (ревизия Диска, из которой проиндексирована версия; старые версии отдаются из неё), `drive_upload_status?` `PENDING \| DONE \| FAILED` + `drive_upload_error?` (публикация загрузки на Диск), `original_name`, `mime`, `size_bytes`, `sha256?`, `scan_status` `PENDING \| CLEAN \| INFECTED \| SKIPPED`, `text_key?`, `preview_key?` + `preview_status?` `PENDING \| READY \| FAILED \| SKIPPED` + `preview_error?` (PDF-превью офисного файла, Gotenberg; NULL — не запрошено), `uploaded_by?` |
 | `material_tags`, `task_tags`, `proposal_tags` | (`entity_id`, `tag_id`) |
 | `uploads` | `group_id`, `user_id`, `storage` `S3 \| LOCAL`, `storage_key` (`tmp/uploads/…`), `file_name`, `mime`, `size_bytes`, `meta` json (форма материала), `status` `PENDING \| COMPLETED \| EXPIRED`, `material_id?`, `expires_at` — прямые загрузки до `complete` |
 | `media_cache` (проекция/индекс) | `version_id`, `storage_key`, `size`, `last_access_at`, `expires_at` — для вытеснения по TTL/объёму (LRU) |
@@ -93,7 +93,8 @@ sqlc в `apps/api/db/queries/`. Общие правила:
 
 | Таблица | Поля |
 |---|---|
-| `drive_connections` | `group_id` (uniq — одна папка на группу), `mode` `SERVICE_ACCOUNT`, `root_folder_id`, `root_folder_name`, `drive_id?` (Shared Drive), `status` `PENDING \| SYNCING \| OK \| ERROR`, `last_error`, `sync_started_at`, `last_sync_at`, `last_full_scan_at`, `changes_page_token`, `sync_interval_sec`, `writable` bool |
+| `drive_publishers` | `group_id` PK — аккаунт Google, от имени которого загрузки публикуются на Диск (D34): `google_email`, `refresh_token_enc` bytea (AES-GCM под `APP_ENCRYPTION_KEY`, связан с `group_id`), `scopes`, `last_error?` (Google отозвал доступ), `connected_by?` |
+| `drive_connections` | `group_id` (uniq — одна папка на группу), `mode` `SERVICE_ACCOUNT`, `root_folder_id`, `root_folder_name`, `drive_id?` (Shared Drive), `status` `PENDING \| SYNCING \| OK \| ERROR`, `last_error`, `last_error_code?` (код ошибки для перевода), `sync_started_at`, `last_sync_at`, `last_full_scan_at`, `changes_page_token`, `sync_interval_sec`, `writable` bool |
 | `drive_items` | `connection_id`, `drive_file_id` (uniq в пределах подключения), `parent_id`, `path_cache` (папки от корня через `/`), `name`, `mime`, `is_folder`, `md5`, `size`, `modified_time`, `web_view_link`, `material_id?`, `state` `NEW \| LINKED \| IMPORTED \| SKIPPED \| ERROR \| DELETED` (SKIPPED — неподдерживаемый тип или удалён в приложении: синк его не восстанавливает), `classification` json, `last_error`, `seen_at` (метка прохода полного скана) |
 
 ## ИИ-сервис (схема `ai.*`, этап W2-B)

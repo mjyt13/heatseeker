@@ -33,11 +33,17 @@ export type PushProvider = (typeof PUSH_PROVIDERS)[number];
 export const IDENTITY_PROVIDERS = ["GOOGLE", "APPLE"] as const;
 export type IdentityProvider = (typeof IDENTITY_PROVIDERS)[number];
 
-export const EVENT_KINDS = ["group.created", "group.updated", "member.joined", "member.roles_changed", "member.status_changed", "subject.created", "subject.updated", "subject.archived", "subject.restored", "tag.created", "tag.updated", "tag.deleted", "invite.created", "invite.revoked", "group.join_code_rotated", "material.added", "material.updated", "material.classified", "material.archived", "material.restored", "material.deleted", "drive.connected", "drive.disconnected", "drive.synced"] as const;
+export const EVENT_KINDS = ["group.created", "group.updated", "member.joined", "member.roles_changed", "member.status_changed", "subject.created", "subject.updated", "subject.archived", "subject.restored", "tag.created", "tag.updated", "tag.deleted", "invite.created", "invite.revoked", "group.join_code_rotated", "material.added", "material.updated", "material.classified", "material.bulk_classified", "material.archived", "material.restored", "material.deleted", "drive.connected", "drive.disconnected", "drive.synced", "drive.reclassified", "drive.publisher_connected", "drive.publisher_disconnected"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
 export const MATERIAL_KINDS = ["LECTURE", "NOTES", "REPORT", "CALC", "ASSIGNMENT", "OTHER"] as const;
 export type MaterialKind = (typeof MATERIAL_KINDS)[number];
+
+export const FILE_TYPES = ["DOCUMENT", "IMAGE", "AUDIO", "VIDEO", "ARCHIVE", "OTHER"] as const;
+export type FileType = (typeof FILE_TYPES)[number];
+
+export const ERROR_CODES = ["drive_not_configured", "drive_api_disabled", "drive_auth_failed", "folder_link", "folder_not_shared", "not_a_folder", "folder_trashed", "version_unavailable", "drive_oauth_not_configured", "drive_scope_missing", "drive_publisher_no_access", "drive_publisher_revoked", "drive_publisher_required"] as const;
+export type ErrorCode = (typeof ERROR_CODES)[number];
 
 export const MATERIAL_SOURCES = ["UPLOAD", "GDRIVE"] as const;
 export type MaterialSource = (typeof MATERIAL_SOURCES)[number];
@@ -63,3 +69,5 @@ export type DriveConnectionStatus = (typeof DRIVE_CONNECTION_STATUSS)[number];
 export const DRIVE_ITEM_STATES = ["NEW", "LINKED", "IMPORTED", "SKIPPED", "ERROR", "DELETED"] as const;
 export type DriveItemState = (typeof DRIVE_ITEM_STATES)[number];
 
+/** RFC 7807 problem type prefix of coded API errors: `${ERROR_TYPE_PREFIX}<ErrorCode>`. */
+export const ERROR_TYPE_PREFIX = "urn:heatseeker:error:";

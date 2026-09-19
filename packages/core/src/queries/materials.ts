@@ -8,6 +8,7 @@ import {
 
 import {
   unwrap,
+  type ClassifiedMaterial,
   type Material,
   type MaterialDetails,
   type MaterialOpen,
@@ -91,6 +92,24 @@ export function useMaterial(materialId: string | null | undefined) {
   });
 }
 
+/**
+ * Запросить PDF-превью офисного файла (pptx/docx/xlsx…): сервер конвертирует
+ * его в фоне; готовность видна в `preview_status` версии (перечитать материал).
+ */
+export function useRequestPreview(materialId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (versionId?: string) =>
+      unwrap(
+        await api.POST('/materials/{materialId}/preview', {
+          params: { path: { materialId }, query: { version_id: versionId } },
+        }),
+      ).preview_status,
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.material(materialId) }),
+  });
+}
+
 /** Получить ссылки на файл (не кешируется: ссылки временные). */
 export function useOpenMaterial() {
   const api = useApi();
@@ -131,6 +150,9 @@ export function useUpdateMaterial(groupId: string) {
 }
 
 /** Разобрать материал из «Входящих». */
+/** Через сколько перечитать ленту после выученного синонима (сервер разбирает похожие файлы в фоне). */
+const RECLASSIFY_REFRESH_MS = 4000;
+
 export function useClassifyMaterial(groupId: string) {
   const api = useApi();
   const qc = useQueryClient();
@@ -138,7 +160,7 @@ export function useClassifyMaterial(groupId: string) {
     mutationFn: async ({
       materialId,
       ...body
-    }: MaterialClassify & { materialId: string }): Promise<Material> =>
+    }: MaterialClassify & { materialId: string }): Promise<ClassifiedMaterial> =>
       unwrap(
         await api.POST('/materials/{materialId}/classify', {
           params: { path: { materialId } },
@@ -147,8 +169,38 @@ export function useClassifyMaterial(groupId: string) {
       ),
     onSuccess: async (m) => {
       await invalidateMaterial(qc, groupId, m.id);
-      // a learned alias changes the subject
+      if (!m.learned_alias) return;
+      // A learned alias changes the subject, and the server re-sorts similar
+      // Inbox files in the background (a couple of seconds later).
       await qc.invalidateQueries({ queryKey: ['group', groupId, 'subjects'] });
+      setTimeout(() => {
+        void qc.invalidateQueries({ queryKey: ['group', groupId, 'materials'] });
+      }, RECLASSIFY_REFRESH_MS);
+    },
+  });
+}
+
+export type MaterialBulkClassify = Omit<Schemas['BulkClassifyInputBody'], '$schema'>;
+
+/** Массовый разбор во «Входящих»: один предмет (и тип) для выбранных. */
+export function useBulkClassify(groupId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: MaterialBulkClassify): Promise<number> =>
+      unwrap(
+        await api.POST('/groups/{groupId}/materials/classify', {
+          params: { path: { groupId } },
+          body,
+        }),
+      ).classified,
+    onSuccess: async (_n, body) => {
+      await qc.invalidateQueries({ queryKey: ['group', groupId, 'materials'] });
+      await Promise.all(
+        (body.material_ids ?? []).map((id) =>
+          qc.invalidateQueries({ queryKey: keys.material(id) }),
+        ),
+      );
     },
   });
 }

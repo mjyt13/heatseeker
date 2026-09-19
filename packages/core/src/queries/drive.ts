@@ -58,6 +58,32 @@ export function useDisconnectDrive(groupId: string) {
   });
 }
 
+/**
+ * Начать подключение аккаунта Google, от имени которого загрузки публикуются
+ * на Диск (D34): возвращает страницу входа Google, её открывают в браузере.
+ */
+export function useStartDrivePublisher(groupId: string) {
+  const api = useApi();
+  return useMutation({
+    mutationFn: async (): Promise<string> =>
+      unwrap(await api.POST('/groups/{groupId}/drive/publisher', { params: { path: { groupId } } }))
+        .auth_url,
+  });
+}
+
+/** Отключить аккаунт публикации (доступ отзывается у Google). */
+export function useDisconnectDrivePublisher(groupId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      unwrap(
+        await api.DELETE('/groups/{groupId}/drive/publisher', { params: { path: { groupId } } }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.drive(groupId) }),
+  });
+}
+
 /** Запустить синхронизацию сейчас. */
 export function useSyncDrive(groupId: string) {
   const api = useApi();

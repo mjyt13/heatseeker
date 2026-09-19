@@ -9,6 +9,8 @@
 *.jks
 *.keystore
 service-account*.json
+gen-lang-client-*.json
+client_secret_*.json
 credentials/
 secrets/
 

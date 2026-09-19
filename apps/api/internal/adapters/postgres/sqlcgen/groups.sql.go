@@ -229,6 +229,80 @@ func (q *Queries) NextGroupSeq(ctx context.Context, id uuid.UUID) (int64, error)
 	return last_seq, err
 }
 
+const searchOpenGroups = `-- name: SearchOpenGroups :many
+SELECT g.id, g.name, g.slug, g.kind, g.join_policy, g.join_code, g.public_read, g.media_mode, g.settings, g.last_seq, g.created_by, g.created_at, g.updated_at, g.archived_at,
+       (SELECT count(*) FROM memberships m
+         WHERE m.group_id = g.id AND m.status = 'ACTIVE')::bigint AS member_count,
+       EXISTS (SELECT 1 FROM memberships m
+         WHERE m.group_id = g.id AND m.user_id = $1 AND m.status = 'ACTIVE') AS is_member
+FROM groups g
+WHERE g.archived_at IS NULL
+  AND g.join_policy = 'OPEN'
+  AND g.name ILIKE '%' || $2::text || '%' ESCAPE '\'
+ORDER BY lower(g.name) = lower($3::text) DESC,
+         g.name ILIKE $2::text || '%' ESCAPE '\' DESC,
+         member_count DESC,
+         g.name
+LIMIT $4
+`
+
+type SearchOpenGroupsParams struct {
+	UserID     uuid.UUID
+	Pattern    string
+	Query      string
+	MaxResults int32
+}
+
+type SearchOpenGroupsRow struct {
+	Group       Group
+	MemberCount int64
+	IsMember    bool
+}
+
+// Groups anyone may join by name (D33): open, not archived. An empty pattern
+// lists all of them. Exact and prefix matches first, then larger groups.
+func (q *Queries) SearchOpenGroups(ctx context.Context, arg SearchOpenGroupsParams) ([]SearchOpenGroupsRow, error) {
+	rows, err := q.db.Query(ctx, searchOpenGroups,
+		arg.UserID,
+		arg.Pattern,
+		arg.Query,
+		arg.MaxResults,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SearchOpenGroupsRow{}
+	for rows.Next() {
+		var i SearchOpenGroupsRow
+		if err := rows.Scan(
+			&i.Group.ID,
+			&i.Group.Name,
+			&i.Group.Slug,
+			&i.Group.Kind,
+			&i.Group.JoinPolicy,
+			&i.Group.JoinCode,
+			&i.Group.PublicRead,
+			&i.Group.MediaMode,
+			&i.Group.Settings,
+			&i.Group.LastSeq,
+			&i.Group.CreatedBy,
+			&i.Group.CreatedAt,
+			&i.Group.UpdatedAt,
+			&i.Group.ArchivedAt,
+			&i.MemberCount,
+			&i.IsMember,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setGroupJoinCode = `-- name: SetGroupJoinCode :one
 UPDATE groups SET join_code = $2 WHERE id = $1 RETURNING id, name, slug, kind, join_policy, join_code, public_read, media_mode, settings, last_seq, created_by, created_at, updated_at, archived_at
 `

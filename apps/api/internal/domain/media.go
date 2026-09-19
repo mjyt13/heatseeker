@@ -69,12 +69,19 @@ const (
 	JobUploadsCleanup           = "uploads:cleanup"
 	JobMaterialsPurge           = "materials:purge"
 	JobMaterialHash             = "materials:hash"
+	JobMaterialPreview          = "materials:preview"
+	JobMaterialsReclassify      = "materials:reclassify"
 )
 
 // DriveSyncPayload is the payload of JobDriveSync.
 type DriveSyncPayload struct {
 	ConnectionID string `json:"connection_id"`
 	Full         bool   `json:"full,omitempty"`
+}
+
+// GroupPayload targets a whole group (JobMaterialsReclassify).
+type GroupPayload struct {
+	GroupID string `json:"group_id"`
 }
 
 // MaterialVersionPayload targets one version (JobDriveUpload, JobMaterialHash).

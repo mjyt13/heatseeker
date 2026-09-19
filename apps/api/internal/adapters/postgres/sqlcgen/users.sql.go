@@ -13,19 +13,20 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (id, name, email, password_hash, locale, timezone, secured_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, name, email, password_hash, locale, timezone, avatar_key, global_role, settings, secured_at, created_at, updated_at, deleted_at
+INSERT INTO users (id, name, email, password_hash, locale, timezone, secured_at, register_client_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, name, email, password_hash, locale, timezone, avatar_key, global_role, settings, secured_at, created_at, updated_at, deleted_at, register_client_id
 `
 
 type CreateUserParams struct {
-	ID           uuid.UUID
-	Name         string
-	Email        *string
-	PasswordHash *string
-	Locale       string
-	Timezone     string
-	SecuredAt    *time.Time
+	ID               uuid.UUID
+	Name             string
+	Email            *string
+	PasswordHash     *string
+	Locale           string
+	Timezone         string
+	SecuredAt        *time.Time
+	RegisterClientID *uuid.UUID
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -37,6 +38,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.Locale,
 		arg.Timezone,
 		arg.SecuredAt,
+		arg.RegisterClientID,
 	)
 	var i User
 	err := row.Scan(
@@ -53,12 +55,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.RegisterClientID,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, name, email, password_hash, locale, timezone, avatar_key, global_role, settings, secured_at, created_at, updated_at, deleted_at FROM users WHERE lower(email) = lower($1) AND deleted_at IS NULL
+SELECT id, name, email, password_hash, locale, timezone, avatar_key, global_role, settings, secured_at, created_at, updated_at, deleted_at, register_client_id FROM users WHERE lower(email) = lower($1) AND deleted_at IS NULL
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -78,12 +81,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.RegisterClientID,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, name, email, password_hash, locale, timezone, avatar_key, global_role, settings, secured_at, created_at, updated_at, deleted_at FROM users WHERE id = $1 AND deleted_at IS NULL
+SELECT id, name, email, password_hash, locale, timezone, avatar_key, global_role, settings, secured_at, created_at, updated_at, deleted_at, register_client_id FROM users WHERE id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
@@ -103,6 +107,33 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.RegisterClientID,
+	)
+	return i, err
+}
+
+const getUserByRegisterClientID = `-- name: GetUserByRegisterClientID :one
+SELECT id, name, email, password_hash, locale, timezone, avatar_key, global_role, settings, secured_at, created_at, updated_at, deleted_at, register_client_id FROM users WHERE register_client_id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetUserByRegisterClientID(ctx context.Context, registerClientID *uuid.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByRegisterClientID, registerClientID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Locale,
+		&i.Timezone,
+		&i.AvatarKey,
+		&i.GlobalRole,
+		&i.Settings,
+		&i.SecuredAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.RegisterClientID,
 	)
 	return i, err
 }
@@ -122,7 +153,7 @@ SET email = COALESCE($2, email),
     password_hash = COALESCE($3, password_hash),
     secured_at = COALESCE(secured_at, now())
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, name, email, password_hash, locale, timezone, avatar_key, global_role, settings, secured_at, created_at, updated_at, deleted_at
+RETURNING id, name, email, password_hash, locale, timezone, avatar_key, global_role, settings, secured_at, created_at, updated_at, deleted_at, register_client_id
 `
 
 type SetUserCredentialsParams struct {
@@ -148,6 +179,7 @@ func (q *Queries) SetUserCredentials(ctx context.Context, arg SetUserCredentials
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.RegisterClientID,
 	)
 	return i, err
 }
@@ -165,7 +197,7 @@ const updateUserProfile = `-- name: UpdateUserProfile :one
 UPDATE users
 SET name = $2, locale = $3, timezone = $4, settings = $5
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, name, email, password_hash, locale, timezone, avatar_key, global_role, settings, secured_at, created_at, updated_at, deleted_at
+RETURNING id, name, email, password_hash, locale, timezone, avatar_key, global_role, settings, secured_at, created_at, updated_at, deleted_at, register_client_id
 `
 
 type UpdateUserProfileParams struct {
@@ -199,6 +231,7 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.RegisterClientID,
 	)
 	return i, err
 }

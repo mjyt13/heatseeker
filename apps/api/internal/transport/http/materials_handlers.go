@@ -17,6 +17,7 @@ type listMaterialsInput struct {
 	NoSubject bool     `query:"no_subject" doc:"Только материалы без предмета."`
 	TagIDs    []string `query:"tag_id" doc:"Материалы со всеми указанными тегами (тег предмета = фильтр по предмету)."`
 	Kind      string   `query:"kind" enum:"LECTURE,NOTES,REPORT,CALC,ASSIGNMENT,OTHER"`
+	FileType  string   `query:"file_type" enum:"DOCUMENT,IMAGE,AUDIO,VIDEO,ARCHIVE,OTHER" doc:"Тип файла по MIME (D35)."`
 	Mine      bool     `query:"mine" doc:"Только загруженные мной."`
 	Inbox     bool     `query:"inbox" doc:"«Входящие»: материалы, требующие разбора."`
 	Archived  bool     `query:"archived" doc:"Архив вместо актуальных."`
@@ -39,6 +40,16 @@ type materialIDInput struct {
 
 type materialOutput struct {
 	Body MaterialDTO
+}
+
+// ClassifiedDTO is a material decided in the Inbox.
+type ClassifiedDTO struct {
+	MaterialDTO
+	LearnedAlias string `json:"learned_alias,omitempty" doc:"Синоним, добавленный предмету из имени папки на Диске; похожие файлы разберутся автоматически."`
+}
+
+type classifiedOutput struct {
+	Body ClassifiedDTO
 }
 
 type materialDetailsOutput struct {
@@ -66,6 +77,21 @@ type classifyMaterialInput struct {
 	}
 }
 
+type bulkClassifyInput struct {
+	GroupID string `path:"groupId" format:"uuid"`
+	Body    struct {
+		MaterialIDs []string `json:"material_ids" minItems:"1" maxItems:"200"`
+		SubjectID   *string  `json:"subject_id,omitempty" format:"uuid" doc:"Пусто — «без предмета»."`
+		Kind        *string  `json:"kind,omitempty" enum:"LECTURE,NOTES,REPORT,CALC,ASSIGNMENT,OTHER" doc:"Пусто — тип каждого материала не меняется."`
+	}
+}
+
+type bulkClassifyOutput struct {
+	Body struct {
+		Classified int `json:"classified" doc:"Сколько материалов разобрано (чужие и удалённые пропускаются)."`
+	}
+}
+
 type openMaterialInput struct {
 	MaterialID string `path:"materialId" format:"uuid"`
 	VersionID  string `query:"version_id" format:"uuid"`
@@ -74,6 +100,17 @@ type openMaterialInput struct {
 
 type openOutput struct {
 	Body OpenDTO
+}
+
+type materialPreviewInput struct {
+	MaterialID string `path:"materialId" format:"uuid"`
+	VersionID  string `query:"version_id" format:"uuid" doc:"Версия; по умолчанию текущая."`
+}
+
+type materialPreviewOutput struct {
+	Body struct {
+		PreviewStatus string `json:"preview_status" enum:"PENDING,READY,SKIPPED" doc:"READY — превью в preview_url ответа /open; PENDING — готовится, опрашивайте материал."`
+	}
 }
 
 type createUploadInput struct {
@@ -164,6 +201,10 @@ func registerMaterials(api huma.API, d Deps) {
 			k := domain.MaterialKind(in.Kind)
 			li.Kind = &k
 		}
+		if in.FileType != "" {
+			ft := domain.FileType(in.FileType)
+			li.FileType = &ft
+		}
 		page, err := d.Materials.List(ctx, p.UserID, groupID, li)
 		if err != nil {
 			return nil, apiErr(d.Log, err)
@@ -171,7 +212,7 @@ func registerMaterials(api huma.API, d Deps) {
 		out := &materialsPageOutput{}
 		out.Body.Items = make([]MaterialDTO, len(page.Items))
 		for i := range page.Items {
-			out.Body.Items[i] = toMaterialDTO(&page.Items[i])
+			out.Body.Items[i] = toMaterialDTO(&page.Items[i], d.Materials)
 		}
 		out.Body.NextCursor = page.NextCursor
 		if page.InboxCount > 0 || in.Inbox {
@@ -193,7 +234,7 @@ func registerMaterials(api huma.API, d Deps) {
 		if err != nil {
 			return nil, apiErr(d.Log, err)
 		}
-		return &materialDetailsOutput{Body: toMaterialDetailsDTO(details)}, nil
+		return &materialDetailsOutput{Body: toMaterialDetailsDTO(details, d.Materials)}, nil
 	})
 
 	huma.Register(api, huma.Operation{
@@ -230,13 +271,44 @@ func registerMaterials(api huma.API, d Deps) {
 		if err != nil {
 			return nil, apiErr(d.Log, err)
 		}
-		return &materialOutput{Body: toMaterialDTO(view)}, nil
+		return &materialOutput{Body: toMaterialDTO(view, d.Materials)}, nil
+	})
+
+	huma.Register(api, huma.Operation{
+		OperationID: "materials-classify-bulk", Method: nethttp.MethodPost, Path: "/groups/{groupId}/materials/classify", Tags: []string{"materials"}, Security: bearer,
+		Summary: "Разобрать несколько материалов", Description: "Массовое действие во «Входящих»: один предмет (и, при желании, тип) для всех выбранных.",
+	}, func(ctx context.Context, in *bulkClassifyInput) (*bulkClassifyOutput, error) {
+		p, groupID, err := principalAndID(ctx, "groupId", in.GroupID)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		ids, err := parseIDs("material_ids", in.Body.MaterialIDs)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		bi := materials.BulkClassifyInput{MaterialIDs: ids}
+		if in.Body.SubjectID != nil {
+			if bi.SubjectID, err = parseOptionalID("subject_id", *in.Body.SubjectID); err != nil {
+				return nil, apiErr(d.Log, err)
+			}
+		}
+		if in.Body.Kind != nil {
+			k := domain.MaterialKind(*in.Body.Kind)
+			bi.Kind = &k
+		}
+		n, err := d.Materials.ClassifyMany(ctx, p.UserID, groupID, bi)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		out := &bulkClassifyOutput{}
+		out.Body.Classified = n
+		return out, nil
 	})
 
 	huma.Register(api, huma.Operation{
 		OperationID: "materials-classify", Method: nethttp.MethodPost, Path: "/materials/{materialId}/classify", Tags: []string{"materials"}, Security: bearer,
 		Summary: "Разобрать материал из «Входящих»", Description: "Модератор подтверждает предмет и тип; материал уходит из «Входящих».",
-	}, func(ctx context.Context, in *classifyMaterialInput) (*materialOutput, error) {
+	}, func(ctx context.Context, in *classifyMaterialInput) (*classifiedOutput, error) {
 		p, id, err := principalAndID(ctx, "materialId", in.MaterialID)
 		if err != nil {
 			return nil, apiErr(d.Log, err)
@@ -247,11 +319,11 @@ func registerMaterials(api huma.API, d Deps) {
 				return nil, apiErr(d.Log, err)
 			}
 		}
-		view, err := d.Materials.Classify(ctx, p.UserID, id, ci)
+		res, err := d.Materials.Classify(ctx, p.UserID, id, ci)
 		if err != nil {
 			return nil, apiErr(d.Log, err)
 		}
-		return &materialOutput{Body: toMaterialDTO(view)}, nil
+		return &classifiedOutput{Body: ClassifiedDTO{MaterialDTO: toMaterialDTO(res.View, d.Materials), LearnedAlias: res.LearnedAlias}}, nil
 	})
 
 	transition := func(opID, path, summary, description string, method string, fn func(context.Context, uuid.UUID, uuid.UUID) error) {
@@ -293,6 +365,30 @@ func registerMaterials(api huma.API, d Deps) {
 			return nil, apiErr(d.Log, err)
 		}
 		return &openOutput{Body: toOpenDTO(res)}, nil
+	})
+
+	huma.Register(api, huma.Operation{
+		OperationID: "materials-preview", Method: nethttp.MethodPost, Path: "/materials/{materialId}/preview", Tags: []string{"materials"}, Security: bearer,
+		Summary: "Запросить PDF-превью офисного файла",
+		Description: "pptx/docx/xlsx и т.п. браузер не показывает: сервер конвертирует их в PDF (Gotenberg). " +
+			"Повторный запрос не создаёт новую задачу; после неудачи (FAILED) — пробует снова.",
+		DefaultStatus: nethttp.StatusAccepted,
+	}, func(ctx context.Context, in *materialPreviewInput) (*materialPreviewOutput, error) {
+		p, id, err := principalAndID(ctx, "materialId", in.MaterialID)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		versionID, err := parseOptionalID("version_id", in.VersionID)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		status, err := d.Materials.RequestPreview(ctx, p.UserID, id, versionID)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		out := &materialPreviewOutput{}
+		out.Body.PreviewStatus = status
+		return out, nil
 	})
 
 	huma.Register(api, huma.Operation{
@@ -345,7 +441,7 @@ func registerMaterials(api huma.API, d Deps) {
 		if err != nil {
 			return nil, apiErr(d.Log, err)
 		}
-		return &materialOutput{Body: toMaterialDTO(view)}, nil
+		return &materialOutput{Body: toMaterialDTO(view, d.Materials)}, nil
 	})
 }
 

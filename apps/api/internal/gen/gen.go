@@ -44,6 +44,8 @@ var enums = []enumDef{
 	{"IdentityProvider", []string{string(domain.ProviderGoogle), string(domain.ProviderApple)}},
 	{"EventKind", strsOf(domain.AllEventKinds)},
 	{"MaterialKind", strsOf(domain.AllMaterialKinds)},
+	{"FileType", strsOf(domain.AllFileTypes)},
+	{"ErrorCode", domain.AllErrorCodes},
 	{"MaterialSource", strsOf([]domain.MaterialSource{domain.SourceUpload, domain.SourceDrive})},
 	{"MaterialStatus", strsOf([]domain.MaterialStatus{domain.MaterialActive, domain.MaterialArchived, domain.MaterialDeleted})},
 	{"ReviewReason", strsOf([]domain.ReviewReason{domain.ReviewLowConfidence, domain.ReviewRemovedFromDrive})},
@@ -120,6 +122,7 @@ export function requiresSecured(action: Action): boolean {
 		fmt.Fprintf(&en, "export const %s = [%s] as const;\nexport type %s = (typeof %s)[number];\n\n",
 			constName(e.Name), quoted(e.Values), e.Name, constName(e.Name))
 	}
+	fmt.Fprintf(&en, "/** RFC 7807 problem type prefix of coded API errors: `${ERROR_TYPE_PREFIX}<ErrorCode>`. */\nexport const ERROR_TYPE_PREFIX = %q;\n", domain.ErrorPrefix)
 	if err := writeFile(filepath.Join(dir, "enums.ts"), []byte(en.String())); err != nil {
 		return err
 	}

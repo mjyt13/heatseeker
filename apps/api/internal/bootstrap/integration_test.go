@@ -5,6 +5,7 @@ package bootstrap_test
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"testing"
 
 	"heatseeker/api/internal/platform/ids"
@@ -196,6 +197,52 @@ func TestCoreFlow(t *testing.T) {
 		t.Fatal("login returned a different user")
 	}
 	c.do("POST", "/auth/login", "", map[string]any{"email": email, "password": "wrong"}, 401, nil)
+
+	// --- search by name and join directly (D33) ---
+	var stream struct {
+		Group struct {
+			ID string `json:"id"`
+		} `json:"group"`
+	}
+	streamName := "Поток Поиска " + runID
+	c.do("POST", "/groups", login.AccessToken, map[string]any{"name": streamName}, 201, &stream)
+	var anna session
+	c.do("POST", "/auth/register", "", map[string]any{"name": "Анна"}, 201, &anna)
+	type searchHit struct {
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		MemberCount int64  `json:"member_count"`
+		IsMember    bool   `json:"is_member"`
+	}
+	var found struct {
+		Items []searchHit `json:"items"`
+	}
+	search := func(q string) []searchHit {
+		found.Items = nil
+		c.do("GET", "/groups/search?q="+url.QueryEscape(q), anna.AccessToken, nil, 200, &found)
+		return found.Items
+	}
+	hits := search("  ПОИСКА " + runID + " ")
+	if len(hits) != 1 || hits[0].ID != stream.Group.ID || hits[0].Name != streamName || hits[0].MemberCount != 1 || hits[0].IsMember {
+		t.Fatalf("search hits = %+v", hits)
+	}
+	if hits := search("%" + runID); len(hits) != 0 {
+		t.Fatalf("LIKE metacharacters must be literal, got %+v", hits)
+	}
+	c.do("POST", "/groups/"+stream.Group.ID+"/join", anna.AccessToken, nil, 200, nil)
+	c.do("POST", "/groups/"+stream.Group.ID+"/join", anna.AccessToken, nil, 200, nil) // idempotent
+	if hits := search(runID); len(hits) != 1 || !hits[0].IsMember || hits[0].MemberCount != 2 {
+		t.Fatalf("after join = %+v", hits)
+	}
+	// invitation-only groups are neither listed nor joinable
+	c.do("PATCH", "/groups/"+stream.Group.ID, login.AccessToken, map[string]any{"join_policy": "INVITE"}, 200, nil)
+	if hits := search(runID); len(hits) != 0 {
+		t.Fatalf("invite-only group listed: %+v", hits)
+	}
+	var bob session
+	c.do("POST", "/auth/register", "", map[string]any{"name": "Боб"}, 201, &bob)
+	c.do("POST", "/groups/"+stream.Group.ID+"/join", bob.AccessToken, nil, 403, nil)
+	c.do("GET", "/groups/search?q="+runID, "", nil, 401, nil)
 
 	// --- unauthenticated access is rejected ---
 	c.do("GET", "/me", "", nil, 401, nil)

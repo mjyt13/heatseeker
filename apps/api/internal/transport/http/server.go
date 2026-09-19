@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	nethttp "net/http"
-	"slices"
 	"strings"
 	"time"
 
@@ -67,13 +66,8 @@ func NewServer(d Deps) *Server {
 	r.Use(middleware.Recoverer)
 	r.Use(timeoutExceptMedia(60 * time.Second))
 	if d.Cfg != nil {
-		origins := d.Cfg.App.CORSOrigins
-		if d.Cfg.IsDev() {
-			// Dev servers (Expo, Vite) pick another port when theirs is busy.
-			origins = append(slices.Clone(origins), "http://localhost:*", "http://127.0.0.1:*")
-		}
 		r.Use(cors.Handler(cors.Options{
-			AllowedOrigins:   origins,
+			AllowOriginFunc:  allowOrigin(d.Cfg.App.CORSOrigins, d.Cfg.IsDev()),
 			AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-Id", "Idempotency-Key", "Range"},
 			ExposedHeaders:   []string{"X-Request-Id", "Content-Range", "Content-Length", "Accept-Ranges", "Content-Disposition"},

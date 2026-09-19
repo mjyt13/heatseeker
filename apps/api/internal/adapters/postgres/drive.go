@@ -23,6 +23,7 @@ func toConnection(c sqlcgen.DriveConnection) *domain.DriveConnection {
 		DriveID:          c.DriveID,
 		Status:           domain.DriveConnectionStatus(c.Status),
 		LastError:        c.LastError,
+		LastErrorCode:    c.LastErrorCode,
 		SyncStartedAt:    c.SyncStartedAt,
 		LastSyncAt:       c.LastSyncAt,
 		LastFullScanAt:   c.LastFullScanAt,
@@ -123,13 +124,14 @@ func (r *driveRepo) BeginSync(ctx context.Context, id uuid.UUID, now, staleBefor
 
 func (r *driveRepo) FinishSync(ctx context.Context, p domain.FinishSyncParams) error {
 	return mapErr(r.s.queries(ctx).FinishDriveSync(ctx, sqlcgen.FinishDriveSyncParams{
-		ID:          p.ID,
-		Status:      string(p.Status),
-		LastError:   p.LastError,
-		PageToken:   p.PageToken,
-		CompletedAt: p.CompletedAt,
-		FullScan:    p.FullScan,
-		Succeeded:   p.Succeeded,
+		ID:            p.ID,
+		Status:        string(p.Status),
+		LastError:     p.LastError,
+		LastErrorCode: p.LastErrorCode,
+		PageToken:     p.PageToken,
+		CompletedAt:   p.CompletedAt,
+		FullScan:      p.FullScan,
+		Succeeded:     p.Succeeded,
 	}), "drive connection")
 }
 
@@ -209,6 +211,14 @@ func (r *driveRepo) ListFolders(ctx context.Context, connectionID uuid.UUID) ([]
 	return toDriveItems(rows), nil
 }
 
+func (r *driveRepo) ListReclassifyCandidates(ctx context.Context, groupID uuid.UUID) ([]domain.DriveItem, error) {
+	rows, err := r.s.queries(ctx).ListReclassifyCandidates(ctx, groupID)
+	if err != nil {
+		return nil, mapErr(err, "drive item")
+	}
+	return toDriveItems(rows), nil
+}
+
 func (r *driveRepo) ListUnseen(ctx context.Context, connectionID uuid.UUID, before time.Time) ([]domain.DriveItem, error) {
 	rows, err := r.s.queries(ctx).ListUnseenDriveItems(ctx, sqlcgen.ListUnseenDriveItemsParams{ConnectionID: connectionID, SeenAt: before})
 	if err != nil {
@@ -245,4 +255,37 @@ func parseUploadMeta(raw []byte) domain.UploadMeta {
 		_ = json.Unmarshal(raw, &m)
 	}
 	return m
+}
+
+func toPublisher(r sqlcgen.DrivePublisher) *domain.DrivePublisher {
+	return &domain.DrivePublisher{
+		GroupID: r.GroupID, Email: r.GoogleEmail, RefreshTokenEnc: r.RefreshTokenEnc, Scopes: r.Scopes,
+		LastError: r.LastError, ConnectedBy: r.ConnectedBy, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
+	}
+}
+
+func (r *driveRepo) UpsertPublisher(ctx context.Context, p domain.DrivePublisher) (*domain.DrivePublisher, error) {
+	row, err := r.s.queries(ctx).UpsertDrivePublisher(ctx, sqlcgen.UpsertDrivePublisherParams{
+		GroupID: p.GroupID, GoogleEmail: p.Email, RefreshTokenEnc: p.RefreshTokenEnc, Scopes: p.Scopes, ConnectedBy: p.ConnectedBy,
+	})
+	if err != nil {
+		return nil, mapErr(err, "drive publisher")
+	}
+	return toPublisher(row), nil
+}
+
+func (r *driveRepo) GetPublisher(ctx context.Context, groupID uuid.UUID) (*domain.DrivePublisher, error) {
+	row, err := r.s.queries(ctx).GetDrivePublisher(ctx, groupID)
+	if err != nil {
+		return nil, mapErr(err, "drive publisher")
+	}
+	return toPublisher(row), nil
+}
+
+func (r *driveRepo) DeletePublisher(ctx context.Context, groupID uuid.UUID) error {
+	return mapErr(r.s.queries(ctx).DeleteDrivePublisher(ctx, groupID), "drive publisher")
+}
+
+func (r *driveRepo) SetPublisherError(ctx context.Context, groupID uuid.UUID, msg *string) error {
+	return mapErr(r.s.queries(ctx).SetDrivePublisherError(ctx, sqlcgen.SetDrivePublisherErrorParams{GroupID: groupID, LastError: msg}), "drive publisher")
 }

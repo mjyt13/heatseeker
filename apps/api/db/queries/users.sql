@@ -1,7 +1,10 @@
 -- name: CreateUser :one
-INSERT INTO users (id, name, email, password_hash, locale, timezone, secured_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO users (id, name, email, password_hash, locale, timezone, secured_at, register_client_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING *;
+
+-- name: GetUserByRegisterClientID :one
+SELECT * FROM users WHERE register_client_id = $1 AND deleted_at IS NULL;
 
 -- name: GetUserByID :one
 SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL;

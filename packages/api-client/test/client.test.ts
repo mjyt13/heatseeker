@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
 
-import { ApiError, createApiClient, unwrap, type Tokens } from '../src';
+import { ApiError, createApiClient, tokenExpiresAt, unwrap, type Tokens } from '../src';
 
 function memoryStore(initial: Tokens | null) {
   let value = initial;
@@ -177,4 +177,41 @@ test('keeps UTF-8 intact when wrapping a retried response (React Native polyfill
   const me = await client.GET('/me');
   expect(me.response.status).toBe(200);
   expect((me.data as { name: string }).name).toBe('Психология · фрейд');
+});
+
+const jwt = (claims: object) =>
+  `h.${btoa(JSON.stringify(claims)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}.s`;
+
+test('reads the expiry of a JWT', () => {
+  expect(tokenExpiresAt(jwt({ sub: 'u', exp: 1_900_000_000 }))).toBe(1_900_000_000_000);
+  expect(tokenExpiresAt(jwt({ sub: 'u' }))).toBeNull();
+  expect(tokenExpiresAt('opaque')).toBeNull();
+  expect(tokenExpiresAt('a.!!!.b')).toBeNull();
+});
+
+test('refreshes ahead of expiry instead of waiting for 401', async () => {
+  const calls: { url: string; auth: string | null }[] = [];
+  const soon = jwt({ sub: 'u', exp: Math.floor(Date.now() / 1000) + 30 });
+  const later = jwt({ sub: 'u', exp: Math.floor(Date.now() / 1000) + 900 });
+  const store = memoryStore({ accessToken: soon, refreshToken: 'r1' });
+  const fakeFetch: typeof fetch = async (input, init) => {
+    const req = input instanceof Request ? input : new Request(input, init);
+    calls.push({ url: new URL(req.url).pathname, auth: req.headers.get('Authorization') });
+    if (req.url.endsWith('/auth/refresh')) {
+      return json(200, { access_token: later, refresh_token: 'r2', user: {} });
+    }
+    return json(200, { id: 'u1', name: 'x' });
+  };
+  const client = createApiClient({ baseUrl: 'http://api/api/v1', tokens: store, fetch: fakeFetch });
+  await Promise.all([client.GET('/me'), client.GET('/me')]);
+  expect(calls.filter((c) => c.url.endsWith('/auth/refresh'))).toHaveLength(1);
+  expect(calls.filter((c) => c.url === '/api/v1/me').map((c) => c.auth)).toEqual([
+    `Bearer ${later}`,
+    `Bearer ${later}`,
+  ]);
+
+  // A fresh token is used as is.
+  calls.length = 0;
+  await client.GET('/me');
+  expect(calls.map((c) => c.url)).toEqual(['/api/v1/me']);
 });

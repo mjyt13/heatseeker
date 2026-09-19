@@ -196,7 +196,7 @@ apps/api/
 |---|---|
 | auth | `POST /auth/register` `{name, invite_code?}` → токены; `POST /auth/login`; `/auth/refresh`, `/auth/logout`; `POST /auth/google` (id_token); `POST /me/credentials` («защитить аккаунт») |
 | me | `GET/PATCH /me`, `/me/devices`, `/me/preferences`, `/me/mutes`, `/me/bookmarks`, `/me/reminders`, `/me/notifications` |
-| groups | `POST /groups`, `GET /groups/:id`, `GET /groups/:id/members` (админ — расширенная инфа), `PATCH /groups/:id/members/:uid/roles`, `POST /groups/:id/invites`, `POST /groups/join/:code`, `GET /groups/:id/sync?since=` |
+| groups | `POST /groups`, `GET /groups/:id`, `GET /groups/:id/members` (админ — расширенная инфа), `PATCH /groups/:id/members/:uid/roles`, `POST /groups/:id/invites`, `POST /groups/join/:code`, `GET /groups/search?q=` и `POST /groups/:id/join` (открытые группы, D33), `GET /groups/:id/sync?since=` |
 | subjects / tags | CRUD; `GET /groups/:id/quick-tags` |
 | materials | `GET /groups/:id/materials?subject&tags&kind&q&cursor`, `GET /materials/:id`, `GET /materials/:id/open` → `{mode, drive_web_view_link?, stream_url?, s3_url?}`, `GET /materials/:id/stream` (прокси с Range), `POST /groups/:id/materials/uploads` (presigned / прямой при `local`), `POST …/complete`, `PATCH`, `/archive`, `/restore`, `DELETE`, `GET /groups/:id/materials/inbox`, `POST /materials/:id/classify` |
 | tasks | CRUD (создаёт любой), `PATCH /tasks/:id/status`, `PATCH /tasks/:id/me/status`, `POST /tasks/:id/pin`, `GET /groups/:id/board` |

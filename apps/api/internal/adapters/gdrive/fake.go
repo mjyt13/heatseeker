@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -29,7 +30,13 @@ type Fake struct {
 }
 
 type fakeFile struct {
-	meta    domain.DriveFile
+	meta      domain.DriveFile
+	content   []byte
+	revisions []fakeRevision // binary files: oldest first, the last one is the head
+}
+
+type fakeRevision struct {
+	meta    domain.DriveRevision
 	content []byte
 }
 
@@ -99,14 +106,21 @@ func (f *Fake) put(id, parent, name, mime string, content []byte, props map[stri
 	now := f.tick()
 	sum := md5.Sum(content) //nolint:gosec // see import
 	created := now
+	var revisions []fakeRevision
 	if old, ok := f.files[id]; ok {
 		created = old.meta.CreatedTime
+		revisions = old.revisions
 	}
+	rev := domain.DriveRevision{
+		ID: fmt.Sprintf("%s-rev%d", id, len(revisions)+1), MD5: hex.EncodeToString(sum[:]),
+		Size: int64(len(content)), ModifiedTime: now,
+	}
+	revisions = append(revisions, fakeRevision{meta: rev, content: content})
 	f.files[id] = &fakeFile{meta: domain.DriveFile{
-		ID: id, Name: name, MimeType: mime, MD5: hex.EncodeToString(sum[:]), Size: int64(len(content)),
+		ID: id, Name: name, MimeType: mime, MD5: rev.MD5, Size: rev.Size,
 		Parents: []string{parent}, CreatedTime: created, ModifiedTime: now, AppProperties: props,
-		WebViewLink: "https://drive.google.com/file/d/" + id + "/view",
-	}, content: content}
+		WebViewLink: "https://drive.google.com/file/d/" + id + "/view", HeadRevisionID: rev.ID,
+	}, content: content, revisions: revisions}
 	f.record(id, false)
 	meta := f.files[id].meta
 	return &meta
@@ -118,6 +132,15 @@ func (f *Fake) UpdateContent(id, content string) {
 	defer f.mu.Unlock()
 	file := f.files[id]
 	f.put(id, file.meta.Parent(), file.meta.Name, file.meta.MimeType, []byte(content), file.meta.AppProperties)
+}
+
+// DropOldRevisions forgets every revision but the head, like Google does
+// after ~30 days for revisions not marked keepForever.
+func (f *Fake) DropOldRevisions(id string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	file := f.files[id]
+	file.revisions = file.revisions[len(file.revisions)-1:]
 }
 
 // Rename changes a file's name.
@@ -259,8 +282,43 @@ func (f *Fake) Download(_ context.Context, fileID, rangeHeader string) (*domain.
 	if file.meta.IsGoogleDoc() {
 		return nil, fmt.Errorf("%w: only files with binary content can be downloaded", domain.ErrForbidden)
 	}
-	data := file.content
-	out := &domain.DriveContent{ContentType: file.meta.MimeType, ContentLength: int64(len(data))}
+	return serveBytes(file.content, file.meta.MimeType, rangeHeader)
+}
+
+// ListRevisions implements domain.DriveClient.
+func (f *Fake) ListRevisions(_ context.Context, fileID string) ([]domain.DriveRevision, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	file, ok := f.files[fileID]
+	if !ok {
+		return nil, fmt.Errorf("%w: drive file", domain.ErrNotFound)
+	}
+	out := make([]domain.DriveRevision, len(file.revisions))
+	for i, r := range file.revisions {
+		out[i] = r.meta
+	}
+	return out, nil
+}
+
+// DownloadRevision implements domain.DriveClient.
+func (f *Fake) DownloadRevision(_ context.Context, fileID, revisionID, rangeHeader string) (*domain.DriveContent, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	file, ok := f.files[fileID]
+	if !ok {
+		return nil, fmt.Errorf("%w: drive file", domain.ErrNotFound)
+	}
+	for _, r := range file.revisions {
+		if r.meta.ID == revisionID {
+			return serveBytes(r.content, file.meta.MimeType, rangeHeader)
+		}
+	}
+	return nil, fmt.Errorf("%w: drive revision", domain.ErrNotFound)
+}
+
+// serveBytes answers a download, honouring "bytes=a-b" and "bytes=a-".
+func serveBytes(data []byte, mime, rangeHeader string) (*domain.DriveContent, error) {
+	out := &domain.DriveContent{ContentType: mime, ContentLength: int64(len(data))}
 	if spec, ok := strings.CutPrefix(rangeHeader, "bytes="); ok {
 		from, to, _ := strings.Cut(spec, "-")
 		a, _ := strconv.Atoi(from)
@@ -295,15 +353,19 @@ func (f *Fake) Export(_ context.Context, fileID, mime string) (*domain.DriveCont
 	return &domain.DriveContent{Body: io.NopCloser(bytes.NewReader(file.content)), ContentType: mime, ContentLength: -1}, nil
 }
 
-// Upload implements domain.DriveClient.
+// Upload implements domain.DriveClient (as the service account).
 func (f *Fake) Upload(_ context.Context, u domain.DriveUpload) (*domain.DriveFile, error) {
+	return f.upload(u, true)
+}
+
+func (f *Fake) upload(u domain.DriveUpload, serviceAccount bool) (*domain.DriveFile, error) {
 	content, err := io.ReadAll(u.Body)
 	if err != nil {
 		return nil, err
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	if f.QuotaExceeded {
+	if serviceAccount && f.QuotaExceeded {
 		return nil, fmt.Errorf("%w: Service Accounts do not have storage quota", domain.ErrDriveQuota)
 	}
 	parent, ok := f.files[u.ParentID]
@@ -315,6 +377,90 @@ func (f *Fake) Upload(_ context.Context, u domain.DriveUpload) (*domain.DriveFil
 	meta.Description = u.Description
 	return meta, nil
 }
+
+// FakeOAuth is the publishing-account flow against a Fake drive: the code
+// "denied-drive" simulates an unticked Drive scope, "expired" a reused code.
+// Clients it builds upload in the account's own quota (QuotaExceeded does not
+// apply) unless Revoked is set.
+type FakeOAuth struct {
+	Drive *Fake
+	Email string
+
+	mu      sync.Mutex
+	Revoked map[string]bool // refresh tokens revoked at "Google"
+}
+
+// NewFakeOAuth returns a flow that signs in as email.
+func NewFakeOAuth(d *Fake, email string) *FakeOAuth {
+	return &FakeOAuth{Drive: d, Email: email, Revoked: map[string]bool{}}
+}
+
+// AuthURL implements domain.DriveAuthorizer.
+func (o *FakeOAuth) AuthURL(state string) string {
+	return "https://accounts.google.test/o/oauth2/auth?state=" + url.QueryEscape(state)
+}
+
+// Exchange implements domain.DriveAuthorizer.
+func (o *FakeOAuth) Exchange(_ context.Context, code string) (*domain.DriveGrant, error) {
+	switch code {
+	case "denied-drive":
+		return nil, domain.WithCode(domain.CodeDriveScopeMissing, domain.Invalid("scope", "access to Google Drive was not granted"))
+	case "expired":
+		return nil, domain.Invalid("code", "the Google sign-in has expired or was already used; start again")
+	}
+	return &domain.DriveGrant{RefreshToken: "refresh-" + code, Email: o.Email, Scopes: "openid email https://www.googleapis.com/auth/drive"}, nil
+}
+
+// Client implements domain.DriveAuthorizer.
+func (o *FakeOAuth) Client(_ context.Context, refreshToken string) (domain.DriveClient, error) {
+	return &fakeUserClient{Fake: o.Drive, oauth: o, token: refreshToken}, nil
+}
+
+// Revoke implements domain.DriveAuthorizer.
+func (o *FakeOAuth) Revoke(_ context.Context, refreshToken string) error {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.Revoked[refreshToken] = true
+	return nil
+}
+
+func (o *FakeOAuth) revoked(token string) bool {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.Revoked[token]
+}
+
+// fakeUserClient is the Fake drive as seen by the publishing account.
+type fakeUserClient struct {
+	*Fake
+	oauth *FakeOAuth
+	token string
+}
+
+func (c *fakeUserClient) check() error {
+	if c.oauth.revoked(c.token) {
+		return domain.WithCode(domain.CodeDrivePublisherRevoked, fmt.Errorf("%w: token revoked", domain.ErrUnavailable))
+	}
+	return nil
+}
+
+// GetFile implements domain.DriveClient.
+func (c *fakeUserClient) GetFile(ctx context.Context, fileID string) (*domain.DriveFile, error) {
+	if err := c.check(); err != nil {
+		return nil, err
+	}
+	return c.Fake.GetFile(ctx, fileID)
+}
+
+// Upload implements domain.DriveClient: the account has storage quota.
+func (c *fakeUserClient) Upload(_ context.Context, u domain.DriveUpload) (*domain.DriveFile, error) {
+	if err := c.check(); err != nil {
+		return nil, err
+	}
+	return c.upload(u, false)
+}
+
+var _ domain.DriveAuthorizer = (*FakeOAuth)(nil)
 
 var _ domain.DriveClient = (*Fake)(nil)
 var _ domain.DriveClient = (*Client)(nil)

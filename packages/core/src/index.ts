@@ -1,5 +1,7 @@
 export * from './api-provider';
 export * from './session';
+export * from './hooks';
+export * from './errors';
 export * from './permissions';
 export * from './queries/keys';
 export * from './queries/auth';
@@ -10,4 +12,4 @@ export * from './queries/sync';
 export * from './queries/materials';
 export * from './queries/drive';
 export * from './materials';
-export type { MaterialKind } from './types';
+export type { FileType, MaterialKind } from './types';

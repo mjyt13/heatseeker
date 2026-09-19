@@ -22,7 +22,9 @@ task dev:logs
 S3 API MinIO по умолчанию слушает только `127.0.0.1`. Для проверки с телефона в той же Wi-Fi —
 `MINIO_BIND=0.0.0.0` в `infra/compose/.env` (не коммитится) и `task dev:up`; консоль остаётся локальной.
 
-Учётные данные по умолчанию: Postgres `heatseeker/heatseeker`, MinIO — из `S3_ACCESS_KEY_ID` /
+Учётные данные по умолчанию: Postgres `heatseeker/heatseeker` (базы `heatseeker` — разработка,
+`heatseeker_test` — интеграционные тесты; вторая создаётся `postgres-init/` только на новом томе,
+на существующем: `podman exec heatseeker-dev-postgres-1 createdb -U heatseeker heatseeker_test`), MinIO — из `S3_ACCESS_KEY_ID` /
 `S3_SECRET_ACCESS_KEY` в окружении (иначе `heatseeker` / `heatseeker-dev-secret`).
 
 ## Прод (появится на этапе 6)

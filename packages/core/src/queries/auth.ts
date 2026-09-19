@@ -9,6 +9,11 @@ import { keys } from './keys';
 export interface RegisterInput {
   name: string;
   invite_code?: string;
+  /**
+   * Случайный UUID, созданный при открытии экрана регистрации: повтор запроса
+   * (двойное нажатие, потерянный ответ) вернёт тот же аккаунт.
+   */
+  client_id?: string;
   locale?: string;
   timezone?: string;
   platform?: 'IOS' | 'ANDROID' | 'WEB';
@@ -53,8 +58,11 @@ export function useLogin() {
   const signIn = useSession((s) => s.signIn);
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { email: string; password: string; platform?: 'IOS' | 'ANDROID' | 'WEB' }): Promise<Session> =>
-      unwrap(await api.POST('/auth/login', { body })),
+    mutationFn: async (body: {
+      email: string;
+      password: string;
+      platform?: 'IOS' | 'ANDROID' | 'WEB';
+    }): Promise<Session> => unwrap(await api.POST('/auth/login', { body })),
     onSuccess: async (session) => {
       await signIn(session);
       qc.setQueryData(keys.me(), session.user);
@@ -84,8 +92,12 @@ export function useUpdateProfile() {
   const setUser = useSession((s) => s.setUser);
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { name?: string; locale?: string; timezone?: string; settings?: Record<string, unknown> }): Promise<User> =>
-      unwrap(await api.PATCH('/me', { body })),
+    mutationFn: async (body: {
+      name?: string;
+      locale?: string;
+      timezone?: string;
+      settings?: Record<string, unknown>;
+    }): Promise<User> => unwrap(await api.PATCH('/me', { body })),
     onSuccess: (user) => {
       setUser(user);
       qc.setQueryData(keys.me(), user);

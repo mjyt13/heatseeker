@@ -34,6 +34,21 @@ func TestCheckContent(t *testing.T) {
 		{"shell script as md", "md", "#!/bin/sh\nrm -rf /", false},
 		{"empty", "pdf", "", false},
 		{"unknown allowed ext is not sniffed", "ods2", "anything", true},
+		{"mp3 with id3", "mp3", "ID3\x04\x00\x00", true},
+		{"mp3 bare frame", "mp3", "\xFF\xFB\x90\x64", true},
+		{"mp3 that is text", "mp3", "hello", false},
+		{"m4a", "m4a", "\x00\x00\x00\x20ftypM4A ", true},
+		{"mp4", "mp4", "\x00\x00\x00\x18ftypmp42", true},
+		{"old quicktime mov", "mov", "\x00\x00\x00\x08wide\x00\x00", true},
+		{"mp4 that is a zip", "mp4", "PK\x03\x04\x14\x00\x00\x00", false},
+		{"ogg", "ogg", "OggS\x00\x02", true},
+		{"flac", "flac", "fLaC\x00\x00\x00\x22", true},
+		{"flac renamed ogg", "flac", "OggS\x00", false},
+		{"wav", "wav", "RIFF\x24\x00\x00\x00WAVEfmt ", true},
+		{"webp renamed wav", "wav", "RIFF\x10\x00\x00\x00WEBPVP8 ", false},
+		{"webm", "webm", "\x1A\x45\xDF\xA3\x9F", true},
+		{"mkv", "mkv", "\x1A\x45\xDF\xA3\x01", true},
+		{"exe renamed mkv", "mkv", "MZ\x90\x00", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -51,6 +66,8 @@ func TestCheckContent(t *testing.T) {
 func TestMimeFor(t *testing.T) {
 	tests := []struct{ ext, claimed, want string }{
 		{"pdf", "text/html", "application/pdf"},
+		{"flac", "", "audio/flac"},
+		{"mkv", "application/octet-stream", "video/x-matroska"},
 		{"docx", "", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
 		{"unknownext", "application/x-custom; charset=binary", "application/x-custom"},
 		{"unknownext", "text/html", "application/octet-stream"},

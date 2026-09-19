@@ -26,7 +26,8 @@ export default function LoginScreen() {
         onChangeText={setEmail}
         autoCapitalize="none"
         autoCorrect={false}
-        keyboardType="email-address"
+        type="email"
+        autoComplete="email"
         textContentType="emailAddress"
       />
       <Field
@@ -34,8 +35,7 @@ export default function LoginScreen() {
         label={t('auth.password')}
         value={password}
         onChangeText={setPassword}
-        secureTextEntry
-        textContentType="password"
+        password={{ show: t('auth.password_show'), hide: t('auth.password_hide') }}
       />
       <ErrorText>{login.isError ? describeError(t, login.error) : null}</ErrorText>
       <Button

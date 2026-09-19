@@ -28,7 +28,11 @@ type OpenResult struct {
 	DriveWebViewLink *string
 	StreamURL        *string // Drive proxy through the API (Range supported)
 	DownloadURL      *string // direct link to our storage (S3 presigned or signed API link)
-	ExpiresAt        *time.Time
+	// PreviewURL is the PDF preview of an office file, once converted;
+	// PreviewState is its state (see Service.PreviewState).
+	PreviewURL   *string
+	PreviewState string
+	ExpiresAt    *time.Time
 }
 
 // OpenInput selects a version and presentation.
@@ -46,6 +50,7 @@ func (s *Service) Open(ctx context.Context, actorID, materialID uuid.UUID, in Op
 	}
 	m := view.Material
 	v := view.Version
+	current := v.ID
 	if in.VersionID != nil && *in.VersionID != v.ID {
 		other, err := s.Materials.GetVersion(ctx, *in.VersionID)
 		if err != nil {
@@ -72,6 +77,17 @@ func (s *Service) Open(ctx context.Context, actorID, materialID uuid.UUID, in Op
 	switch v.Storage {
 	case domain.StorageDrive:
 		// Stage 1 serves every mode as LINK; CACHE/IMPORT copies arrive in stage 5.
+		if v.ID != current {
+			// The Drive link shows the file as it is now, so an older version
+			// is only served from its revision, and only while Google keeps it.
+			res.DriveWebViewLink = nil
+			if !s.cfg.ProxyEnabled || s.Client == nil || v.DriveFileID == nil {
+				return nil, versionUnavailable()
+			}
+			if _, err := s.revisionOf(ctx, &v, true); err != nil {
+				return nil, err
+			}
+		}
 		if s.cfg.ProxyEnabled && s.Client != nil && v.DriveFileID != nil {
 			exp := now.Add(s.cfg.StreamTTL)
 			token, err := s.streams.Sign(streamClaims{Material: m.ID, Version: v.ID, User: actorID, Download: in.Download}, exp)
@@ -88,22 +104,25 @@ func (s *Service) Open(ctx context.Context, actorID, materialID uuid.UUID, in Op
 		if v.StorageKey == nil {
 			return nil, domain.NotFound("file")
 		}
-		req, err := s.Store.PresignGet(ctx, *v.StorageKey, v.OriginalName, inline, s.cfg.PresignTTL)
+		req, err := s.fileLink(ctx, *v.StorageKey, v.OriginalName, v.Mime, inline)
 		if err != nil {
 			return nil, err
-		}
-		if req == nil {
-			exp := now.Add(s.cfg.PresignTTL)
-			token, err := s.links.Sign(localClaims{Op: opGet, Key: *v.StorageKey, Name: v.OriginalName, Mime: v.Mime, Inline: inline}, exp)
-			if err != nil {
-				return nil, err
-			}
-			u := fmt.Sprintf("%s/media/%s", s.cfg.APIBaseURL, url.PathEscape(token))
-			req = &domain.PresignedRequest{URL: u, ExpiresAt: exp}
 		}
 		res.DownloadURL, res.ExpiresAt = &req.URL, &req.ExpiresAt
 	default:
 		return nil, fmt.Errorf("unknown storage %q", v.Storage)
+	}
+
+	res.PreviewState = s.PreviewState(&v)
+	if !in.Download && res.PreviewState == string(domain.PreviewReady) && v.PreviewKey != nil {
+		req, err := s.fileLink(ctx, *v.PreviewKey, previewName(v.OriginalName), "application/pdf", true)
+		if err != nil {
+			return nil, err
+		}
+		res.PreviewURL = &req.URL
+		if res.ExpiresAt == nil || req.ExpiresAt.Before(*res.ExpiresAt) {
+			res.ExpiresAt = &req.ExpiresAt
+		}
 	}
 
 	if m.UploaderID == nil || *m.UploaderID != actorID {
@@ -112,6 +131,22 @@ func (s *Service) Open(ctx context.Context, actorID, materialID uuid.UUID, in Op
 		}
 	}
 	return res, nil
+}
+
+// fileLink is a download link for an object of our storage: presigned by S3,
+// or signed by the API for the local store.
+func (s *Service) fileLink(ctx context.Context, key, name, mime string, inline bool) (*domain.PresignedRequest, error) {
+	req, err := s.Store.PresignGet(ctx, key, name, inline, s.cfg.PresignTTL)
+	if err != nil || req != nil {
+		return req, err
+	}
+	exp := s.Clock.Now().Add(s.cfg.PresignTTL)
+	token, err := s.links.Sign(localClaims{Op: opGet, Key: key, Name: name, Mime: mime, Inline: inline}, exp)
+	if err != nil {
+		return nil, err
+	}
+	u := fmt.Sprintf("%s/media/%s", s.cfg.APIBaseURL, url.PathEscape(token))
+	return &domain.PresignedRequest{URL: u, ExpiresAt: exp}, nil
 }
 
 type streamClaims struct {
@@ -159,7 +194,8 @@ func (s *Service) Stream(ctx context.Context, materialID uuid.UUID, token, range
 		return nil, domain.Unavailable("drive proxy is disabled")
 	}
 	// Membership may have ended since the link was issued.
-	if _, _, err := s.loadView(ctx, c.User, materialID); err != nil {
+	view, _, err := s.loadView(ctx, c.User, materialID)
+	if err != nil {
 		return nil, err
 	}
 	v, err := s.Materials.GetVersion(ctx, c.Version)
@@ -183,7 +219,18 @@ func (s *Service) Stream(ctx context.Context, materialID uuid.UUID, token, range
 	if rangeHeader != "" && !strings.HasPrefix(rangeHeader, "bytes=") {
 		rangeHeader = ""
 	}
-	dc, err := s.Client.Download(ctx, *v.DriveFileID, rangeHeader)
+	var dc *domain.DriveContent
+	if v.ID == view.Version.ID {
+		dc, err = s.Client.Download(ctx, *v.DriveFileID, rangeHeader)
+	} else {
+		var revisionID string
+		if revisionID, err = s.revisionOf(ctx, v, false); err == nil {
+			dc, err = s.Client.DownloadRevision(ctx, *v.DriveFileID, revisionID, rangeHeader)
+			if errors.Is(err, domain.ErrNotFound) {
+				err = versionUnavailable()
+			}
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -195,6 +242,48 @@ func (s *Service) Stream(ctx context.Context, materialID uuid.UUID, token, range
 		Body: dc.Body, ContentType: contentType, ContentLength: dc.ContentLength, ContentRange: dc.ContentRange,
 		Partial: dc.Partial, FileName: v.OriginalName, Inline: inline && filenames.Inline(v.Mime),
 	}, nil
+}
+
+// revisionOf returns the Drive revision holding an older version's content.
+// Versions indexed before revisions were recorded are matched by md5, and the
+// match is remembered. verify re-checks a known revision (streams skip it: a
+// player sends many range requests). A revision Google has already dropped is
+// reported as CodeVersionUnavailable.
+func (s *Service) revisionOf(ctx context.Context, v *domain.MaterialVersion, verify bool) (string, error) {
+	known := v.DriveRevisionID
+	if known != nil && !verify {
+		return *known, nil
+	}
+	if v.DriveFileID == nil || (known == nil && v.DriveMD5 == nil) {
+		return "", versionUnavailable() // native Google documents have no stored revisions
+	}
+	revisions, err := s.Client.ListRevisions(ctx, *v.DriveFileID)
+	if err != nil {
+		return "", err
+	}
+	for i := len(revisions) - 1; i >= 0; i-- {
+		r := revisions[i]
+		if known != nil {
+			if r.ID == *known {
+				return r.ID, nil
+			}
+			continue
+		}
+		if r.MD5 == *v.DriveMD5 {
+			id := r.ID
+			if err := s.Materials.SetVersionDriveRevision(ctx, v.ID, id); err != nil {
+				s.Log.Warn("remember drive revision", "version", v.ID, "err", err)
+			}
+			v.DriveRevisionID = &id
+			return id, nil
+		}
+	}
+	return "", versionUnavailable()
+}
+
+func versionUnavailable() error {
+	return domain.WithCode(domain.CodeVersionUnavailable,
+		fmt.Errorf("%w: Google Drive no longer keeps this version of the file", domain.ErrGone))
 }
 
 // LocalGet serves an object of the local store by a signed link.

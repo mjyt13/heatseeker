@@ -1,12 +1,15 @@
+import { randomUUID } from 'expo-crypto';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform } from 'react-native';
 
-import { useGroupPreview, useRegister } from '@heatseeker/core';
+import { useRegister } from '@heatseeker/core';
 import { LIMITS } from '@heatseeker/shared';
 import { Button, ErrorText, Field, H1, Paragraph, Screen, YStack } from '@heatseeker/ui';
 
+import { useCodePreview } from '@/components/join-by-code';
+import { API_URL } from '@/lib/api';
 import { describeError } from '@/lib/errors';
 
 const platform = Platform.OS === 'ios' ? 'IOS' : Platform.OS === 'android' ? 'ANDROID' : 'WEB';
@@ -18,13 +21,17 @@ export default function WelcomeScreen() {
   const params = useLocalSearchParams<{ code?: string }>();
   const [name, setName] = useState('');
   const [code, setCode] = useState(params.code ?? '');
-  const preview = useGroupPreview(code.trim() || null);
+  // One id per screen: repeated taps and retries map to the same account.
+  const [clientId] = useState(randomUUID);
+  const codePreview = useCodePreview(code);
   const register = useRegister();
 
   const nameError = name.trim().length === 0 && register.isError ? t('errors.validation') : null;
 
   const submit = () => {
-    register.mutate({ name: name.trim(), invite_code: code.trim() || undefined, platform });
+    // An unrecognised code must not block sign-up: the group can be found by name later.
+    const inviteCode = codePreview.preview ? code.trim() : undefined;
+    register.mutate({ name: name.trim(), invite_code: inviteCode, client_id: clientId, platform });
   };
 
   return (
@@ -51,21 +58,26 @@ export default function WelcomeScreen() {
         onChangeText={setCode}
         autoCapitalize="none"
         autoCorrect={false}
-        hint={
-          preview.data
-            ? t('groups.join_question', { name: preview.data.group.name })
-            : preview.isError
-              ? t('errors.not_found')
-              : t('auth.code_hint')
-        }
+        hint={code.trim() ? codePreview.hint : t('auth.code_hint')}
+        error={codePreview.error}
       />
       <ErrorText>{register.isError ? describeError(t, register.error) : null}</ErrorText>
-      <Button size="$5" theme="accent" disabled={register.isPending || !name.trim()} onPress={submit}>
+      <Button
+        size="$5"
+        theme="accent"
+        disabled={register.isPending || !name.trim()}
+        onPress={submit}
+      >
         {t('auth.continue')}
       </Button>
       <Button chromeless onPress={() => router.push('/(auth)/login')}>
         {t('auth.have_account')}
       </Button>
+      {__DEV__ ? (
+        <Paragraph size="$2" color="$color9" textAlign="center" userSelect="text">
+          {t('auth.dev_api', { url: API_URL })}
+        </Paragraph>
+      ) : null}
     </Screen>
   );
 }

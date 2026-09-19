@@ -56,8 +56,17 @@ func SafeName(name string) string {
 	return out
 }
 
-// Inline reports whether a MIME type is safe to render in a browser.
+// Inline reports whether a MIME type is safe to render in a browser: PDF,
+// raster images, audio and video (played by the browser or the app's player)
+// and plain text (served with nosniff). SVG and HTML can carry scripts.
 func Inline(mimeType string) bool {
-	return mimeType == "application/pdf" ||
-		(strings.HasPrefix(mimeType, "image/") && mimeType != "image/svg+xml")
+	switch {
+	case mimeType == "application/pdf", mimeType == "text/plain":
+		return true
+	case strings.HasPrefix(mimeType, "image/"):
+		return mimeType != "image/svg+xml"
+	case strings.HasPrefix(mimeType, "audio/"), strings.HasPrefix(mimeType, "video/"):
+		return true
+	}
+	return false
 }

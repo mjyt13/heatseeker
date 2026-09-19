@@ -24,6 +24,7 @@ import {
   YStack,
 } from '@heatseeker/ui';
 
+import { AliasEditor } from '@/components/alias-editor';
 import { describeError } from '@/lib/errors';
 import { useGroupContext } from '@/lib/group';
 
@@ -95,16 +96,13 @@ function SubjectForm({ subject, onDone }: { subject: Subject | null; onDone: () 
   const [name, setName] = useState(subject?.name ?? '');
   const [shortName, setShortName] = useState(subject?.short_name ?? '');
   const [teacher, setTeacher] = useState(subject?.teacher ?? '');
-  const [aliases, setAliases] = useState((subject?.aliases ?? []).join(', '));
+  const [aliases, setAliases] = useState<string[]>(subject?.aliases ?? []);
 
   const body = {
     name: name.trim(),
     short_name: shortName.trim() || undefined,
     teacher: teacher.trim() || undefined,
-    aliases: aliases
-      .split(',')
-      .map((a) => a.trim())
-      .filter(Boolean),
+    aliases,
     color: subject?.color ?? undefined,
     sort_order: subject?.sort_order,
     semester: subject?.semester ?? undefined,
@@ -138,14 +136,7 @@ function SubjectForm({ subject, onDone }: { subject: Subject | null; onDone: () 
         onChangeText={setTeacher}
         maxLength={120}
       />
-      <Field
-        id="subject-aliases"
-        label={t('subjects.aliases')}
-        hint={t('subjects.aliases_hint')}
-        value={aliases}
-        onChangeText={setAliases}
-        autoCapitalize="none"
-      />
+      <AliasEditor value={aliases} onChange={setAliases} />
       <ErrorText>{error ? describeError(t, error) : null}</ErrorText>
       <XStack gap="$2" flexWrap="wrap">
         <Button flex={1} onPress={onDone}>

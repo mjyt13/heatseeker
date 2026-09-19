@@ -22,8 +22,8 @@ self-hosted модель) и markdown-редактор.
 публикация загрузок на Диск (D32), лента активности; экраны mobile: лента, материал, загрузка,
 «Входящие», Диск, предметы, активность. Проверено фейковым Диском (`adapters/gdrive/fake.go`)
 в интеграционном тесте и MinIO, затем на реальной папке (индексация, раскладка, изменения,
-удаление, Google Docs). Публикация на Диск работает только в Shared Drive; для «Моего диска» решено
-OAuth-подключение аккаунта старосты (D34) — не реализовано. Markdown в описаниях пока
+удаление, Google Docs). Публикация на Диск — от подключённого через OAuth аккаунта
+старосты (D34, D36) или сервисным аккаунтом в Shared Drive. Markdown в описаниях пока
 показывается как текст (редактор — этап 2).
 
 **Этап 0 (фундамент) — каркас собран.** Готово: Go-ядро (`apps/api`) с auth L1/L2, группами,
@@ -124,9 +124,11 @@ Go-тулчейн стоит в user-space; в каждом shell перед Go-
 Docker Hub недоступен — compose использует зеркала (`mirror.gcr.io`, `quay.io`).
 
 ```bash
-# инфраструктура для разработки (Postgres :5433, Redis :6379, MinIO :9100/:9101, asynqmon :8082)
+# инфраструктура для разработки (Postgres :5433, Redis :6379, MinIO :9100/:9101, asynqmon :8082,
+# Gotenberg :3030 — PDF-превью офисных файлов, OFFICE_PREVIEW_URL)
 task dev:up      # = podman compose -f infra/compose/docker-compose.dev.yml up -d
 task dev:down    # остановить (данные сохраняются); task dev:reset — стереть данные
+task dev:ip      # IP компьютера в Wi-Fi → apps/api/.env и apps/mobile/.env.local (телефон, после смены сети)
 
 # ядро (из apps/api; конфиг — apps/api/.env, шаблон — .env.example в корне)
 task api:migrate            # goose up;  task api:migrate -- status|down|redo
@@ -161,7 +163,7 @@ CI проверяет, что они актуальны. После измене
 - `docs/PLAN.md` — полный план разработки (архитектура, модули, режимы медиа, Google Drive,
   обсуждения/синхронизация, уведомления, env, ИИ-сервис, roadmap).
 - `docs/DATA-MODEL.md` — таблицы, поля, индексы.
-- `docs/DECISIONS.md` — лог принятых решений (D1–D34).
+- `docs/DECISIONS.md` — лог принятых решений (D1–D37).
 - `docs/OPEN-QUESTIONS.md` — что ещё не решено и к какому этапу нужно.
 - `docs/GOOGLE-DRIVE.md` — настройка сервисного аккаунта и подключение папки.
 - `docs/FIXES.md` — недочёты из ручной проверки, очередь исправлений.

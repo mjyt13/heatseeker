@@ -140,6 +140,30 @@ func NewMux(d Deps) *asynq.ServeMux {
 		}
 		return d.Materials.HashVersion(ctx, id)
 	})
+	mux.HandleFunc(domain.JobMaterialPreview, func(ctx context.Context, t *asynq.Task) error {
+		var p domain.MaterialVersionPayload
+		id, err := decodeID(t, &p, func() string { return p.VersionID })
+		if err != nil {
+			return err
+		}
+		err = d.Materials.BuildPreview(ctx, id)
+		if err != nil && lastAttempt(ctx) {
+			// Leave a final state instead of an endless PENDING.
+			if ferr := d.Materials.PreviewGaveUp(context.WithoutCancel(ctx), id, err); ferr != nil {
+				d.Log.Error("mark preview failed", "version", id, "err", ferr)
+			}
+		}
+		return err
+	})
+	mux.HandleFunc(domain.JobMaterialsReclassify, func(ctx context.Context, t *asynq.Task) error {
+		var p domain.GroupPayload
+		id, err := decodeID(t, &p, func() string { return p.GroupID })
+		if err != nil {
+			return err
+		}
+		_, err = d.Drive.Reclassify(ctx, id)
+		return err
+	})
 	mux.HandleFunc(domain.JobUploadsCleanup, func(ctx context.Context, _ *asynq.Task) error {
 		n, err := d.Materials.CleanupUploads(ctx)
 		if n > 0 {
@@ -206,6 +230,13 @@ func Schedule() []Entry {
 		{"20 * * * *", asynq.NewTask(domain.JobUploadsCleanup, nil), []asynq.Option{asynq.Queue(QueueLow), asynq.MaxRetry(2)}},
 		{"30 4 * * *", asynq.NewTask(domain.JobMaterialsPurge, nil), []asynq.Option{asynq.Queue(QueueLow), asynq.MaxRetry(2)}},
 	}
+}
+
+// lastAttempt reports whether a failing task will not be retried again.
+func lastAttempt(ctx context.Context) bool {
+	retried, ok1 := asynq.GetRetryCount(ctx)
+	maxRetry, ok2 := asynq.GetMaxRetry(ctx)
+	return ok1 && ok2 && retried >= maxRetry
 }
 
 // asynqLogger adapts slog to asynq's logger interface.

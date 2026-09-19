@@ -16,6 +16,17 @@ func apiErr(log *slog.Logger, err error) error {
 	if err == nil {
 		return nil
 	}
+	out := statusErr(log, err)
+	if code := domain.ErrorCode(err); code != "" {
+		var model *huma.ErrorModel
+		if errors.As(out, &model) {
+			model.Type = domain.ErrorPrefix + code
+		}
+	}
+	return out
+}
+
+func statusErr(log *slog.Logger, err error) error {
 	var ve *domain.ValidationError
 	switch {
 	case errors.As(err, &ve):

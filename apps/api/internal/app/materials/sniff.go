@@ -20,7 +20,15 @@ var (
 	magicZip  = []byte("PK\x03\x04")
 	magicOLE  = []byte{0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1}
 	magicRTF  = []byte(`{\rtf`)
+	magicID3  = []byte("ID3")
+	magicOgg  = []byte("OggS")
+	magicFLAC = []byte("fLaC")
+	magicEBML = []byte{0x1A, 0x45, 0xDF, 0xA3} // Matroska / WebM
 )
+
+// isoBoxes are the first box types of MP4/MOV/M4A files (ISO BMFF and old
+// QuickTime files that start without "ftyp").
+var isoBoxes = map[string]bool{"ftyp": true, "moov": true, "mdat": true, "wide": true, "free": true, "skip": true}
 
 // executable signatures are refused whatever the extension says.
 var executables = [][]byte{
@@ -78,6 +86,15 @@ var knownMime = map[string]string{
 	"webp": "image/webp",
 	"heic": "image/heic",
 	"zip":  "application/zip",
+	"mp3":  "audio/mpeg",
+	"m4a":  "audio/mp4",
+	"ogg":  "audio/ogg",
+	"flac": "audio/flac",
+	"wav":  "audio/wav",
+	"mp4":  "video/mp4",
+	"mov":  "video/quicktime",
+	"webm": "video/webm",
+	"mkv":  "video/x-matroska",
 }
 
 // CheckContent verifies that the leading bytes of a file match its extension
@@ -112,6 +129,19 @@ func CheckContent(ext string, head []byte) error {
 		ok = len(head) >= 12 && string(head[4:8]) == "ftyp"
 	case "txt", "md", "csv":
 		ok = looksLikeText(head)
+	case "mp3":
+		// An ID3 tag or a bare MPEG audio frame (11 sync bits).
+		ok = bytes.HasPrefix(head, magicID3) || (len(head) >= 2 && head[0] == 0xFF && head[1]&0xE0 == 0xE0)
+	case "m4a", "mp4", "mov":
+		ok = len(head) >= 8 && isoBoxes[string(head[4:8])]
+	case "ogg":
+		ok = bytes.HasPrefix(head, magicOgg)
+	case "flac":
+		ok = bytes.HasPrefix(head, magicFLAC)
+	case "wav":
+		ok = len(head) >= 12 && string(head[:4]) == "RIFF" && string(head[8:12]) == "WAVE"
+	case "webm", "mkv":
+		ok = bytes.HasPrefix(head, magicEBML)
 	}
 	if !ok {
 		return domain.Invalid("file", "file content does not match its ."+ext+" extension")

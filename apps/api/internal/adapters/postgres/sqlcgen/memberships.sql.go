@@ -133,7 +133,7 @@ func (q *Queries) ListActiveMemberUserIDs(ctx context.Context, groupID uuid.UUID
 }
 
 const listMembers = `-- name: ListMembers :many
-SELECT memberships.id, memberships.user_id, memberships.group_id, memberships.roles, memberships.status, memberships.joined_via, memberships.joined_at, memberships.created_at, memberships.updated_at, users.id, users.name, users.email, users.password_hash, users.locale, users.timezone, users.avatar_key, users.global_role, users.settings, users.secured_at, users.created_at, users.updated_at, users.deleted_at
+SELECT memberships.id, memberships.user_id, memberships.group_id, memberships.roles, memberships.status, memberships.joined_via, memberships.joined_at, memberships.created_at, memberships.updated_at, users.id, users.name, users.email, users.password_hash, users.locale, users.timezone, users.avatar_key, users.global_role, users.settings, users.secured_at, users.created_at, users.updated_at, users.deleted_at, users.register_client_id
 FROM memberships
 JOIN users ON users.id = memberships.user_id
 WHERE memberships.group_id = $1 AND users.deleted_at IS NULL
@@ -177,6 +177,7 @@ func (q *Queries) ListMembers(ctx context.Context, groupID uuid.UUID) ([]ListMem
 			&i.User.CreatedAt,
 			&i.User.UpdatedAt,
 			&i.User.DeletedAt,
+			&i.User.RegisterClientID,
 		); err != nil {
 			return nil, err
 		}

@@ -16,6 +16,7 @@ export type Tag = Schemas['TagDTO'];
 export type QuickTag = Schemas['QuickTagDTO'];
 export type GroupEvent = Schemas['EventDTO'];
 export type Material = Schemas['MaterialDTO'];
+export type ClassifiedMaterial = Schemas['ClassifiedDTO'];
 export type MaterialDetails = Schemas['MaterialDetailsDTO'];
 export type MaterialVersion = Schemas['MaterialVersionDTO'];
 export type MaterialOpen = Schemas['OpenDTO'];
@@ -58,10 +59,29 @@ export class ApiError extends Error {
   }
 }
 
+/** Access-токен обновляется заранее, если до истечения осталось меньше минуты. */
+const REFRESH_AHEAD_MS = 60_000;
+
+/** Срок действия JWT (`exp`, мс) или null, если токен не JWT. Подпись не проверяется. */
+export function tokenExpiresAt(accessToken: string): number | null {
+  const payload = accessToken.split('.')[1];
+  if (!payload) return null;
+  try {
+    const b64 = payload
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+      .padEnd(Math.ceil(payload.length / 4) * 4, '=');
+    const claims = JSON.parse(atob(b64)) as { exp?: unknown };
+    return typeof claims.exp === 'number' ? claims.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Создаёт типизированный клиент. Подставляет bearer-токен, при 401 один раз
- * обновляет пару токенов через /auth/refresh и повторяет запрос; refresh
- * выполняется единожды на все параллельные запросы.
+ * Создаёт типизированный клиент. Подставляет bearer-токен и обновляет пару
+ * токенов через /auth/refresh заранее (до истечения меньше минуты) или при 401
+ * с повтором запроса; refresh выполняется единожды на все параллельные запросы.
  */
 export function createApiClient(options: ClientOptions) {
   const client = createClient<paths>({ baseUrl: options.baseUrl, fetch: options.fetch });
@@ -102,7 +122,10 @@ export function createApiClient(options: ClientOptions) {
     async onRequest({ request, schemaPath }) {
       if (schemaPath.startsWith('/auth/') && !schemaPath.startsWith('/auth/google'))
         return undefined;
-      const tokens = await options.tokens.get();
+      let tokens = await options.tokens.get();
+      // A long upload or a request right at expiry would otherwise hit 401.
+      const expiresAt = tokens ? tokenExpiresAt(tokens.accessToken) : null;
+      if (expiresAt !== null && expiresAt - Date.now() < REFRESH_AHEAD_MS) tokens = await refresh();
       if (tokens) request.headers.set('Authorization', `Bearer ${tokens.accessToken}`);
       if (request.body !== null) replayable.set(request, request.clone());
       return request;

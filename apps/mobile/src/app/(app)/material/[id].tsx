@@ -1,8 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { MaterialDetails } from '@heatseeker/api-client';
@@ -11,12 +10,14 @@ import {
   useMaterial,
   useMaterialTransition,
   useOpenMaterial,
+  useRequestPreview,
   useUpdateMaterial,
   type MaterialKind,
   type MaterialTransition,
 } from '@heatseeker/core';
 import {
   Button,
+  confirm,
   EmptyState,
   ErrorText,
   Field,
@@ -38,20 +39,48 @@ import {
   SubjectPicker,
   useFormatSize,
 } from '@/components/materials';
+import { MediaPlayer, playableKind, type PlayableKind } from '@/components/media-player';
 import { describeError } from '@/lib/errors';
 import { subjectLabel, useGroupContext } from '@/lib/group';
 import { showMaterial } from '@/lib/open';
 
+type PreviewStatus = MaterialDetails['file']['preview_status'];
+type PreviewProblem = 'timeout' | 'too_large' | 'failed';
+/** How long "Смотреть" waits for a PDF preview, and how often it checks. */
+const PREVIEW_WAIT_MS = 120_000;
+const PREVIEW_POLL_MS = 2_500;
+
 /** Материал: просмотр, история версий, правка и модерация. */
 export default function MaterialScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  // The route is a hidden tab and stays mounted: a fresh view per material
+  // resets the player, the edit form and the rest of the local state.
+  return <MaterialView key={id} id={id} />;
+}
+
+function MaterialView({ id }: { id: string }) {
   const { t } = useTranslation();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
   const ctx = useGroupContext();
   const material = useMaterial(id);
   const open = useOpenMaterial();
   const transition = useMaterialTransition(ctx.groupId ?? '');
   const [editing, setEditing] = useState(false);
+  // Audio/video play inline; undefined version = the current one.
+  const [playing, setPlaying] = useState<{ versionId?: string; kind: PlayableKind } | null>(null);
+  // Leaving the screen stops playback (the tab itself is not unmounted).
+  useFocusEffect(useCallback(() => () => setPlaying(null), []));
+  const requestPreview = useRequestPreview(id);
+  // Version whose PDF preview is being prepared, and why the last one failed.
+  const [preparing, setPreparing] = useState<string | null>(null);
+  const [previewProblem, setPreviewProblem] = useState<PreviewProblem | null>(null);
+  const alive = useRef(true);
+  useEffect(
+    () => () => {
+      alive.current = false;
+    },
+    [],
+  );
 
   if (material.isPending) return <LoadingScreen />;
   if (!material.data) {
@@ -78,11 +107,57 @@ export default function MaterialScreen() {
       ? ctx.subjectById.get(m.classification.subject_id)
       : undefined;
 
+  const playable = playableKind(m.file.mime);
+
+  /**
+   * Office files are shown through a PDF preview made by the server: request
+   * it if needed, wait while it is converted, then open it. Without a preview
+   * (too large, failed, turned off) the file opens as before — downloaded.
+   */
+  const view = async (versionId: string, status: PreviewStatus | undefined) => {
+    setPreviewProblem(null);
+    if (status !== 'READY' && status !== 'NONE' && status !== 'PENDING' && status !== 'FAILED') {
+      open.mutate(
+        { materialId: m.id, versionId },
+        { onSuccess: (links) => void showMaterial(links) },
+      );
+      return;
+    }
+    setPreparing(versionId);
+    try {
+      if (status === 'NONE' || status === 'FAILED') await requestPreview.mutateAsync(versionId);
+      const deadline = Date.now() + PREVIEW_WAIT_MS;
+      let current = status === 'READY' ? status : 'PENDING';
+      while (current === 'PENDING' && Date.now() < deadline && alive.current) {
+        await new Promise((resolve) => setTimeout(resolve, PREVIEW_POLL_MS));
+        const fresh = await material.refetch();
+        current = fresh.data?.versions?.find((v) => v.id === versionId)?.preview_status ?? '';
+      }
+      if (!alive.current) return;
+      if (current !== 'READY') {
+        setPreviewProblem(
+          current === 'PENDING' ? 'timeout' : current === 'SKIPPED' ? 'too_large' : 'failed',
+        );
+        return;
+      }
+      const links = await open.mutateAsync({ materialId: m.id, versionId });
+      await showMaterial(links);
+    } catch {
+      // Request errors are shown by the mutations below the buttons.
+    } finally {
+      if (alive.current) setPreparing(null);
+    }
+  };
+
   const doOpen = (preferDrive: boolean, download = false) =>
-    open.mutate(
-      { materialId: m.id, download },
-      { onSuccess: (links) => void showMaterial(links, preferDrive) },
-    );
+    !preferDrive && !download && playable
+      ? setPlaying(playing && !playing.versionId ? null : { kind: playable })
+      : !preferDrive && !download
+        ? void view(m.file.id, m.file.preview_status)
+        : open.mutate(
+            { materialId: m.id, download },
+            { onSuccess: (links) => void showMaterial(links, preferDrive) },
+          );
 
   const doTransition = (action: MaterialTransition) => {
     const run = () =>
@@ -90,14 +165,17 @@ export default function MaterialScreen() {
         { materialId: m.id, action },
         { onSuccess: () => (action === 'delete' ? router.back() : undefined) },
       );
-    if (action === 'delete') {
-      Alert.alert(t('common.delete'), t('common.confirm_delete'), [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.delete'), style: 'destructive', onPress: run },
-      ]);
-    } else {
+    if (action !== 'delete') {
       run();
+      return;
     }
+    void confirm({
+      title: t('common.delete'),
+      message: t('common.confirm_delete'),
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
+      destructive: true,
+    }).then((ok) => ok && run());
   };
 
   return (
@@ -144,12 +222,41 @@ export default function MaterialScreen() {
         <YStack gap="$2">
           <Button
             theme="accent"
-            icon={<Ionicons name="eye-outline" size={18} />}
-            disabled={open.isPending}
+            icon={<Ionicons name={playable ? 'play' : 'eye-outline'} size={18} />}
+            disabled={open.isPending || preparing !== null}
             onPress={() => doOpen(false)}
           >
-            {t('materials.open_in_app')}
+            {preparing === m.file.id
+              ? t('materials.preview_preparing')
+              : playable
+                ? t('player.listen', { context: playable })
+                : t('materials.open_in_app')}
           </Button>
+          {previewProblem ? (
+            <Paragraph color="$color10">
+              {t(`materials.preview_problem.${previewProblem}`)}
+            </Paragraph>
+          ) : null}
+          <ErrorText>
+            {requestPreview.isError ? describeError(t, requestPreview.error) : null}
+          </ErrorText>
+          {playing ? (
+            <YStack gap="$1">
+              {playing.versionId ? (
+                <Paragraph size="$2" color="$color10">
+                  {t('materials.version_n', {
+                    n: m.versions?.find((v) => v.id === playing.versionId)?.version_no,
+                  })}
+                </Paragraph>
+              ) : null}
+              <MediaPlayer
+                key={playing.versionId ?? 'current'}
+                materialId={m.id}
+                versionId={playing.versionId}
+                kind={playing.kind}
+              />
+            </YStack>
+          ) : null}
           {m.file.drive_web_view_link ? (
             <Button
               icon={<Ionicons name="logo-google" size={18} />}
@@ -175,7 +282,7 @@ export default function MaterialScreen() {
           <YStack gap="$1">
             <SectionLabel>{t('materials.description')}</SectionLabel>
             {/* Markdown rendering arrives with the editor (stage 2); plain text is safe meanwhile. */}
-            <Paragraph selectable>{m.description}</Paragraph>
+            <Paragraph userSelect="text">{m.description}</Paragraph>
           </YStack>
         ) : null}
 
@@ -193,12 +300,15 @@ export default function MaterialScreen() {
               <ListRow
                 key={v.id}
                 title={t('materials.version_n', { n: v.version_no })}
-                subtitle={`${v.original_name} · ${new Date(v.created_at).toLocaleString()}`}
+                subtitle={
+                  preparing === v.id
+                    ? t('materials.preview_preparing')
+                    : `${v.original_name} · ${new Date(v.created_at).toLocaleString()}`
+                }
                 onPress={() =>
-                  open.mutate(
-                    { materialId: m.id, versionId: v.id },
-                    { onSuccess: (links) => void showMaterial(links) },
-                  )
+                  playableKind(v.mime)
+                    ? setPlaying({ versionId: v.id, kind: playableKind(v.mime)! })
+                    : void view(v.id, v.preview_status)
                 }
               />
             ))}

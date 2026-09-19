@@ -53,6 +53,7 @@ type DriveConnection struct {
 	CreatedBy        *uuid.UUID
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	LastErrorCode    *string
 }
 
 type DriveItem struct {
@@ -75,6 +76,17 @@ type DriveItem struct {
 	SeenAt         time.Time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+}
+
+type DrivePublisher struct {
+	GroupID         uuid.UUID
+	GoogleEmail     string
+	RefreshTokenEnc []byte
+	Scopes          string
+	LastError       *string
+	ConnectedBy     *uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type Group struct {
@@ -172,6 +184,9 @@ type MaterialVersion struct {
 	PreviewKey        *string
 	UploadedBy        *uuid.UUID
 	CreatedAt         time.Time
+	DriveRevisionID   *string
+	PreviewStatus     *string
+	PreviewError      *string
 }
 
 type Membership struct {
@@ -244,17 +259,18 @@ type Upload struct {
 }
 
 type User struct {
-	ID           uuid.UUID
-	Name         string
-	Email        *string
-	PasswordHash *string
-	Locale       string
-	Timezone     string
-	AvatarKey    *string
-	GlobalRole   string
-	Settings     []byte
-	SecuredAt    *time.Time
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	DeletedAt    *time.Time
+	ID               uuid.UUID
+	Name             string
+	Email            *string
+	PasswordHash     *string
+	Locale           string
+	Timezone         string
+	AvatarKey        *string
+	GlobalRole       string
+	Settings         []byte
+	SecuredAt        *time.Time
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	DeletedAt        *time.Time
+	RegisterClientID *uuid.UUID
 }

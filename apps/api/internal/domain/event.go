@@ -31,12 +31,20 @@ const (
 	EventMaterialAdded      EventKind = "material.added"
 	EventMaterialUpdated    EventKind = "material.updated"
 	EventMaterialClassified EventKind = "material.classified"
-	EventMaterialArchived   EventKind = "material.archived"
-	EventMaterialRestored   EventKind = "material.restored"
-	EventMaterialDeleted    EventKind = "material.deleted"
-	EventDriveConnected     EventKind = "drive.connected"
-	EventDriveDisconnected  EventKind = "drive.disconnected"
-	EventDriveSynced        EventKind = "drive.synced"
+	// EventMaterialsBulkClassified summarises an Inbox bulk action.
+	EventMaterialsBulkClassified EventKind = "material.bulk_classified"
+	EventMaterialArchived        EventKind = "material.archived"
+	EventMaterialRestored        EventKind = "material.restored"
+	EventMaterialDeleted         EventKind = "material.deleted"
+	EventDriveConnected          EventKind = "drive.connected"
+	EventDriveDisconnected       EventKind = "drive.disconnected"
+	EventDriveSynced             EventKind = "drive.synced"
+	// A publishing Google account was connected to or removed from the group.
+	EventDrivePublisherConnected    EventKind = "drive.publisher_connected"
+	EventDrivePublisherDisconnected EventKind = "drive.publisher_disconnected"
+	// EventDriveReclassified summarises Inbox files sorted automatically after
+	// subjects or aliases changed.
+	EventDriveReclassified EventKind = "drive.reclassified"
 )
 
 // AllEventKinds lists every kind, exported to packages/shared.
@@ -45,9 +53,10 @@ var AllEventKinds = []EventKind{
 	EventSubjectCreated, EventSubjectUpdated, EventSubjectArchived, EventSubjectRestored,
 	EventTagCreated, EventTagUpdated, EventTagDeleted, EventInviteCreated, EventInviteRevoked,
 	EventJoinCodeRotated,
-	EventMaterialAdded, EventMaterialUpdated, EventMaterialClassified, EventMaterialArchived,
+	EventMaterialAdded, EventMaterialUpdated, EventMaterialClassified, EventMaterialsBulkClassified, EventMaterialArchived,
 	EventMaterialRestored, EventMaterialDeleted,
-	EventDriveConnected, EventDriveDisconnected, EventDriveSynced,
+	EventDriveConnected, EventDriveDisconnected, EventDriveSynced, EventDriveReclassified,
+	EventDrivePublisherConnected, EventDrivePublisherDisconnected,
 }
 
 // Event is one row of the append-only group log. Seq is monotonic per group

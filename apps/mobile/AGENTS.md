@@ -10,7 +10,9 @@ Expo SDK 57 (React Native 0.86, React 19.2, Expo Router 57). API Expo меняе
 - Данные — хуки из `@heatseeker/core` (TanStack Query); прямые вызовы `api.*` в экранах не делать.
 - Строки — через `useTranslation()` и словари `@heatseeker/i18n`; новые ключи добавлять в `ru`
   и `en` одновременно.
-- Токены — `src/lib/storage.ts` (SecureStore); базовый URL API — `EXPO_PUBLIC_API_URL`.
+- Токены — `src/lib/storage.ts` (SecureStore); базовый URL API — `EXPO_PUBLIC_API_URL`, без него в dev —
+  хост Metro/страницы и порт 8000 (`src/lib/api.ts`).
+- Аудио и видео — встроенный плеер `src/components/media-player.tsx` (expo-audio / expo-video).
 - Проверка без устройства: `pnpm typecheck`, `pnpm lint`, `pnpm export:check` (бандл Metro).
 - Babel-плагин Tamagui (оптимизирующий компилятор) пока не подключён — включить, когда
   сборка стабилизируется (см. docs/adr/0005).

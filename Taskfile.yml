@@ -27,6 +27,10 @@ tasks:
     desc: Stop development infrastructure and wipe its data
     cmds: ["{{.COMPOSE}} down -v"]
 
+  dev:ip:
+    desc: Write this machine's LAN IP into dev configs for a phone (task dev:ip -- <ip> to override)
+    cmds: ["bash infra/scripts/dev-ip.sh {{.CLI_ARGS}}"]
+
   dev:ps:
     desc: Show development containers and their ports
     cmds: ["{{.COMPOSE}} ps"]

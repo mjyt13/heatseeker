@@ -7,6 +7,21 @@ import { keys } from './keys';
 
 export type SubjectInput = components['schemas']['SubjectBody'];
 
+/** Тело PUT для предмета с текущими значениями (и заменой части полей). */
+export function toSubjectInput(subject: Subject, patch: Partial<SubjectInput> = {}): SubjectInput {
+  return {
+    name: subject.name,
+    short_name: subject.short_name ?? undefined,
+    teacher: subject.teacher ?? undefined,
+    teacher_contact: subject.teacher_contact ?? undefined,
+    color: subject.color ?? undefined,
+    semester: subject.semester ?? undefined,
+    sort_order: subject.sort_order,
+    aliases: subject.aliases ?? [],
+    ...patch,
+  };
+}
+
 /** Предметы группы. */
 export function useSubjects(groupId: string | null | undefined, includeArchived = false) {
   const api = useApi();
@@ -38,9 +53,15 @@ export function useUpdateSubject(groupId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ subjectId, ...body }: SubjectInput & { subjectId: string }): Promise<Subject> =>
+    mutationFn: async ({
+      subjectId,
+      ...body
+    }: SubjectInput & { subjectId: string }): Promise<Subject> =>
       unwrap(
-        await api.PUT('/groups/{groupId}/subjects/{subjectId}', { params: { path: { groupId, subjectId } }, body }),
+        await api.PUT('/groups/{groupId}/subjects/{subjectId}', {
+          params: { path: { groupId, subjectId } },
+          body,
+        }),
       ),
     onSuccess: () => invalidateSubjectViews(qc, groupId),
   });
@@ -51,7 +72,13 @@ export function useArchiveSubject(groupId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ subjectId, restore = false }: { subjectId: string; restore?: boolean }) => {
+    mutationFn: async ({
+      subjectId,
+      restore = false,
+    }: {
+      subjectId: string;
+      restore?: boolean;
+    }) => {
       const path = { params: { path: { groupId, subjectId } } };
       const res = restore
         ? await api.POST('/groups/{groupId}/subjects/{subjectId}/restore', path)

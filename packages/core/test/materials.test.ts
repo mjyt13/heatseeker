@@ -27,6 +27,7 @@ describe('filterFromQuickTag', () => {
 
 test('normalizeFilter drops empties and sorts tags so cache keys are stable', () => {
   expect(normalizeFilter({ q: '  ', mine: false, tag_id: [] })).toEqual({});
+  expect(normalizeFilter({ file_type: 'AUDIO' })).toEqual({ file_type: 'AUDIO' });
   expect(normalizeFilter({ q: ' лекция ', tag_id: ['b', 'a'], inbox: true })).toEqual({
     q: 'лекция',
     tag_id: ['a', 'b'],
@@ -55,6 +56,9 @@ test('fileIcon', () => {
   ).toBe('slides');
   expect(fileIcon('application/vnd.ms-excel')).toBe('sheet');
   expect(fileIcon('image/png')).toBe('image');
+  expect(fileIcon('audio/flac')).toBe('audio');
+  expect(fileIcon('video/mp4')).toBe('video');
+  expect(fileIcon('application/x-7z-compressed')).toBe('archive');
   expect(fileIcon('text/csv')).toBe('text');
   expect(fileIcon('application/octet-stream')).toBe('file');
 });

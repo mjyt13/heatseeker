@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
@@ -36,9 +37,13 @@ type Settings struct {
 	ProxyEnabled       bool
 	StreamTTL          time.Duration
 	DriveUploadEnabled bool
-	HashMaxBytes       int64
-	MinConfidence      float64
-	SigningSecret      string
+	// DrivePublisherOAuth: the server can connect a publishing Google account (D34).
+	DrivePublisherOAuth bool
+	HashMaxBytes        int64
+	// PreviewMaxBytes bounds office files converted to PDF previews.
+	PreviewMaxBytes int64
+	MinConfidence   float64
+	SigningSecret   string
 }
 
 // Deps are the collaborators of the service.
@@ -50,6 +55,8 @@ type Deps struct {
 	Drive     domain.DriveRepo
 	Store     domain.MediaStore
 	Client    domain.DriveClient // nil when Drive is not configured
+	// Converter makes PDF previews of office files; nil disables them.
+	Converter domain.DocumentConverter
 	Access    *access.Service
 	Events    *events.Publisher
 	Tx        domain.TxManager
@@ -101,6 +108,7 @@ type ListInput struct {
 	NoSubject bool
 	TagIDs    []uuid.UUID
 	Kind      *domain.MaterialKind
+	FileType  *domain.FileType
 	Mine      bool
 	Inbox     bool
 	Archived  bool
@@ -136,6 +144,7 @@ func (s *Service) List(ctx context.Context, actorID, groupID uuid.UUID, in ListI
 		SubjectID: in.SubjectID,
 		NoSubject: in.NoSubject,
 		Kind:      in.Kind,
+		FileType:  in.FileType,
 		Inbox:     in.Inbox,
 		Query:     strings.TrimSpace(in.Query),
 		Limit:     in.Limit,
@@ -145,6 +154,9 @@ func (s *Service) List(ctx context.Context, actorID, groupID uuid.UUID, in ListI
 	}
 	if in.Mine {
 		f.UploaderID = &actorID
+	}
+	if f.FileType != nil && !slices.Contains(domain.AllFileTypes, *f.FileType) {
+		return nil, domain.Invalid("file_type", "unknown file type")
 	}
 	if f.Kind != nil && !slices.Contains(domain.AllMaterialKinds, *f.Kind) {
 		return nil, domain.Invalid("kind", "unknown material kind")
@@ -414,8 +426,15 @@ type ClassifyInput struct {
 	LearnAlias bool
 }
 
+// ClassifyResult is the classified material and the alias learned from its
+// Drive folder, if any.
+type ClassifyResult struct {
+	View         *domain.MaterialView
+	LearnedAlias string
+}
+
 // Classify confirms subject and kind and clears the review flag.
-func (s *Service) Classify(ctx context.Context, actorID, materialID uuid.UUID, in ClassifyInput) (*domain.MaterialView, error) {
+func (s *Service) Classify(ctx context.Context, actorID, materialID uuid.UUID, in ClassifyInput) (*ClassifyResult, error) {
 	view, actor, err := s.loadView(ctx, actorID, materialID)
 	if err != nil {
 		return nil, err
@@ -465,7 +484,95 @@ func (s *Service) Classify(ctx context.Context, actorID, materialID uuid.UUID, i
 	if err != nil {
 		return nil, err
 	}
-	return s.Materials.GetView(ctx, m.ID)
+	fresh, err := s.Materials.GetView(ctx, m.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &ClassifyResult{View: fresh, LearnedAlias: alias}, nil
+}
+
+// MaxBulkClassify caps one ClassifyMany call.
+const MaxBulkClassify = 200
+
+// BulkClassifyInput assigns one subject (and optionally one kind) to many
+// Inbox materials at once.
+type BulkClassifyInput struct {
+	MaterialIDs []uuid.UUID
+	SubjectID   *uuid.UUID
+	// Kind nil keeps each material's own kind.
+	Kind *domain.MaterialKind
+}
+
+// ClassifyMany is the Inbox bulk action. Materials of other groups or already
+// deleted ones are skipped; it returns how many were classified.
+func (s *Service) ClassifyMany(ctx context.Context, actorID, groupID uuid.UUID, in BulkClassifyInput) (int, error) {
+	actor, err := s.Access.Actor(ctx, actorID, groupID)
+	if err != nil {
+		return 0, err
+	}
+	if err := actor.Require(authz.MaterialModerate); err != nil {
+		return 0, err
+	}
+	if len(in.MaterialIDs) == 0 || len(in.MaterialIDs) > MaxBulkClassify {
+		return 0, domain.Invalid("material_ids", fmt.Sprintf("must contain 1–%d ids", MaxBulkClassify))
+	}
+	if in.Kind != nil && !slices.Contains(domain.AllMaterialKinds, *in.Kind) {
+		return 0, domain.Invalid("kind", "unknown material kind")
+	}
+	if err := s.checkSubject(ctx, groupID, in.SubjectID); err != nil {
+		return 0, err
+	}
+	done := 0
+	err = s.Tx.RunInTx(ctx, func(ctx context.Context) error {
+		seen := map[uuid.UUID]bool{}
+		for _, id := range in.MaterialIDs {
+			if seen[id] {
+				continue
+			}
+			seen[id] = true
+			m, err := s.Materials.Get(ctx, id)
+			if errors.Is(err, domain.ErrNotFound) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			if m.GroupID != groupID || m.Status == domain.MaterialDeleted {
+				continue
+			}
+			p := domain.UpdateMaterialParams{
+				ID: m.ID, Title: m.Title, Description: m.Description, SubjectID: in.SubjectID, Kind: m.Kind,
+				Classification: m.Classification,
+			}
+			if in.Kind != nil {
+				p.Kind = *in.Kind
+			}
+			markManual(&p)
+			p.NeedsReview, p.ReviewReason = false, nil
+			if _, err := s.Materials.Update(ctx, p); err != nil {
+				return err
+			}
+			e, err := domain.NewEvent(groupID, domain.EventMaterialClassified, &actorID, "material", &m.ID, map[string]any{
+				"title": m.Title, "subject_id": in.SubjectID, "kind": p.Kind, "bulk": true,
+			})
+			e.Audit = false // the summary below is what the activity feed shows
+			if err := s.Events.Emit(ctx, e, err); err != nil {
+				return err
+			}
+			done++
+		}
+		if done == 0 {
+			return nil
+		}
+		e, err := domain.NewEvent(groupID, domain.EventMaterialsBulkClassified, &actorID, "group", &groupID, map[string]any{
+			"count": done, "subject_id": in.SubjectID, "kind": in.Kind,
+		})
+		return s.Events.Emit(ctx, e, err)
+	})
+	if err != nil {
+		return 0, err
+	}
+	return done, nil
 }
 
 // aliasCandidate picks the deepest Drive folder that names neither a kind

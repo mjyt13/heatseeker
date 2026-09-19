@@ -56,6 +56,75 @@
         ],
         "type": "object"
       },
+      "BulkClassifyInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/BulkClassifyInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "kind": {
+            "description": "Пусто — тип каждого материала не меняется.",
+            "enum": [
+              "LECTURE",
+              "NOTES",
+              "REPORT",
+              "CALC",
+              "ASSIGNMENT",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "material_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "subject_id": {
+            "description": "Пусто — «без предмета».",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "material_ids"
+        ],
+        "type": "object"
+      },
+      "BulkClassifyOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/BulkClassifyOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "classified": {
+            "description": "Сколько материалов разобрано (чужие и удалённые пропускаются).",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "classified"
+        ],
+        "type": "object"
+      },
       "ClassificationDTO": {
         "additionalProperties": false,
         "properties": {
@@ -99,6 +168,139 @@
         },
         "required": [
           "confidence"
+        ],
+        "type": "object"
+      },
+      "ClassifiedDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/ClassifiedDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "archived_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "classification": {
+            "$ref": "#/components/schemas/ClassificationDTO"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deleted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "description": "Markdown.",
+            "type": "string"
+          },
+          "download_count": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "file": {
+            "$ref": "#/components/schemas/MaterialVersionDTO",
+            "description": "Текущая версия файла."
+          },
+          "group_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "LECTURE",
+              "NOTES",
+              "REPORT",
+              "CALC",
+              "ASSIGNMENT",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "learned_alias": {
+            "description": "Синоним, добавленный предмету из имени папки на Диске; похожие файлы разберутся автоматически.",
+            "type": "string"
+          },
+          "needs_review": {
+            "description": "Лежит во «Входящих» модератора.",
+            "type": "boolean"
+          },
+          "review_reason": {
+            "enum": [
+              "LOW_CONFIDENCE",
+              "REMOVED_FROM_DRIVE"
+            ],
+            "type": "string"
+          },
+          "sort_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "UPLOAD",
+              "GDRIVE"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED",
+              "DELETED"
+            ],
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "tag_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "uploader_id": {
+            "description": "Нет у файлов, найденных на Диске.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "group_id",
+          "title",
+          "description",
+          "kind",
+          "source",
+          "status",
+          "tag_ids",
+          "classification",
+          "needs_review",
+          "download_count",
+          "sort_at",
+          "file",
+          "created_at",
+          "updated_at"
         ],
         "type": "object"
       },
@@ -429,6 +631,10 @@
             "description": "Только для управляющих Диском.",
             "type": "string"
           },
+          "last_error_code": {
+            "description": "Код ошибки (как в type ошибок API, без префикса), если он есть.",
+            "type": "string"
+          },
           "last_full_scan_at": {
             "format": "date-time",
             "type": "string"
@@ -571,6 +777,52 @@
         ],
         "type": "object"
       },
+      "DrivePublisherDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "connected_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "connected_by": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "last_error": {
+            "description": "Google отклонил доступ: аккаунт нужно подключить заново.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "connected_at"
+        ],
+        "type": "object"
+      },
+      "DrivePublisherStartOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/DrivePublisherStartOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "auth_url": {
+            "description": "Страница входа Google: открыть в браузере. После входа Google вернёт на /drive/oauth/callback.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "auth_url"
+        ],
+        "type": "object"
+      },
       "DriveStatsDTO": {
         "additionalProperties": false,
         "properties": {
@@ -626,12 +878,24 @@
             "readOnly": true,
             "type": "string"
           },
+          "can_publish": {
+            "description": "Загрузки сейчас можно копировать в папку группы.",
+            "type": "boolean"
+          },
           "configured": {
             "description": "На сервере настроен сервисный аккаунт.",
             "type": "boolean"
           },
           "connection": {
             "$ref": "#/components/schemas/DriveConnectionDTO"
+          },
+          "publisher": {
+            "$ref": "#/components/schemas/DrivePublisherDTO",
+            "description": "Подключённый аккаунт; только для управляющих Диском."
+          },
+          "publisher_available": {
+            "description": "На сервере можно подключить аккаунт Google для публикации (D34).",
+            "type": "boolean"
           },
           "service_account_email": {
             "description": "Этому адресу нужно выдать доступ к папке.",
@@ -646,7 +910,9 @@
         },
         "required": [
           "configured",
-          "upload_enabled"
+          "upload_enabled",
+          "publisher_available",
+          "can_publish"
         ],
         "type": "object"
       },
@@ -923,6 +1189,69 @@
           "settings",
           "last_seq",
           "created_at"
+        ],
+        "type": "object"
+      },
+      "GroupSearchItemDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "is_member": {
+            "description": "Я уже состою в группе.",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "MASTERS",
+              "DPO",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "member_count": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "member_count",
+          "is_member"
+        ],
+        "type": "object"
+      },
+      "GroupSearchOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/GroupSearchOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GroupSearchItemDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
         ],
         "type": "object"
       },
@@ -1401,6 +1730,33 @@
         ],
         "type": "object"
       },
+      "MaterialPreviewOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/MaterialPreviewOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "preview_status": {
+            "description": "READY — превью в preview_url ответа /open; PENDING — готовится, опрашивайте материал.",
+            "enum": [
+              "PENDING",
+              "READY",
+              "SKIPPED"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "preview_status"
+        ],
+        "type": "object"
+      },
       "MaterialVersionDTO": {
         "additionalProperties": false,
         "properties": {
@@ -1433,6 +1789,17 @@
             "type": "string"
           },
           "original_name": {
+            "type": "string"
+          },
+          "preview_status": {
+            "description": "PDF-превью офисного файла: NONE — не запрошено (POST /materials/{materialId}/preview). Нет поля — файл показывается как есть.",
+            "enum": [
+              "NONE",
+              "PENDING",
+              "READY",
+              "FAILED",
+              "SKIPPED"
+            ],
             "type": "string"
           },
           "scan_status": {
@@ -1757,6 +2124,21 @@
             ],
             "type": "string"
           },
+          "preview_status": {
+            "description": "Как у версии; нет поля — файл показывается как есть.",
+            "enum": [
+              "NONE",
+              "PENDING",
+              "READY",
+              "FAILED",
+              "SKIPPED"
+            ],
+            "type": "string"
+          },
+          "preview_url": {
+            "description": "PDF-превью офисного файла, когда оно готово: для «Смотреть».",
+            "type": "string"
+          },
           "size_bytes": {
             "format": "int64",
             "type": "integer"
@@ -1984,6 +2366,11 @@
             ],
             "format": "uri",
             "readOnly": true,
+            "type": "string"
+          },
+          "client_id": {
+            "description": "Случайный UUID экрана регистрации: повтор запроса в течение 15 минут вернёт тот же аккаунт.",
+            "format": "uuid",
             "type": "string"
           },
           "device_name": {
@@ -2873,6 +3260,66 @@
         ]
       }
     },
+    "/drive/oauth/callback": {
+      "get": {
+        "description": "Сюда Google перенаправляет браузер; отвечает HTML-страницей с результатом.",
+        "operationId": "drive-oauth-callback",
+        "parameters": [
+          {
+            "explode": false,
+            "in": "query",
+            "name": "code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Приходит от Google, если вход отменён.",
+            "explode": false,
+            "in": "query",
+            "name": "error",
+            "schema": {
+              "description": "Приходит от Google, если вход отменён.",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Аккаунт подключён."
+          },
+          "400": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Не удалось подключить."
+          }
+        },
+        "summary": "Возврат после входа Google",
+        "tags": [
+          "drive"
+        ]
+      }
+    },
     "/groups": {
       "post": {
         "operationId": "groups-create",
@@ -3004,6 +3451,56 @@
           }
         ],
         "summary": "Вступить по коду приглашения или коду группы",
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/groups/search": {
+      "get": {
+        "description": "Только открытые группы (join_policy=OPEN), до 20 штук.",
+        "operationId": "groups-search",
+        "parameters": [
+          {
+            "description": "Часть названия; пусто — все открытые группы.",
+            "explode": false,
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "description": "Часть названия; пусто — все открытые группы.",
+              "maxLength": 80,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupSearchOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Найти группу по названию",
         "tags": [
           "groups"
         ]
@@ -3365,6 +3862,93 @@
         ]
       }
     },
+    "/groups/{groupId}/drive/publisher": {
+      "delete": {
+        "description": "Доступ отзывается у Google.",
+        "operationId": "drive-publisher-disconnect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Отключить аккаунт Google для публикации",
+        "tags": [
+          "drive"
+        ]
+      },
+      "post": {
+        "description": "Возвращает страницу входа Google. Загрузки группы будут публиковаться на Диск от имени этого аккаунта (в «Моём диске» у сервисного аккаунта нет квоты, D34). Аккаунт должен иметь права редактора на папку группы.",
+        "operationId": "drive-publisher-start",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DrivePublisherStartOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Подключить аккаунт Google для публикации",
+        "tags": [
+          "drive"
+        ]
+      }
+    },
     "/groups/{groupId}/drive/status": {
       "get": {
         "description": "Адрес сервисного аккаунта, папка, состояние синхронизации и счётчики.",
@@ -3613,6 +4197,54 @@
         ]
       }
     },
+    "/groups/{groupId}/join": {
+      "post": {
+        "description": "Для групп из поиска; повторный вызов возвращает текущее членство.",
+        "operationId": "groups-join-open",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupWithMembershipDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Вступить в открытую группу",
+        "tags": [
+          "groups"
+        ]
+      }
+    },
     "/groups/{groupId}/join-code/rotate": {
       "post": {
         "operationId": "groups-rotate-join-code",
@@ -3728,6 +4360,24 @@
             }
           },
           {
+            "description": "Тип файла по MIME (D35).",
+            "explode": false,
+            "in": "query",
+            "name": "file_type",
+            "schema": {
+              "description": "Тип файла по MIME (D35).",
+              "enum": [
+                "DOCUMENT",
+                "IMAGE",
+                "AUDIO",
+                "VIDEO",
+                "ARCHIVE",
+                "OTHER"
+              ],
+              "type": "string"
+            }
+          },
+          {
             "description": "Только загруженные мной.",
             "explode": false,
             "in": "query",
@@ -3817,6 +4467,64 @@
           }
         ],
         "summary": "Лента материалов",
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/groups/{groupId}/materials/classify": {
+      "post": {
+        "description": "Массовое действие во «Входящих»: один предмет (и, при желании, тип) для всех выбранных.",
+        "operationId": "materials-classify-bulk",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkClassifyInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkClassifyOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Разобрать несколько материалов",
         "tags": [
           "materials"
         ]
@@ -4995,7 +5703,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MaterialDTO"
+                  "$ref": "#/components/schemas/ClassifiedDTO"
                 }
               }
             },
@@ -5085,6 +5793,65 @@
           }
         ],
         "summary": "Ссылки для просмотра и скачивания",
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/materials/{materialId}/preview": {
+      "post": {
+        "description": "pptx/docx/xlsx и т.п. браузер не показывает: сервер конвертирует их в PDF (Gotenberg). Повторный запрос не создаёт новую задачу; после неудачи (FAILED) — пробует снова.",
+        "operationId": "materials-preview",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "materialId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Версия; по умолчанию текущая.",
+            "explode": false,
+            "in": "query",
+            "name": "version_id",
+            "schema": {
+              "description": "Версия; по умолчанию текущая.",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialPreviewOutputBody"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Запросить PDF-превью офисного файла",
         "tags": [
           "materials"
         ]

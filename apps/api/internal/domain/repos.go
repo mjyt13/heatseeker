@@ -25,6 +25,8 @@ type CreateUserParams struct {
 	Locale       string
 	Timezone     string
 	Secured      bool
+	// RegisterClientID makes sign-up idempotent (see auth.Service.Register).
+	RegisterClientID *uuid.UUID
 }
 
 // UserRepo persists users.
@@ -33,6 +35,7 @@ type UserRepo interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*User, error)
 	// GetByEmail also returns the password hash (empty when none) for login.
 	GetByEmail(ctx context.Context, email string) (*User, string, error)
+	GetByRegisterClientID(ctx context.Context, clientID uuid.UUID) (*User, error)
 	UpdateProfile(ctx context.Context, id uuid.UUID, name, locale, timezone string, settings json.RawMessage) (*User, error)
 	SetCredentials(ctx context.Context, id uuid.UUID, email, passwordHash *string) (*User, error)
 	MarkSecured(ctx context.Context, id uuid.UUID) error
@@ -89,6 +92,8 @@ type GroupRepo interface {
 	GetBySlug(ctx context.Context, slug string) (*Group, error)
 	GetByJoinCode(ctx context.Context, code string) (*Group, error)
 	ListForUser(ctx context.Context, userID uuid.UUID) ([]GroupWithMembership, error)
+	// SearchOpen finds open groups whose name contains query (all of them when query is empty).
+	SearchOpen(ctx context.Context, userID uuid.UUID, query string, limit int32) ([]GroupSearchHit, error)
 	Update(ctx context.Context, p UpdateGroupParams) (*Group, error)
 	SetJoinCode(ctx context.Context, id uuid.UUID, code *string) (*Group, error)
 	Archive(ctx context.Context, id uuid.UUID) error
@@ -179,6 +184,12 @@ type MaterialRepo interface {
 	ListVersions(ctx context.Context, materialID uuid.UUID) ([]MaterialVersion, error)
 	// UpdateVersionFile refreshes file metadata of a Drive-backed version in place.
 	UpdateVersionFile(ctx context.Context, v MaterialVersion) error
+	// ClaimVersionPreview marks a preview requested (again, after a failure);
+	// false when it is already pending, ready or skipped.
+	ClaimVersionPreview(ctx context.Context, versionID uuid.UUID) (bool, error)
+	SetVersionPreview(ctx context.Context, versionID uuid.UUID, status PreviewStatus, key, errMsg *string) error
+	// SetVersionDriveRevision remembers the Drive revision matched to a version.
+	SetVersionDriveRevision(ctx context.Context, versionID uuid.UUID, revisionID string) error
 	SetVersionDriveUpload(ctx context.Context, versionID uuid.UUID, status DriveUploadStatus, errMsg, fileID, webViewLink *string) error
 	SetVersionHash(ctx context.Context, versionID uuid.UUID, sha256 string) error
 }
@@ -195,13 +206,15 @@ type UploadRepo interface {
 
 // FinishSyncParams records the outcome of a sync run.
 type FinishSyncParams struct {
-	ID          uuid.UUID
-	Status      DriveConnectionStatus
-	LastError   *string
-	PageToken   *string
-	FullScan    bool
-	Succeeded   bool
-	CompletedAt time.Time
+	ID        uuid.UUID
+	Status    DriveConnectionStatus
+	LastError *string
+	// LastErrorCode is the domain error code of the failure, when it has one.
+	LastErrorCode *string
+	PageToken     *string
+	FullScan      bool
+	Succeeded     bool
+	CompletedAt   time.Time
 }
 
 // DriveRepo persists Drive connections and their file index.
@@ -225,7 +238,17 @@ type DriveRepo interface {
 	UpdateItemState(ctx context.Context, id uuid.UUID, state DriveItemState, materialID *uuid.UUID, c Classification, lastError *string) error
 	ListItems(ctx context.Context, connectionID uuid.UUID, state *DriveItemState, limit, offset int32) ([]DriveItem, error)
 	ListFolders(ctx context.Context, connectionID uuid.UUID) ([]DriveItem, error)
+	// ListReclassifyCandidates returns the group's Drive files that sit in the
+	// Inbox only because automatic classification was unsure.
+	ListReclassifyCandidates(ctx context.Context, groupID uuid.UUID) ([]DriveItem, error)
 	ListUnseen(ctx context.Context, connectionID uuid.UUID, before time.Time) ([]DriveItem, error)
 	DeleteItems(ctx context.Context, connectionID uuid.UUID) error
 	Stats(ctx context.Context, connectionID uuid.UUID) (*DriveStats, error)
+
+	// UpsertPublisher stores (or replaces) the group's publishing account and
+	// clears its error.
+	UpsertPublisher(ctx context.Context, p DrivePublisher) (*DrivePublisher, error)
+	GetPublisher(ctx context.Context, groupID uuid.UUID) (*DrivePublisher, error)
+	DeletePublisher(ctx context.Context, groupID uuid.UUID) error
+	SetPublisherError(ctx context.Context, groupID uuid.UUID, msg *string) error
 }

@@ -6,6 +6,7 @@ export const keys = {
   me: () => ['me'] as const,
   myGroups: () => ['me', 'groups'] as const,
   preview: (code: string) => ['preview', code] as const,
+  groupSearch: (q: string) => ['groups', 'search', q] as const,
   group: (id: string) => ['group', id] as const,
   members: (id: string) => ['group', id, 'members'] as const,
   invites: (id: string) => ['group', id, 'invites'] as const,

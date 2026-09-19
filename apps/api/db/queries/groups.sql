@@ -38,3 +38,21 @@ UPDATE groups SET last_seq = last_seq + 1 WHERE id = $1 RETURNING last_seq;
 
 -- name: GroupSlugExists :one
 SELECT EXISTS (SELECT 1 FROM groups WHERE slug = $1);
+
+-- name: SearchOpenGroups :many
+-- Groups anyone may join by name (D33): open, not archived. An empty pattern
+-- lists all of them. Exact and prefix matches first, then larger groups.
+SELECT sqlc.embed(g),
+       (SELECT count(*) FROM memberships m
+         WHERE m.group_id = g.id AND m.status = 'ACTIVE')::bigint AS member_count,
+       EXISTS (SELECT 1 FROM memberships m
+         WHERE m.group_id = g.id AND m.user_id = sqlc.arg(user_id) AND m.status = 'ACTIVE') AS is_member
+FROM groups g
+WHERE g.archived_at IS NULL
+  AND g.join_policy = 'OPEN'
+  AND g.name ILIKE '%' || sqlc.arg(pattern)::text || '%' ESCAPE '\'
+ORDER BY lower(g.name) = lower(sqlc.arg(query)::text) DESC,
+         g.name ILIKE sqlc.arg(pattern)::text || '%' ESCAPE '\' DESC,
+         member_count DESC,
+         g.name
+LIMIT sqlc.arg(max_results);

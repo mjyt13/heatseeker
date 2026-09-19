@@ -24,7 +24,7 @@ export interface ListRowProps {
 /** Строка списка: иконка/аватар слева, заголовок и подзаголовок, действие справа. */
 export function ListRow({ title, subtitle, leading, trailing, onPress }: ListRowProps) {
   return (
-    <RowFrame onPress={onPress} accessibilityRole={onPress ? 'button' : undefined}>
+    <RowFrame onPress={onPress} role={onPress ? 'button' : undefined}>
       {leading}
       <YStack flex={1} gap="$0.5">
         <SizableText size="$4" numberOfLines={1}>

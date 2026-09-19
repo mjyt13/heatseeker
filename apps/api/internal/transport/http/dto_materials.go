@@ -43,14 +43,20 @@ type MaterialVersionDTO struct {
 	DriveUploadError  *string    `json:"drive_upload_error,omitempty"`
 	UploadedBy        *uuid.UUID `json:"uploaded_by,omitempty"`
 	CreatedAt         time.Time  `json:"created_at"`
+	PreviewStatus     string     `json:"preview_status,omitempty" enum:"NONE,PENDING,READY,FAILED,SKIPPED" doc:"PDF-превью офисного файла: NONE — не запрошено (POST /materials/{materialId}/preview). Нет поля — файл показывается как есть."`
 }
 
-func toVersionDTO(v *domain.MaterialVersion) MaterialVersionDTO {
+// previewStater tells the preview state of a version (materials.Service).
+type previewStater interface {
+	PreviewState(v *domain.MaterialVersion) string
+}
+
+func toVersionDTO(v *domain.MaterialVersion, ps previewStater) MaterialVersionDTO {
 	dto := MaterialVersionDTO{
 		ID: v.ID, VersionNo: v.VersionNo, Storage: string(v.Storage), OriginalName: v.OriginalName, Mime: v.Mime,
 		SizeBytes: v.SizeBytes, ScanStatus: string(v.ScanStatus), DriveWebViewLink: v.DriveWebViewLink,
 		DriveModifiedTime: v.DriveModifiedTime, DriveUploadError: v.DriveUploadError, UploadedBy: v.UploadedBy,
-		CreatedAt: v.CreatedAt,
+		CreatedAt: v.CreatedAt, PreviewStatus: ps.PreviewState(v),
 	}
 	if v.DriveUploadStatus != nil {
 		s := string(*v.DriveUploadStatus)
@@ -83,13 +89,13 @@ type MaterialDTO struct {
 	UpdatedAt      time.Time          `json:"updated_at"`
 }
 
-func toMaterialDTO(v *domain.MaterialView) MaterialDTO {
+func toMaterialDTO(v *domain.MaterialView, ps previewStater) MaterialDTO {
 	m := v.Material
 	dto := MaterialDTO{
 		ID: m.ID, GroupID: m.GroupID, SubjectID: m.SubjectID, UploaderID: m.UploaderID, Title: m.Title,
 		Description: m.Description, Kind: string(m.Kind), Source: string(m.Source), Status: string(m.Status),
 		TagIDs: v.TagIDs, Classification: toClassificationDTO(m.Classification), NeedsReview: m.NeedsReview,
-		DownloadCount: m.DownloadCount, SortAt: m.SortAt, File: toVersionDTO(&v.Version),
+		DownloadCount: m.DownloadCount, SortAt: m.SortAt, File: toVersionDTO(&v.Version, ps),
 		ArchivedAt: m.ArchivedAt, DeletedAt: m.DeletedAt, CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt,
 	}
 	if dto.TagIDs == nil {
@@ -112,14 +118,14 @@ type MaterialDetailsDTO struct {
 	Moderator bool                 `json:"moderator"`
 }
 
-func toMaterialDetailsDTO(d *materials.Details) MaterialDetailsDTO {
+func toMaterialDetailsDTO(d *materials.Details, ps previewStater) MaterialDetailsDTO {
 	out := MaterialDetailsDTO{
-		MaterialDTO: toMaterialDTO(&d.View), DrivePath: d.DrivePath,
+		MaterialDTO: toMaterialDTO(&d.View, ps), DrivePath: d.DrivePath,
 		CanEdit: d.CanEdit, CanDelete: d.CanDelete, Moderator: d.Moderator,
 		Versions: make([]MaterialVersionDTO, len(d.Versions)),
 	}
 	for i := range d.Versions {
-		out.Versions[i] = toVersionDTO(&d.Versions[i])
+		out.Versions[i] = toVersionDTO(&d.Versions[i], ps)
 	}
 	return out
 }
@@ -136,6 +142,8 @@ type OpenDTO struct {
 	DriveWebViewLink *string    `json:"drive_web_view_link,omitempty" doc:"Открыть в Google Диске (нужен доступ к папке)."`
 	StreamURL        *string    `json:"stream_url,omitempty" doc:"Файл с Диска через сервер (поддерживает Range)."`
 	DownloadURL      *string    `json:"download_url,omitempty" doc:"Прямая ссылка на файл в хранилище."`
+	PreviewURL       *string    `json:"preview_url,omitempty" doc:"PDF-превью офисного файла, когда оно готово: для «Смотреть»."`
+	PreviewStatus    string     `json:"preview_status,omitempty" enum:"NONE,PENDING,READY,FAILED,SKIPPED" doc:"Как у версии; нет поля — файл показывается как есть."`
 	ExpiresAt        *time.Time `json:"expires_at,omitempty" doc:"Когда ссылки перестанут работать."`
 }
 
@@ -143,7 +151,8 @@ func toOpenDTO(o *materials.OpenResult) OpenDTO {
 	return OpenDTO{
 		MaterialID: o.MaterialID, VersionID: o.VersionID, Mode: string(o.Mode), Storage: string(o.Storage),
 		FileName: o.FileName, Mime: o.Mime, SizeBytes: o.SizeBytes, DriveWebViewLink: o.DriveWebViewLink,
-		StreamURL: o.StreamURL, DownloadURL: o.DownloadURL, ExpiresAt: o.ExpiresAt,
+		StreamURL: o.StreamURL, DownloadURL: o.DownloadURL, PreviewURL: o.PreviewURL, PreviewStatus: o.PreviewState,
+		ExpiresAt: o.ExpiresAt,
 	}
 }
 
@@ -183,6 +192,7 @@ type DriveConnectionDTO struct {
 	SharedDrive     bool       `json:"shared_drive" doc:"Папка лежит в общем диске (Google Workspace)."`
 	Status          string     `json:"status" enum:"PENDING,SYNCING,OK,ERROR"`
 	LastError       *string    `json:"last_error,omitempty" doc:"Только для управляющих Диском."`
+	LastErrorCode   *string    `json:"last_error_code,omitempty" doc:"Код ошибки (как в type ошибок API, без префикса), если он есть."`
 	LastSyncAt      *time.Time `json:"last_sync_at,omitempty"`
 	LastFullScanAt  *time.Time `json:"last_full_scan_at,omitempty"`
 	SyncIntervalSec int32      `json:"sync_interval_sec"`
@@ -201,11 +211,22 @@ type DriveStatsDTO struct {
 	InboxSize int64 `json:"inbox_size"`
 }
 
+// DrivePublisherDTO is the Google account that publishes uploads to Drive.
+type DrivePublisherDTO struct {
+	Email       string     `json:"email"`
+	LastError   *string    `json:"last_error,omitempty" doc:"Google отклонил доступ: аккаунт нужно подключить заново."`
+	ConnectedBy *uuid.UUID `json:"connected_by,omitempty"`
+	ConnectedAt time.Time  `json:"connected_at"`
+}
+
 // DriveStatusDTO is the Drive integration as seen by a member.
 type DriveStatusDTO struct {
 	Configured          bool                `json:"configured" doc:"На сервере настроен сервисный аккаунт."`
 	ServiceAccountEmail string              `json:"service_account_email,omitempty" doc:"Этому адресу нужно выдать доступ к папке."`
 	UploadEnabled       bool                `json:"upload_enabled"`
+	PublisherAvailable  bool                `json:"publisher_available" doc:"На сервере можно подключить аккаунт Google для публикации (D34)."`
+	Publisher           *DrivePublisherDTO  `json:"publisher,omitempty" doc:"Подключённый аккаунт; только для управляющих Диском."`
+	CanPublish          bool                `json:"can_publish" doc:"Загрузки сейчас можно копировать в папку группы."`
 	Connection          *DriveConnectionDTO `json:"connection,omitempty"`
 	Stats               *DriveStatsDTO      `json:"stats,omitempty"`
 }
@@ -214,13 +235,19 @@ func toDriveConnectionDTO(c *domain.DriveConnection) *DriveConnectionDTO {
 	return &DriveConnectionDTO{
 		ID: c.ID, RootFolderID: c.RootFolderID, RootFolderName: c.RootFolderName,
 		FolderURL:   "https://drive.google.com/drive/folders/" + c.RootFolderID,
-		SharedDrive: c.DriveID != nil, Status: string(c.Status), LastError: c.LastError, LastSyncAt: c.LastSyncAt,
+		SharedDrive: c.DriveID != nil, Status: string(c.Status), LastError: c.LastError, LastErrorCode: c.LastErrorCode, LastSyncAt: c.LastSyncAt,
 		LastFullScanAt: c.LastFullScanAt, SyncIntervalSec: c.SyncIntervalSec, Writable: c.Writable, CreatedAt: c.CreatedAt,
 	}
 }
 
 func toDriveStatusDTO(s *drive.Status) DriveStatusDTO {
-	dto := DriveStatusDTO{Configured: s.Configured, ServiceAccountEmail: s.ServiceAccountEmail, UploadEnabled: s.UploadEnabled}
+	dto := DriveStatusDTO{
+		Configured: s.Configured, ServiceAccountEmail: s.ServiceAccountEmail, UploadEnabled: s.UploadEnabled,
+		PublisherAvailable: s.PublisherAvailable, CanPublish: s.CanPublish,
+	}
+	if p := s.Publisher; p != nil {
+		dto.Publisher = &DrivePublisherDTO{Email: p.Email, LastError: p.LastError, ConnectedBy: p.ConnectedBy, ConnectedAt: p.CreatedAt}
+	}
 	if s.Connection != nil {
 		dto.Connection = toDriveConnectionDTO(s.Connection)
 	}

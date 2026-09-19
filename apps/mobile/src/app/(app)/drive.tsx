@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking } from 'react-native';
+import { Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -13,6 +13,7 @@ import {
 } from '@heatseeker/core';
 import {
   Button,
+  confirm,
   ErrorText,
   Field,
   H4,
@@ -26,6 +27,8 @@ import {
   YStack,
 } from '@heatseeker/ui';
 
+import { CopyButton } from '@/components/copy-button';
+import { DrivePublisherCard } from '@/components/drive-publisher';
 import { describeError } from '@/lib/errors';
 import { useGroupContext } from '@/lib/group';
 
@@ -49,11 +52,16 @@ export default function DriveScreen() {
 
   if (status.isPending) return <LoadingScreen />;
 
-  const confirmDisconnect = () =>
-    Alert.alert(t('drive.disconnect'), t('drive.disconnect_confirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('drive.disconnect'), style: 'destructive', onPress: () => disconnect.mutate() },
-    ]);
+  const confirmDisconnect = async () => {
+    const ok = await confirm({
+      title: t('drive.disconnect'),
+      message: t('drive.disconnect_confirm'),
+      confirmText: t('drive.disconnect'),
+      cancelText: t('common.cancel'),
+      destructive: true,
+    });
+    if (ok) disconnect.mutate();
+  };
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top']}>
@@ -101,10 +109,25 @@ export default function DriveScreen() {
                 })}
               </Paragraph>
             ) : null}
-            <Paragraph color="$color10">
-              {conn.writable ? t('drive.writable') : t('drive.read_only')}
-            </Paragraph>
-            {conn.last_error ? <ErrorText>{conn.last_error}</ErrorText> : null}
+            {s?.upload_enabled ? (
+              <Paragraph color="$color10">
+                {s.can_publish
+                  ? t('drive.writable')
+                  : s.publisher_available
+                    ? t('drive.needs_publisher')
+                    : t('drive.read_only')}
+              </Paragraph>
+            ) : null}
+            {conn.last_error ? (
+              <ErrorText>
+                {conn.last_error_code
+                  ? t(`errors.codes.${conn.last_error_code}`, {
+                      email: s?.service_account_email ?? '',
+                      defaultValue: conn.last_error,
+                    })
+                  : conn.last_error}
+              </ErrorText>
+            ) : null}
           </YStack>
         ) : null}
 
@@ -133,9 +156,10 @@ export default function DriveScreen() {
             <Separator />
             <H4>{t('drive.how_to_title')}</H4>
             <Paragraph>1. {t('drive.how_to_1')}</Paragraph>
-            <Paragraph selectable>
+            <Paragraph userSelect="text">
               2. {t('drive.how_to_2', { email: s.service_account_email })}
             </Paragraph>
+            {s.service_account_email ? <CopyButton value={s.service_account_email} /> : null}
             <Paragraph>3. {t('drive.how_to_3')}</Paragraph>
             <Field
               id="drive-folder"
@@ -146,7 +170,11 @@ export default function DriveScreen() {
               autoCorrect={false}
               placeholder="https://drive.google.com/drive/folders/…"
             />
-            <ErrorText>{connect.isError ? describeError(t, connect.error) : null}</ErrorText>
+            <ErrorText>
+              {connect.isError
+                ? describeError(t, connect.error, { email: s.service_account_email ?? '' })
+                : null}
+            </ErrorText>
             <Button
               theme="accent"
               disabled={folder.trim().length < 10 || connect.isPending}
@@ -180,6 +208,17 @@ export default function DriveScreen() {
           </XStack>
         ) : null}
         <ErrorText>{disconnect.isError ? describeError(t, disconnect.error) : null}</ErrorText>
+
+        {s && canManage && s.upload_enabled && s.publisher_available ? (
+          <>
+            <Separator />
+            <DrivePublisherCard
+              groupId={groupId}
+              status={s}
+              onReturn={() => void status.refetch()}
+            />
+          </>
+        ) : null}
 
         {!canManage && (needsSecure || !conn) ? (
           <Paragraph color="$color10">{t('drive.needs_manage')}</Paragraph>

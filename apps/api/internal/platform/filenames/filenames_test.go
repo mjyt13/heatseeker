@@ -33,3 +33,23 @@ func TestContentDisposition(t *testing.T) {
 		t.Errorf("ascii attachment = %q", got)
 	}
 }
+
+func TestInline(t *testing.T) {
+	tests := map[string]bool{
+		"application/pdf":    true,
+		"image/png":          true,
+		"image/svg+xml":      false,
+		"audio/flac":         true,
+		"audio/mpeg":         true,
+		"video/mp4":          true,
+		"text/plain":         true,
+		"text/html":          false,
+		"application/zip":    false,
+		"application/msword": false,
+	}
+	for mime, want := range tests {
+		if got := Inline(mime); got != want {
+			t.Errorf("Inline(%q) = %v, want %v", mime, got, want)
+		}
+	}
+}
