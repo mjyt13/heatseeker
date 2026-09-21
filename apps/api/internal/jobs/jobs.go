@@ -17,6 +17,7 @@ import (
 
 	"heatseeker/api/internal/app/drive"
 	"heatseeker/api/internal/app/materials"
+	"heatseeker/api/internal/app/tasks"
 	"heatseeker/api/internal/domain"
 	"heatseeker/api/internal/platform/config"
 )
@@ -35,6 +36,7 @@ type Deps struct {
 	EventRetention time.Duration
 	Drive          *drive.Service
 	Materials      *materials.Service
+	Tasks          *tasks.Service
 	Log            *slog.Logger
 }
 
@@ -164,6 +166,13 @@ func NewMux(d Deps) *asynq.ServeMux {
 		_, err = d.Drive.Reclassify(ctx, id)
 		return err
 	})
+	mux.HandleFunc(domain.JobTasksDeadlineScan, func(ctx context.Context, _ *asynq.Task) error {
+		n, err := d.Tasks.ScanDeadlines(ctx)
+		if n > 0 {
+			d.Log.Info("task deadlines announced", "count", n)
+		}
+		return err
+	})
 	mux.HandleFunc(domain.JobUploadsCleanup, func(ctx context.Context, _ *asynq.Task) error {
 		n, err := d.Materials.CleanupUploads(ctx)
 		if n > 0 {
@@ -227,6 +236,7 @@ func Schedule() []Entry {
 		{"15 3 * * *", asynq.NewTask(domain.JobAuthCleanupRefreshTokens, nil), []asynq.Option{asynq.Queue(QueueLow), asynq.MaxRetry(2)}},
 		{"45 3 * * *", asynq.NewTask(domain.JobEventsPrune, nil), []asynq.Option{asynq.Queue(QueueLow), asynq.MaxRetry(2)}},
 		{"* * * * *", asynq.NewTask(domain.JobDriveSyncDue, nil), []asynq.Option{asynq.Queue(QueueDefault), asynq.MaxRetry(0), asynq.Unique(50 * time.Second)}},
+		{"* * * * *", asynq.NewTask(domain.JobTasksDeadlineScan, nil), []asynq.Option{asynq.Queue(QueueDefault), asynq.MaxRetry(0), asynq.Unique(50 * time.Second)}},
 		{"20 * * * *", asynq.NewTask(domain.JobUploadsCleanup, nil), []asynq.Option{asynq.Queue(QueueLow), asynq.MaxRetry(2)}},
 		{"30 4 * * *", asynq.NewTask(domain.JobMaterialsPurge, nil), []asynq.Option{asynq.Queue(QueueLow), asynq.MaxRetry(2)}},
 	}

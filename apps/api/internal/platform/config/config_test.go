@@ -98,3 +98,34 @@ func TestDriveOAuthRedirect(t *testing.T) {
 		})
 	}
 }
+
+func TestDeadlineOffsets(t *testing.T) {
+	tests := []struct {
+		name string
+		spec []string
+		want []int32
+	}{
+		{"defaults order", []string{"3h", "7d", "1d", "0"}, []int32{10080, 1440, 180, 0}},
+		{"duplicates collapse", []string{"1d", "1440m", "24h"}, []int32{1440}},
+		{"blanks ignored", []string{"", " 2h "}, []int32{120}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := Tasks{DeadlineOffsets: tt.spec}.Offsets()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got) != len(tt.want) {
+				t.Fatalf("offsets = %v, want %v", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Fatalf("offsets = %v, want %v", got, tt.want)
+				}
+			}
+		})
+	}
+	if _, err := (Tasks{DeadlineOffsets: []string{"soon"}}).Offsets(); err == nil {
+		t.Fatal("expected an error for a bad offset")
+	}
+}

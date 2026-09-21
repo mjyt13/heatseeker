@@ -52,9 +52,18 @@ export default function MoreScreen() {
           />
         ) : null}
 
+        <YStack>
+          <H4>{t('more.section_group')}</H4>
+          <ListRow
+            leading={<Ionicons name="people-outline" size={22} />}
+            title={ctx.group.data?.group.name ?? t('groups.title')}
+            subtitle={t('more.switch_group')}
+            onPress={() => router.push('/(app)/groups')}
+          />
+        </YStack>
+
         {ctx.groupId ? (
           <YStack>
-            <H4>{t('more.section_group')}</H4>
             <ListRow
               leading={<Ionicons name="book-outline" size={22} />}
               title={t('subjects.manage')}

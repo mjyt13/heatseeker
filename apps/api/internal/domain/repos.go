@@ -192,6 +192,8 @@ type MaterialRepo interface {
 	SetVersionDriveRevision(ctx context.Context, versionID uuid.UUID, revisionID string) error
 	SetVersionDriveUpload(ctx context.Context, versionID uuid.UUID, status DriveUploadStatus, errMsg, fileID, webViewLink *string) error
 	SetVersionHash(ctx context.Context, versionID uuid.UUID, sha256 string) error
+	// Share turns a file kept in a task into a group material (D43).
+	Share(ctx context.Context, id uuid.UUID) (*Material, error)
 }
 
 // UploadRepo persists pending direct uploads.
@@ -251,4 +253,80 @@ type DriveRepo interface {
 	GetPublisher(ctx context.Context, groupID uuid.UUID) (*DrivePublisher, error)
 	DeletePublisher(ctx context.Context, groupID uuid.UUID) error
 	SetPublisherError(ctx context.Context, groupID uuid.UUID, msg *string) error
+}
+
+// TaskRepo persists tasks, personal progress and attachments.
+type TaskRepo interface {
+	Create(ctx context.Context, t Task) (*Task, error)
+	Get(ctx context.Context, id uuid.UUID) (*Task, error)
+	GetByClientID(ctx context.Context, groupID, clientID uuid.UUID) (*Task, error)
+	GetView(ctx context.Context, id, actorID uuid.UUID) (*TaskView, error)
+	List(ctx context.Context, f TaskFilter) ([]TaskView, error)
+	Counts(ctx context.Context, groupID, actorID uuid.UUID, now time.Time, dueSoonBefore time.Time) (*TaskCounts, error)
+	Update(ctx context.Context, p UpdateTaskParams) (*Task, error)
+	SetStatus(ctx context.Context, id uuid.UUID, status TaskStatus, completedAt *time.Time) (*Task, error)
+	SetPinned(ctx context.Context, id uuid.UUID, by *uuid.UUID, at *time.Time) (*Task, error)
+	SoftDelete(ctx context.Context, id uuid.UUID, at time.Time) error
+
+	SetAssignees(ctx context.Context, taskID uuid.UUID, userIDs []uuid.UUID) error
+	ListAssignments(ctx context.Context, taskID uuid.UUID) ([]TaskAssignment, error)
+	SetMyStatus(ctx context.Context, taskID, userID uuid.UUID, status TaskStatus, completedAt *time.Time) (*TaskAssignment, error)
+	// AddAttachment attaches one material without touching the others.
+	AddAttachment(ctx context.Context, taskID, materialID uuid.UUID) error
+	SetAttachments(ctx context.Context, taskID, groupID uuid.UUID, materialIDs []uuid.UUID) error
+
+	// ListDueReminders returns tasks whose deadline reminder is due now, for
+	// the configured offsets (minutes before the deadline). Deadlines older
+	// than graceMinutes are left alone.
+	ListDueReminders(ctx context.Context, now time.Time, offsets []int32, graceMinutes, limit int32) ([]DueTask, error)
+	// MarkNotified remembers offsets already announced for a task.
+	MarkNotified(ctx context.Context, id uuid.UUID, offsets []int32) error
+}
+
+// UpdateTaskParams is the editable part of a task.
+type UpdateTaskParams struct {
+	ID          uuid.UUID
+	SubjectID   *uuid.UUID
+	Title       string
+	Description string
+	Kind        TaskKind
+	Priority    TaskPriority
+	AssignMode  TaskAssignMode
+	Visibility  TaskVisibility
+	DueAt       *time.Time
+	// ResetNotified clears the announced reminders after the deadline moved.
+	ResetNotified bool
+}
+
+// DiscussionRepo persists threads, messages, personal hides and read marks.
+type DiscussionRepo interface {
+	GetThread(ctx context.Context, groupID uuid.UUID, target ThreadTarget, targetID uuid.UUID) (*Thread, error)
+	GetThreadByID(ctx context.Context, id uuid.UUID) (*Thread, error)
+	// EnsureThread creates the thread of a target or returns the existing one.
+	EnsureThread(ctx context.Context, t Thread) (*Thread, error)
+	// ListThreads returns the group's threads with the viewer's unread counts.
+	ListThreads(ctx context.Context, groupID, viewerID uuid.UUID) ([]ThreadSummary, error)
+	// TouchThread records a new message and adjusts the message count.
+	TouchThread(ctx context.Context, threadID uuid.UUID, seq int64, at time.Time) error
+	AdjustMessageCount(ctx context.Context, threadID uuid.UUID, delta int32) error
+
+	CreateMessage(ctx context.Context, m Message) (*Message, error)
+	GetMessage(ctx context.Context, id uuid.UUID) (*Message, error)
+	GetMessageByClientID(ctx context.Context, threadID, clientID uuid.UUID) (*Message, error)
+	GetMessageView(ctx context.Context, id, viewerID uuid.UUID) (*MessageView, error)
+	ListMessages(ctx context.Context, f MessageFilter) ([]MessageView, error)
+	EditMessage(ctx context.Context, id uuid.UUID, body string, at time.Time) (*Message, error)
+	SoftDeleteMessage(ctx context.Context, id uuid.UUID, at time.Time) (*Message, error)
+	UndeleteMessage(ctx context.Context, id uuid.UUID) (*Message, error)
+	SetHiddenForAll(ctx context.Context, id uuid.UUID, by *uuid.UUID, at *time.Time) (*Message, error)
+
+	HideMessage(ctx context.Context, messageID, userID uuid.UUID) error
+	UnhideMessage(ctx context.Context, messageID, userID uuid.UUID) error
+	// ListHiddenByUser is the "hidden by me" screen, newest hide first.
+	ListHiddenByUser(ctx context.Context, groupID, userID uuid.UUID, limit int32) ([]MessageView, error)
+
+	// MarkRead moves the read mark forward; it never goes back.
+	MarkRead(ctx context.Context, threadID, userID uuid.UUID, seq int64) error
+	// ReadSeq is the user's read mark in a thread, 0 before the first read.
+	ReadSeq(ctx context.Context, threadID, userID uuid.UUID) (int64, error)
 }

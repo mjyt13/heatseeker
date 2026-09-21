@@ -29,7 +29,7 @@ func (q *Queries) ClaimVersionPreview(ctx context.Context, id uuid.UUID) (uuid.U
 }
 
 const countInbox = `-- name: CountInbox :one
-SELECT count(*) FROM materials WHERE group_id = $1 AND needs_review AND status = 'ACTIVE'
+SELECT count(*) FROM materials WHERE group_id = $1 AND needs_review AND status = 'ACTIVE' AND task_id IS NULL
 `
 
 func (q *Queries) CountInbox(ctx context.Context, groupID uuid.UUID) (int64, error) {
@@ -41,11 +41,11 @@ func (q *Queries) CountInbox(ctx context.Context, groupID uuid.UUID) (int64, err
 
 const createMaterial = `-- name: CreateMaterial :one
 INSERT INTO materials (id, group_id, subject_id, uploader_id, title, description, kind, source, status,
-                       classification, needs_review, review_reason, sort_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                       classification, needs_review, review_reason, sort_at, task_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 RETURNING id, group_id, subject_id, uploader_id, title, description, kind, source, status, current_version_id,
           classification, needs_review, review_reason, download_count, sort_at, archived_by, archived_at,
-          deleted_by, deleted_at, created_at, updated_at
+          deleted_by, deleted_at, created_at, updated_at, task_id
 `
 
 type CreateMaterialParams struct {
@@ -62,6 +62,7 @@ type CreateMaterialParams struct {
 	NeedsReview    bool
 	ReviewReason   *string
 	SortAt         time.Time
+	TaskID         *uuid.UUID
 }
 
 type CreateMaterialRow struct {
@@ -86,6 +87,7 @@ type CreateMaterialRow struct {
 	DeletedAt        *time.Time
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	TaskID           *uuid.UUID
 }
 
 func (q *Queries) CreateMaterial(ctx context.Context, arg CreateMaterialParams) (CreateMaterialRow, error) {
@@ -103,6 +105,7 @@ func (q *Queries) CreateMaterial(ctx context.Context, arg CreateMaterialParams) 
 		arg.NeedsReview,
 		arg.ReviewReason,
 		arg.SortAt,
+		arg.TaskID,
 	)
 	var i CreateMaterialRow
 	err := row.Scan(
@@ -127,6 +130,7 @@ func (q *Queries) CreateMaterial(ctx context.Context, arg CreateMaterialParams) 
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TaskID,
 	)
 	return i, err
 }
@@ -221,7 +225,7 @@ func (q *Queries) DeleteMaterialTags(ctx context.Context, materialID uuid.UUID) 
 const getMaterial = `-- name: GetMaterial :one
 SELECT id, group_id, subject_id, uploader_id, title, description, kind, source, status, current_version_id,
        classification, needs_review, review_reason, download_count, sort_at, archived_by, archived_at,
-       deleted_by, deleted_at, created_at, updated_at
+       deleted_by, deleted_at, created_at, updated_at, task_id
 FROM materials WHERE id = $1
 `
 
@@ -247,6 +251,7 @@ type GetMaterialRow struct {
 	DeletedAt        *time.Time
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	TaskID           *uuid.UUID
 }
 
 func (q *Queries) GetMaterial(ctx context.Context, id uuid.UUID) (GetMaterialRow, error) {
@@ -274,6 +279,7 @@ func (q *Queries) GetMaterial(ctx context.Context, id uuid.UUID) (GetMaterialRow
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TaskID,
 	)
 	return i, err
 }
@@ -317,7 +323,7 @@ func (q *Queries) GetMaterialVersion(ctx context.Context, id uuid.UUID) (Materia
 const getMaterialView = `-- name: GetMaterialView :one
 SELECT m.id, m.group_id, m.subject_id, m.uploader_id, m.title, m.description, m.kind, m.source, m.status,
        m.current_version_id, m.classification, m.needs_review, m.review_reason, m.download_count, m.sort_at,
-       m.archived_by, m.archived_at, m.deleted_by, m.deleted_at, m.created_at, m.updated_at,
+       m.archived_by, m.archived_at, m.deleted_by, m.deleted_at, m.created_at, m.updated_at, m.task_id,
        v.id, v.material_id, v.version_no, v.storage, v.storage_key, v.cache_expires_at, v.drive_file_id, v.drive_web_view_link, v.drive_md5, v.drive_modified_time, v.drive_upload_status, v.drive_upload_error, v.original_name, v.mime, v.size_bytes, v.sha256, v.scan_status, v.text_key, v.preview_key, v.uploaded_by, v.created_at, v.drive_revision_id, v.preview_status, v.preview_error
 FROM materials m
 JOIN material_versions v ON v.id = m.current_version_id
@@ -346,6 +352,7 @@ type GetMaterialViewRow struct {
 	DeletedAt        *time.Time
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	TaskID           *uuid.UUID
 	MaterialVersion  MaterialVersion
 }
 
@@ -374,6 +381,7 @@ func (q *Queries) GetMaterialView(ctx context.Context, id uuid.UUID) (GetMateria
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TaskID,
 		&i.MaterialVersion.ID,
 		&i.MaterialVersion.MaterialID,
 		&i.MaterialVersion.VersionNo,
@@ -512,12 +520,14 @@ func (q *Queries) ListMaterialVersions(ctx context.Context, materialID uuid.UUID
 const listMaterials = `-- name: ListMaterials :many
 SELECT m.id, m.group_id, m.subject_id, m.uploader_id, m.title, m.description, m.kind, m.source, m.status,
        m.current_version_id, m.classification, m.needs_review, m.review_reason, m.download_count, m.sort_at,
-       m.archived_by, m.archived_at, m.deleted_by, m.deleted_at, m.created_at, m.updated_at,
+       m.archived_by, m.archived_at, m.deleted_by, m.deleted_at, m.created_at, m.updated_at, m.task_id,
        v.id, v.material_id, v.version_no, v.storage, v.storage_key, v.cache_expires_at, v.drive_file_id, v.drive_web_view_link, v.drive_md5, v.drive_modified_time, v.drive_upload_status, v.drive_upload_error, v.original_name, v.mime, v.size_bytes, v.sha256, v.scan_status, v.text_key, v.preview_key, v.uploaded_by, v.created_at, v.drive_revision_id, v.preview_status, v.preview_error
 FROM materials m
 JOIN material_versions v ON v.id = m.current_version_id
 WHERE m.group_id = $1
   AND m.status = $2
+  -- Files kept inside a task are reached through the task only (D43).
+  AND m.task_id IS NULL
   AND ($3::uuid IS NULL OR m.subject_id = $3::uuid)
   AND (NOT $4::boolean OR m.subject_id IS NULL)
   AND ($5::text IS NULL OR m.kind = $5::text)
@@ -579,6 +589,7 @@ type ListMaterialsRow struct {
 	DeletedAt        *time.Time
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	TaskID           *uuid.UUID
 	MaterialVersion  MaterialVersion
 }
 
@@ -629,6 +640,7 @@ func (q *Queries) ListMaterials(ctx context.Context, arg ListMaterialsParams) ([
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TaskID,
 			&i.MaterialVersion.ID,
 			&i.MaterialVersion.MaterialID,
 			&i.MaterialVersion.VersionNo,
@@ -667,7 +679,7 @@ func (q *Queries) ListMaterials(ctx context.Context, arg ListMaterialsParams) ([
 const listPurgeableMaterials = `-- name: ListPurgeableMaterials :many
 SELECT id, group_id, subject_id, uploader_id, title, description, kind, source, status, current_version_id,
        classification, needs_review, review_reason, download_count, sort_at, archived_by, archived_at,
-       deleted_by, deleted_at, created_at, updated_at
+       deleted_by, deleted_at, created_at, updated_at, task_id
 FROM materials
 WHERE status = 'DELETED' AND deleted_at < $1
 ORDER BY deleted_at
@@ -701,6 +713,7 @@ type ListPurgeableMaterialsRow struct {
 	DeletedAt        *time.Time
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	TaskID           *uuid.UUID
 }
 
 func (q *Queries) ListPurgeableMaterials(ctx context.Context, arg ListPurgeableMaterialsParams) ([]ListPurgeableMaterialsRow, error) {
@@ -734,6 +747,7 @@ func (q *Queries) ListPurgeableMaterials(ctx context.Context, arg ListPurgeableM
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TaskID,
 		); err != nil {
 			return nil, err
 		}
@@ -771,7 +785,7 @@ SET status = $1,
 WHERE id = $3
 RETURNING id, group_id, subject_id, uploader_id, title, description, kind, source, status, current_version_id,
           classification, needs_review, review_reason, download_count, sort_at, archived_by, archived_at,
-          deleted_by, deleted_at, created_at, updated_at
+          deleted_by, deleted_at, created_at, updated_at, task_id
 `
 
 type SetMaterialStatusParams struct {
@@ -802,6 +816,7 @@ type SetMaterialStatusRow struct {
 	DeletedAt        *time.Time
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	TaskID           *uuid.UUID
 }
 
 func (q *Queries) SetMaterialStatus(ctx context.Context, arg SetMaterialStatusParams) (SetMaterialStatusRow, error) {
@@ -829,6 +844,7 @@ func (q *Queries) SetMaterialStatus(ctx context.Context, arg SetMaterialStatusPa
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TaskID,
 	)
 	return i, err
 }
@@ -911,6 +927,70 @@ func (q *Queries) SetVersionPreview(ctx context.Context, arg SetVersionPreviewPa
 	return err
 }
 
+const shareMaterial = `-- name: ShareMaterial :one
+UPDATE materials SET task_id = NULL, sort_at = now()
+WHERE id = $1 AND task_id IS NOT NULL
+RETURNING id, group_id, subject_id, uploader_id, title, description, kind, source, status, current_version_id,
+          classification, needs_review, review_reason, download_count, sort_at, archived_by, archived_at,
+          deleted_by, deleted_at, created_at, updated_at, task_id
+`
+
+type ShareMaterialRow struct {
+	ID               uuid.UUID
+	GroupID          uuid.UUID
+	SubjectID        *uuid.UUID
+	UploaderID       *uuid.UUID
+	Title            string
+	Description      string
+	Kind             string
+	Source           string
+	Status           string
+	CurrentVersionID *uuid.UUID
+	Classification   []byte
+	NeedsReview      bool
+	ReviewReason     *string
+	DownloadCount    int32
+	SortAt           time.Time
+	ArchivedBy       *uuid.UUID
+	ArchivedAt       *time.Time
+	DeletedBy        *uuid.UUID
+	DeletedAt        *time.Time
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	TaskID           *uuid.UUID
+}
+
+// A file kept in a task becomes an ordinary group material (D43).
+func (q *Queries) ShareMaterial(ctx context.Context, id uuid.UUID) (ShareMaterialRow, error) {
+	row := q.db.QueryRow(ctx, shareMaterial, id)
+	var i ShareMaterialRow
+	err := row.Scan(
+		&i.ID,
+		&i.GroupID,
+		&i.SubjectID,
+		&i.UploaderID,
+		&i.Title,
+		&i.Description,
+		&i.Kind,
+		&i.Source,
+		&i.Status,
+		&i.CurrentVersionID,
+		&i.Classification,
+		&i.NeedsReview,
+		&i.ReviewReason,
+		&i.DownloadCount,
+		&i.SortAt,
+		&i.ArchivedBy,
+		&i.ArchivedAt,
+		&i.DeletedBy,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TaskID,
+	)
+	return i, err
+}
+
 const updateMaterial = `-- name: UpdateMaterial :one
 UPDATE materials
 SET title = $2, description = $3, subject_id = $4, kind = $5, classification = $6,
@@ -918,7 +998,7 @@ SET title = $2, description = $3, subject_id = $4, kind = $5, classification = $
 WHERE id = $1
 RETURNING id, group_id, subject_id, uploader_id, title, description, kind, source, status, current_version_id,
           classification, needs_review, review_reason, download_count, sort_at, archived_by, archived_at,
-          deleted_by, deleted_at, created_at, updated_at
+          deleted_by, deleted_at, created_at, updated_at, task_id
 `
 
 type UpdateMaterialParams struct {
@@ -954,6 +1034,7 @@ type UpdateMaterialRow struct {
 	DeletedAt        *time.Time
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	TaskID           *uuid.UUID
 }
 
 func (q *Queries) UpdateMaterial(ctx context.Context, arg UpdateMaterialParams) (UpdateMaterialRow, error) {
@@ -990,6 +1071,7 @@ func (q *Queries) UpdateMaterial(ctx context.Context, arg UpdateMaterialParams) 
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TaskID,
 	)
 	return i, err
 }

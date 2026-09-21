@@ -21,12 +21,14 @@ import (
 	"heatseeker/api/internal/adapters/queue"
 	"heatseeker/api/internal/app/access"
 	"heatseeker/api/internal/app/auth"
+	"heatseeker/api/internal/app/discussions"
 	"heatseeker/api/internal/app/drive"
 	"heatseeker/api/internal/app/groups"
 	"heatseeker/api/internal/app/materials"
 	"heatseeker/api/internal/app/subjects"
 	appsync "heatseeker/api/internal/app/sync"
 	"heatseeker/api/internal/app/tags"
+	"heatseeker/api/internal/app/tasks"
 	"heatseeker/api/internal/domain"
 	"heatseeker/api/internal/events"
 	"heatseeker/api/internal/jobs"
@@ -40,19 +42,21 @@ import (
 
 // Services is the assembled application.
 type Services struct {
-	Pool      *pgxpool.Pool
-	Store     *postgres.Store
-	Bus       *events.Bus
-	Tokens    *auth.Tokens
-	Auth      *auth.Service
-	Groups    *groups.Service
-	Subjects  *subjects.Service
-	Tags      *tags.Service
-	Sync      *appsync.Service
-	Materials *materials.Service
-	Drive     *drive.Service
-	Media     domain.MediaStore
-	Queue     domain.JobQueue
+	Pool        *pgxpool.Pool
+	Store       *postgres.Store
+	Bus         *events.Bus
+	Tokens      *auth.Tokens
+	Auth        *auth.Service
+	Groups      *groups.Service
+	Subjects    *subjects.Service
+	Tags        *tags.Service
+	Sync        *appsync.Service
+	Materials   *materials.Service
+	Drive       *drive.Service
+	Tasks       *tasks.Service
+	Discussions *discussions.Service
+	Media       domain.MediaStore
+	Queue       domain.JobQueue
 
 	closers []func()
 }
@@ -154,7 +158,7 @@ func wire(pool *pgxpool.Pool, cfg *config.Config, log *slog.Logger, opts Options
 
 	materialsSvc := materials.NewService(materials.Deps{
 		Materials: store.Materials(), Uploads: store.Uploads(), Subjects: store.Subjects(), Tags: store.Tags(),
-		Drive: store.Drive(), Store: opts.Media, Client: opts.DriveClient, Converter: opts.Converter, Access: acc, Events: publisher,
+		Drive: store.Drive(), Tasks: store.Tasks(), Store: opts.Media, Client: opts.DriveClient, Converter: opts.Converter, Access: acc, Events: publisher,
 		Tx: store, Queue: opts.Queue, Clock: clk, Log: log,
 	}, materials.Settings{
 		APIBaseURL:          strings.TrimRight(cfg.App.BaseURL, "/") + "/api/v1",
@@ -194,6 +198,20 @@ func wire(pool *pgxpool.Pool, cfg *config.Config, log *slog.Logger, opts Options
 		StateSecret:        cfg.Auth.JWTAccessSecret,
 	})
 
+	offsets, err := cfg.Tasks.Offsets()
+	if err != nil {
+		return nil, err
+	}
+	tasksSvc := tasks.NewService(tasks.Deps{
+		Tasks: store.Tasks(), Subjects: store.Subjects(), Members: store.Memberships(),
+		Access: acc, Events: publisher, Tx: store, Clock: clk, Log: log,
+	}, tasks.Settings{
+		DeadlineOffsets: offsets,
+		ReminderGrace:   time.Duration(cfg.Tasks.ReminderGraceHours) * time.Hour,
+		DueSoonWindow:   time.Duration(cfg.Tasks.DueSoonDays) * 24 * time.Hour,
+		ScanLimit:       int32(cfg.Tasks.ScanLimit),
+	})
+
 	bus.Subscribe(driveSvc.OnEvent)
 
 	return &Services{
@@ -208,8 +226,13 @@ func wire(pool *pgxpool.Pool, cfg *config.Config, log *slog.Logger, opts Options
 		Sync:      appsync.NewService(store.Events(), acc),
 		Materials: materialsSvc,
 		Drive:     driveSvc,
-		Media:     opts.Media,
-		Queue:     opts.Queue,
+		Tasks:     tasksSvc,
+		Discussions: discussions.NewService(discussions.Deps{
+			Discussions: store.Discussions(), Subjects: store.Subjects(), Materials: store.Materials(), Tasks: store.Tasks(),
+			Access: acc, Events: publisher, Tx: store, Clock: clk, Log: log,
+		}),
+		Media: opts.Media,
+		Queue: opts.Queue,
 	}, nil
 }
 
@@ -249,6 +272,7 @@ func (s *Services) JobDeps(cfg *config.Config, log *slog.Logger) jobs.Deps {
 		EventRetention: time.Duration(cfg.Events.RetentionDays) * 24 * time.Hour,
 		Drive:          s.Drive,
 		Materials:      s.Materials,
+		Tasks:          s.Tasks,
 		Log:            log,
 	}
 }
@@ -256,16 +280,18 @@ func (s *Services) JobDeps(cfg *config.Config, log *slog.Logger) jobs.Deps {
 // HTTPServer builds the HTTP transport over the services.
 func (s *Services) HTTPServer(cfg *config.Config, log *slog.Logger) *httptransport.Server {
 	return httptransport.NewServer(httptransport.Deps{
-		Cfg:       cfg,
-		Log:       log,
-		Tokens:    s.Tokens,
-		Auth:      s.Auth,
-		Groups:    s.Groups,
-		Subjects:  s.Subjects,
-		Tags:      s.Tags,
-		Sync:      s.Sync,
-		Materials: s.Materials,
-		Drive:     s.Drive,
+		Cfg:         cfg,
+		Log:         log,
+		Tokens:      s.Tokens,
+		Auth:        s.Auth,
+		Groups:      s.Groups,
+		Subjects:    s.Subjects,
+		Tags:        s.Tags,
+		Sync:        s.Sync,
+		Materials:   s.Materials,
+		Drive:       s.Drive,
+		Tasks:       s.Tasks,
+		Discussions: s.Discussions,
 		Health: func(ctx context.Context) error {
 			pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 			defer cancel()

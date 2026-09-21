@@ -75,7 +75,7 @@ Expo SDK (последний стабильный) + Expo Router (deep links и�
 Query (+ persist) для серверных данных; Zustand для локального состояния; react-hook-form +
 zod; `openapi-fetch` из `packages/api-client`; `expo-secure-store` (токены);
 `expo-notifications`; `expo-document-picker` / `expo-file-system`; `expo-sqlite` — локальная
-БД сообщений и outbox (офлайн); `i18next` + `expo-localization`.
+БД сообщений (офлайн-чтение; outbox пока — очередь на AsyncStorage, D41); `i18next` + `expo-localization`.
 
 Почему Expo, а не Flutter/нативно: единый TypeScript с вебом (типы, клиент, хуки, UI), EAS
 Update для обновлений без стора, знакомая React-экосистема. Flutter дал бы веб только на
@@ -194,14 +194,14 @@ apps/api/
 
 | Модуль | Эндпоинты (эскиз) |
 |---|---|
-| auth | `POST /auth/register` `{name, invite_code?}` → токены; `POST /auth/login`; `/auth/refresh`, `/auth/logout`; `POST /auth/google` (id_token); `POST /me/credentials` («защитить аккаунт») |
+| auth | `POST /auth/register` `{name, invite_code?, group_id?}` → токены; `POST /auth/login`; `/auth/refresh`, `/auth/logout`; `POST /auth/google` (id_token); `POST /me/credentials` («защитить аккаунт») |
 | me | `GET/PATCH /me`, `/me/devices`, `/me/preferences`, `/me/mutes`, `/me/bookmarks`, `/me/reminders`, `/me/notifications` |
-| groups | `POST /groups`, `GET /groups/:id`, `GET /groups/:id/members` (админ — расширенная инфа), `PATCH /groups/:id/members/:uid/roles`, `POST /groups/:id/invites`, `POST /groups/join/:code`, `GET /groups/search?q=` и `POST /groups/:id/join` (открытые группы, D33), `GET /groups/:id/sync?since=` |
+| groups | `POST /groups`, `GET /groups/:id`, `GET /groups/:id/members` (админ — расширенная инфа), `PATCH /groups/:id/members/:uid/roles`, `POST /groups/:id/invites`, `POST /groups/join/:code`, `GET /groups/search?q=` и `POST /groups/:id/join` (открытые группы, D33), `GET /groups/discover?q=` (без токена, для первого экрана, D44), `GET /groups/:id/sync?since=` |
 | subjects / tags | CRUD; `GET /groups/:id/quick-tags` |
-| materials | `GET /groups/:id/materials?subject&tags&kind&q&cursor`, `GET /materials/:id`, `GET /materials/:id/open` → `{mode, drive_web_view_link?, stream_url?, s3_url?}`, `GET /materials/:id/stream` (прокси с Range), `POST /groups/:id/materials/uploads` (presigned / прямой при `local`), `POST …/complete`, `PATCH`, `/archive`, `/restore`, `DELETE`, `GET /groups/:id/materials/inbox`, `POST /materials/:id/classify` |
-| tasks | CRUD (создаёт любой), `PATCH /tasks/:id/status`, `PATCH /tasks/:id/me/status`, `POST /tasks/:id/pin`, `GET /groups/:id/board` |
+| materials | `GET /groups/:id/materials?subject&tags&kind&q&cursor`, `GET /materials/:id`, `GET /materials/:id/open` → `{mode, drive_web_view_link?, stream_url?, s3_url?}`, `GET /materials/:id/stream` (прокси с Range), `POST /groups/:id/materials/uploads` (presigned / прямой при `local`; `task_id` + `task_only` — сразу в задачу, D43), `POST …/complete`, `PATCH`, `/archive`, `/restore`, `DELETE`, `GET /groups/:id/materials/inbox`, `POST /materials/:id/classify`, `POST /materials/:id/share` (файл из задачи — группе, D43) |
+| tasks | `GET/POST /groups/:id/tasks` (фильтры `mine\|open\|overdue\|subject_id\|kind\|status\|q`, создание идемпотентно по `client_id`), `GET /groups/:id/tasks/board` (счётчики), `GET/PATCH/DELETE /tasks/:id`, `PATCH /tasks/:id/status`, `PATCH /tasks/:id/me/status`, `POST/DELETE /tasks/:id/pin`, `PUT /tasks/:id/materials` (файлы задачи целиком) |
 | schedule | `GET /groups/:id/schedule?from&to`, CRUD событий, exceptions, change-requests (этап 3), `schedule.ics` |
-| threads | `GET /groups/:id/subjects/:sid/threads` (основная навигация — по предмету), `GET /groups/:id/threads?target=subject:<id>\|lesson:<occ>\|material:<id>\|task:<id>\|proposal:<id>\|general`, `GET /threads/:id/messages?before&after&include_hidden`, `POST /threads/:id/messages` `{client_id, body}`, `PATCH/DELETE /messages/:id` (своё), `POST/DELETE /messages/:id/hide` (для себя), `POST /messages/:id/moderate` (для всех), `POST /threads/:id/read` |
+| discussions | `GET /groups/:id/discussions` (общий чат, строка на предмет, обсуждения материалов/задач, непрочитанное), `GET /groups/:id/discussions/:type/:target/messages?before_seq\|after_seq&include_hidden`, `POST …/messages` `{client_id, body, reply_to_id?}` (первое сообщение создаёт тред, D40), `POST …/read` `{seq?}`, `PATCH/DELETE /messages/:id` (своё), `POST /messages/:id/restore` (вернуть своё удалённое), `POST/DELETE /messages/:id/hide` (для себя), `POST/DELETE /messages/:id/moderate` (для всех), `GET /groups/:id/messages/hidden` («Скрытые мной») |
 | proposals | CRUD, vote, status |
 | announcements | `POST /groups/:id/announcements` |
 | drive | `POST /groups/:id/drive/connection`, `GET …/status`, `POST …/sync`, `GET …/items`, `POST /groups/:id/drive/upload` (§6.3) |

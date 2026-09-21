@@ -7,12 +7,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
-import { ApiProvider, useSession } from '@heatseeker/core';
+import { ApiProvider, useOutbox, useSession } from '@heatseeker/core';
 import { TamaguiProvider, tamaguiConfig } from '@heatseeker/ui';
 
 import { api } from '@/lib/api';
 import { QUERY_CACHE_BUSTER, queryClient, queryPersister } from '@/lib/query';
-import { groupStore, tokenStore } from '@/lib/storage';
+import { groupStore, outboxStore, tokenStore } from '@/lib/storage';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -23,11 +23,23 @@ export default function RootLayout() {
 
   useEffect(() => {
     void bootstrap(tokenStore, groupStore).finally(() => SplashScreen.hideAsync());
+    void useOutbox.getState().configure(outboxStore);
   }, [bootstrap]);
 
+  // Unsent messages belong to the account that wrote them.
+  useEffect(() => {
+    if (status === 'anonymous') useOutbox.getState().clear();
+  }, [status]);
+
   return (
-    <TamaguiProvider config={tamaguiConfig} defaultTheme={colorScheme === 'dark' ? 'dark' : 'light'}>
-      <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: queryPersister, buster: QUERY_CACHE_BUSTER }}>
+    <TamaguiProvider
+      config={tamaguiConfig}
+      defaultTheme={colorScheme === 'dark' ? 'dark' : 'light'}
+    >
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister: queryPersister, buster: QUERY_CACHE_BUSTER }}
+      >
         <ApiProvider client={api}>
           <StatusBar style="auto" />
           <Stack screenOptions={{ headerShown: false }}>

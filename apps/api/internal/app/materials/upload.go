@@ -32,6 +32,10 @@ type UploadInput struct {
 	Kind        *domain.MaterialKind
 	TagIDs      []uuid.UUID
 	ToDrive     bool
+	// TaskID attaches the new material to a task; TaskOnly keeps it there,
+	// out of the feed (D43).
+	TaskID   *uuid.UUID
+	TaskOnly bool
 }
 
 // UploadTicket tells the client where to send the bytes.
@@ -82,6 +86,18 @@ func (s *Service) CreateUpload(ctx context.Context, actorID, groupID uuid.UUID, 
 	}
 	if meta.TagIDs, err = s.checkTags(ctx, groupID, in.TagIDs); err != nil {
 		return nil, err
+	}
+	if in.TaskOnly && in.TaskID == nil {
+		return nil, domain.Invalid("task_only", "needs task_id")
+	}
+	if in.TaskOnly && in.ToDrive {
+		return nil, domain.Invalid("to_drive", "a file kept in a task is not published to Google Drive")
+	}
+	if in.TaskID != nil {
+		if err := s.checkTaskManager(ctx, actor, groupID, *in.TaskID); err != nil {
+			return nil, err
+		}
+		meta.TaskID, meta.TaskOnly = in.TaskID, in.TaskOnly
 	}
 	if in.ToDrive {
 		if err := s.checkDriveUpload(ctx, actor.Can(authz.DriveUpload), actor.User.Secured(), groupID); err != nil {
@@ -233,6 +249,10 @@ func (s *Service) CompleteUpload(ctx context.Context, actorID, uploadID uuid.UUI
 		class.Topic, class.Semester = guess.Topic, guess.Semester
 	}
 
+	var keepIn *uuid.UUID
+	if meta.TaskOnly {
+		keepIn = meta.TaskID
+	}
 	materialID := ids.New()
 	versionID := ids.New()
 	finalKey := fmt.Sprintf("groups/%s/materials/%s/v1/%s", u.GroupID, materialID, filenames.SafeName(u.FileName))
@@ -244,7 +264,7 @@ func (s *Service) CompleteUpload(ctx context.Context, actorID, uploadID uuid.UUI
 		m, err := s.Materials.Create(ctx, domain.Material{
 			ID: materialID, GroupID: u.GroupID, SubjectID: class.SubjectID, UploaderID: &actorID,
 			Title: meta.Title, Description: meta.Description, Kind: class.Kind, Source: domain.SourceUpload,
-			Status: domain.MaterialActive, Classification: class, SortAt: now,
+			Status: domain.MaterialActive, Classification: class, SortAt: now, TaskID: keepIn,
 		})
 		if err != nil {
 			return err
@@ -293,9 +313,18 @@ func (s *Service) CompleteUpload(ctx context.Context, actorID, uploadID uuid.UUI
 				s.enqueuePreview(m.ID, versionID)
 			}
 		})
-		return s.emit(ctx, u.GroupID, domain.EventMaterialAdded, &actorID, m.ID, map[string]any{
-			"title": m.Title, "subject_id": m.SubjectID, "kind": m.Kind, "source": m.Source,
-		})
+		if meta.TaskID != nil {
+			if err := s.Tasks.AddAttachment(ctx, *meta.TaskID, m.ID); err != nil {
+				return err
+			}
+		}
+		added := map[string]any{"title": m.Title, "subject_id": m.SubjectID, "kind": m.Kind, "source": m.Source}
+		if keepIn != nil {
+			// Not a group material: the feed stays quiet, the task's card refreshes by sync.
+			added["task_id"] = keepIn
+			return s.emitQuiet(ctx, u.GroupID, domain.EventMaterialAdded, &actorID, m.ID, added)
+		}
+		return s.emit(ctx, u.GroupID, domain.EventMaterialAdded, &actorID, m.ID, added)
 	})
 	if err != nil {
 		// Put the file back so the client can retry completing the upload.

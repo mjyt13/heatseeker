@@ -135,6 +135,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/groups/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Открытые группы до регистрации
+         * @description Без аутентификации — для первого экрана (D44): открытые группы по части названия, до 20; пусто — все открытые.
+         */
+        get: operations["groups-discover"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/groups/join/{code}": {
         parameters: {
             query?: never;
@@ -205,6 +225,70 @@ export interface paths {
         get: operations["activity-list"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/discussions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Экран «Обсуждения»
+         * @description Общий тред, строка на каждый предмет и обсуждения материалов/задач с непрочитанным.
+         */
+        get: operations["discussions-overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/discussions/{targetType}/{targetId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Сообщения обсуждения
+         * @description Без курсора — последняя страница; before_seq — старее, after_seq — новее. Сообщения всегда от старых к новым.
+         */
+        get: operations["discussions-messages"];
+        put?: never;
+        /**
+         * Написать сообщение
+         * @description Первое сообщение создаёт тред. Гости не пишут.
+         */
+        post: operations["discussions-post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/discussions/{targetType}/{targetId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отметить прочитанным
+         * @description Отметка только двигается вперёд.
+         */
+        post: operations["discussions-read"];
         delete?: never;
         options?: never;
         head?: never;
@@ -499,6 +583,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/groups/{groupId}/messages/hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Скрытые мной
+         * @description Сообщения, которые я скрыл для себя, — чтобы быстро вернуть.
+         */
+        get: operations["discussions-hidden"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/groups/{groupId}/quick-tags": {
         parameters: {
             query?: never;
@@ -665,6 +769,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/groups/{groupId}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Задачи группы
+         * @description Сначала закреплённые, затем по сроку. Личные задачи видит только их автор.
+         */
+        get: operations["tasks-list"];
+        put?: never;
+        /**
+         * Создать задачу
+         * @description Может любой участник. Повтор с тем же client_id возвращает созданную задачу.
+         */
+        post: operations["tasks-create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/tasks/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Сводка по задачам
+         * @description Счётчики для доски и бейджей: по статусам, открытые, просроченные, ближайшие и мои.
+         */
+        get: operations["tasks-board"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/materials/{materialId}": {
         parameters: {
             query?: never;
@@ -784,6 +932,26 @@ export interface paths {
          * @description Удалённый (до окончательной очистки) возвращает только модератор.
          */
         post: operations["materials-restore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/materials/{materialId}/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Открыть файл из задачи группе
+         * @description Файл, оставленный только в задаче, становится обычным материалом: появляется в ленте и остаётся прикреплённым к задаче. Загрузивший, автор задачи или модератор.
+         */
+        post: operations["materials-share"];
         delete?: never;
         options?: never;
         head?: never;
@@ -954,6 +1122,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/messages/{messageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Удалить своё сообщение
+         * @description В треде остаётся пометка «сообщение удалено».
+         */
+        delete: operations["messages-delete"];
+        options?: never;
+        head?: never;
+        /** Изменить своё сообщение */
+        patch: operations["messages-edit"];
+        trace?: never;
+    };
+    "/messages/{messageId}/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Скрыть для себя
+         * @description Сообщение сворачивается только у меня.
+         */
+        post: operations["messages-hide"];
+        /** Вернуть скрытое мной */
+        delete: operations["messages-unhide"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messages/{messageId}/moderate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Скрыть для всех
+         * @description Модератор или админ. Автор и модераторы продолжают видеть текст с пометкой.
+         */
+        post: operations["messages-moderate"];
+        /** Вернуть скрытое модератором */
+        delete: operations["messages-unmoderate"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messages/{messageId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Восстановить своё удалённое сообщение */
+        post: operations["messages-restore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/meta": {
         parameters: {
             query?: never;
@@ -969,6 +1217,109 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/tasks/{taskId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Задача */
+        get: operations["tasks-get"];
+        put?: never;
+        post?: never;
+        /**
+         * Удалить задачу
+         * @description Автор, староста, модератор или админ.
+         */
+        delete: operations["tasks-delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Изменить задачу
+         * @description Автор, староста, модератор или админ. Поля заменяются целиком; перенос срока снова включает напоминания.
+         */
+        patch: operations["tasks-update"];
+        trace?: never;
+    };
+    "/tasks/{taskId}/materials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Прикреплённые файлы задачи
+         * @description Заменяет набор целиком. Автор, староста, модератор или админ.
+         */
+        put: operations["tasks-materials"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{taskId}/me/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Мой прогресс по задаче
+         * @description Личный статус; общий статус задачи не меняется.
+         */
+        patch: operations["tasks-my-status"];
+        trace?: never;
+    };
+    "/tasks/{taskId}/pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Закрепить задачу
+         * @description Староста, модератор или админ.
+         */
+        post: operations["tasks-pin"];
+        /** Открепить задачу */
+        delete: operations["tasks-unpin"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{taskId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Статус задачи для группы */
+        patch: operations["tasks-status"];
         trace?: never;
     };
     "/uploads/{uploadId}/complete": {
@@ -1098,6 +1449,8 @@ export interface components {
             status: "ACTIVE" | "ARCHIVED" | "DELETED";
             subject_id?: string;
             tag_ids: string[] | null;
+            /** @description Файл оставлен только в этой задаче (D43): не в ленте, видят те, кто видит задачу. */
+            task_id?: string;
             title: string;
             /** Format: date-time */
             updated_at: string;
@@ -1182,6 +1535,13 @@ export interface components {
              */
             subject_id?: string;
             tag_ids?: string[] | null;
+            /**
+             * Format: uuid
+             * @description Сразу прикрепить к задаче (нужно право править задачу).
+             */
+            task_id?: string;
+            /** @description Оставить файл только в задаче: не в ленте, видят те, кто видит задачу (D43). Нужен task_id; не вместе с to_drive. */
+            task_only?: boolean;
             /** @description По умолчанию — из имени файла. */
             title?: string;
             /** @description Опубликовать копию в папке группы на Google Диске (нужен защищённый аккаунт). */
@@ -1224,6 +1584,46 @@ export interface components {
              */
             readonly $schema?: string;
             items: components["schemas"]["DeviceDTO"][] | null;
+        };
+        DiscussionDTO: {
+            last_message?: components["schemas"]["MessagePreviewDTO"];
+            /** Format: date-time */
+            last_message_at?: string;
+            /** Format: int32 */
+            message_count: number;
+            /**
+             * Format: int32
+             * @description Непрочитанное в обсуждениях материалов и задач предмета.
+             */
+            nested_unread: number;
+            subject_id?: string;
+            target_id: string;
+            /** @enum {string} */
+            target_type: "SUBJECT" | "LESSON" | "MATERIAL" | "TASK" | "PROPOSAL" | "GENERAL";
+            /** @description Пусто, пока в обсуждении никто не писал. */
+            thread_id?: string;
+            title?: string;
+            /** Format: int32 */
+            unread: number;
+        };
+        DiscussionsDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/DiscussionsDTO.json
+             */
+            readonly $schema?: string;
+            /** @description Общий тред группы. */
+            general: components["schemas"]["DiscussionDTO"];
+            /** @description Обсуждения материалов, задач и архивных предметов, где уже писали. */
+            others: components["schemas"]["DiscussionDTO"][] | null;
+            /** @description По строке на каждый активный предмет, в порядке предметов. */
+            subjects: components["schemas"]["DiscussionDTO"][] | null;
+            /**
+             * Format: int32
+             * @description Всего непрочитанных сообщений.
+             */
+            unread: number;
         };
         DriveConnectionDTO: {
             /**
@@ -1347,6 +1747,15 @@ export interface components {
             readonly $schema?: string;
             /** @description Полный перескан папки вместо ленты изменений. */
             full?: boolean;
+        };
+        EditMessageInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/EditMessageInputBody.json
+             */
+            readonly $schema?: string;
+            body: string;
         };
         ErrorDetail: {
             /** @description Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id' */
@@ -1547,6 +1956,19 @@ export interface components {
              */
             platform?: "IOS" | "ANDROID" | "WEB";
         };
+        MarkReadInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/MarkReadInputBody.json
+             */
+            readonly $schema?: string;
+            /**
+             * Format: int64
+             * @description До какого сообщения прочитано; 0 — до последнего.
+             */
+            seq?: number;
+        };
         MaterialDTO: {
             /**
              * Format: uri
@@ -1583,6 +2005,8 @@ export interface components {
             status: "ACTIVE" | "ARCHIVED" | "DELETED";
             subject_id?: string;
             tag_ids: string[] | null;
+            /** @description Файл оставлен только в этой задаче (D43): не в ленте, видят те, кто видит задачу. */
+            task_id?: string;
             title: string;
             /** Format: date-time */
             updated_at: string;
@@ -1630,6 +2054,8 @@ export interface components {
             status: "ACTIVE" | "ARCHIVED" | "DELETED";
             subject_id?: string;
             tag_ids: string[] | null;
+            /** @description Файл оставлен только в этой задаче (D43): не в ленте, видят те, кто видит задачу. */
+            task_id?: string;
             title: string;
             /** Format: date-time */
             updated_at: string;
@@ -1746,6 +2172,89 @@ export interface components {
             status: "ACTIVE" | "PENDING" | "BANNED";
             user_id: string;
         };
+        MessageDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/MessageDTO.json
+             */
+            readonly $schema?: string;
+            author_id?: string;
+            author_name: string;
+            /** @description Markdown; пусто для удалённого, скрытого модератором (кроме автора и модераторов) или скрытого мной без include_hidden. */
+            body: string;
+            client_id: string;
+            /** Format: date-time */
+            created_at: string;
+            deleted: boolean;
+            /** Format: date-time */
+            edited_at?: string;
+            hidden_by_me: boolean;
+            /** @description Скрыто модератором для всех. */
+            hidden_for_all: boolean;
+            /** @description Кто скрыл; видят только модераторы. */
+            hidden_for_all_by?: string;
+            id: string;
+            mine: boolean;
+            reply_to?: components["schemas"]["MessageReplyDTO"];
+            /**
+             * Format: int64
+             * @description Порядок в треде; совпадает с seq события message.created.
+             */
+            seq: number;
+            /** @description Только в списке «Скрытые мной». */
+            thread?: components["schemas"]["ThreadRefDTO"];
+            thread_id: string;
+        };
+        MessagePageDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/MessagePageDTO.json
+             */
+            readonly $schema?: string;
+            /** @description Есть ещё сообщения в направлении чтения. */
+            has_more: boolean;
+            items: components["schemas"]["MessageDTO"][] | null;
+            /**
+             * Format: int64
+             * @description Моя отметка прочтения до этого запроса.
+             */
+            last_read_seq: number;
+            /**
+             * Format: int64
+             * @description seq последнего сообщения треда.
+             */
+            last_seq: number;
+            /** @description Пусто, пока в обсуждении никто не писал. */
+            thread?: components["schemas"]["ThreadRefDTO"];
+        };
+        MessagePreviewDTO: {
+            author_id?: string;
+            author_name: string;
+            /** @description Начало текста. */
+            body: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        MessageReplyDTO: {
+            author_id?: string;
+            author_name: string;
+            /** @description Начало текста; пусто, если сообщение удалено или скрыто модератором. */
+            body: string;
+            deleted: boolean;
+            hidden_for_all: boolean;
+            id: string;
+        };
+        MessagesOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/MessagesOutputBody.json
+             */
+            readonly $schema?: string;
+            items: components["schemas"]["MessageDTO"][] | null;
+        };
         MetaOutputBody: {
             /**
              * Format: uri
@@ -1792,6 +2301,23 @@ export interface components {
             /** @description Файл с Диска через сервер (поддерживает Range). */
             stream_url?: string;
             version_id: string;
+        };
+        PostMessageInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/PostMessageInputBody.json
+             */
+            readonly $schema?: string;
+            /** @description Markdown, до 4000 символов. */
+            body: string;
+            /**
+             * Format: uuid
+             * @description Идемпотентность: повтор с тем же id вернёт уже отправленное сообщение.
+             */
+            client_id: string;
+            /** Format: uuid */
+            reply_to_id?: string;
         };
         PreviewOutputBody: {
             /**
@@ -1872,6 +2398,11 @@ export interface components {
              */
             client_id?: string;
             device_name?: string;
+            /**
+             * Format: uuid
+             * @description Открытая группа, выбранная на экране регистрации (GET /groups/discover), — сразу вступить. Код приглашения важнее.
+             */
+            group_id?: string;
             /** @description Код приглашения или код группы — сразу вступить. */
             invite_code?: string;
             locale?: string;
@@ -2014,6 +2545,159 @@ export interface components {
              */
             readonly $schema?: string;
             items: components["schemas"]["TagDTO"][] | null;
+        };
+        TaskBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/TaskBody.json
+             */
+            readonly $schema?: string;
+            /** @enum {string} */
+            assign_mode?: "ALL" | "SELECTED" | "SELF";
+            /** @description Кому задача при assign_mode=SELECTED. */
+            assignee_ids?: string[] | null;
+            /**
+             * Format: uuid
+             * @description Идемпотентность: повтор с тем же id вернёт уже созданную задачу.
+             */
+            client_id?: string;
+            /** @description Markdown. */
+            description?: string;
+            /**
+             * Format: date-time
+             * @description Срок; пусто — без срока.
+             */
+            due_at?: string;
+            /** @enum {string} */
+            kind?: "TEACHER" | "GROUP" | "PERSONAL";
+            /** @description Прикреплённые материалы (заменяются целиком); не передано — при правке остаются как были. */
+            material_ids?: string[] | null;
+            /** @enum {string} */
+            priority?: "LOW" | "NORMAL" | "HIGH";
+            /** Format: uuid */
+            subject_id?: string;
+            title: string;
+            /** @enum {string} */
+            visibility?: "GROUP" | "PRIVATE";
+        };
+        TaskCountsDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/TaskCountsDTO.json
+             */
+            readonly $schema?: string;
+            by_status: {
+                [key: string]: number;
+            };
+            /**
+             * Format: int32
+             * @description Открытые задачи со сроком в ближайшие TASK_DUE_SOON_DAYS дней.
+             */
+            due_soon: number;
+            /**
+             * Format: int32
+             * @description Открытые задачи, которые касаются меня и не закрыты мной лично.
+             */
+            mine: number;
+            /** Format: int32 */
+            open: number;
+            /** Format: int32 */
+            overdue: number;
+        };
+        TaskDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/TaskDTO.json
+             */
+            readonly $schema?: string;
+            /**
+             * @description Кому задача: всей группе, выбранным участникам или только автору.
+             * @enum {string}
+             */
+            assign_mode: "ALL" | "SELECTED" | "SELF";
+            /** Format: int32 */
+            assigned_count: number;
+            assignee_ids: string[] | null;
+            /** Format: date-time */
+            completed_at?: string;
+            /** Format: date-time */
+            created_at: string;
+            created_by?: string;
+            description?: string;
+            /** Format: int32 */
+            done_count: number;
+            /** Format: date-time */
+            due_at?: string;
+            group_id: string;
+            id: string;
+            /** @enum {string} */
+            kind: "TEACHER" | "GROUP" | "PERSONAL";
+            /** @description Прикреплённые материалы. */
+            material_ids: string[] | null;
+            /**
+             * @description Мой личный прогресс; пусто — я к задаче не притрагивался.
+             * @enum {string}
+             */
+            my_status?: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE" | "CANCELLED";
+            /** @description Срок прошёл, а задача открыта. */
+            overdue: boolean;
+            /** Format: date-time */
+            pinned_at?: string;
+            pinned_by?: string;
+            /** @enum {string} */
+            priority: "LOW" | "NORMAL" | "HIGH";
+            /**
+             * @description Статус задачи для всей группы.
+             * @enum {string}
+             */
+            status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE" | "CANCELLED";
+            subject_id?: string;
+            title: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** @enum {string} */
+            visibility: "GROUP" | "PRIVATE";
+        };
+        TaskMaterialsInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/TaskMaterialsInputBody.json
+             */
+            readonly $schema?: string;
+            /** @description Все прикреплённые материалы; пустой список открепляет всё. */
+            material_ids: string[] | null;
+        };
+        TaskStatusInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/TaskStatusInputBody.json
+             */
+            readonly $schema?: string;
+            /** @enum {string} */
+            status: "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE" | "CANCELLED";
+        };
+        TasksOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/TasksOutputBody.json
+             */
+            readonly $schema?: string;
+            items: components["schemas"]["TaskDTO"][] | null;
+        };
+        ThreadRefDTO: {
+            id: string;
+            subject_id?: string;
+            target_id: string;
+            /** @enum {string} */
+            target_type: "SUBJECT" | "LESSON" | "MATERIAL" | "TASK" | "PROPOSAL" | "GENERAL";
+            /** @description Название материала или задачи на момент первого сообщения. */
+            title?: string;
         };
         UpdateGroupInputBody: {
             /**
@@ -2349,6 +3033,38 @@ export interface operations {
             };
         };
     };
+    "groups-discover": {
+        parameters: {
+            query?: {
+                /** @description Часть названия; пусто — все открытые группы. */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupSearchOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "groups-preview": {
         parameters: {
             query?: never;
@@ -2532,6 +3248,153 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ActivityOutputBody"];
                 };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "discussions-overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscussionsDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "discussions-messages": {
+        parameters: {
+            query?: {
+                /** @description Более старые сообщения, чем этот seq. */
+                before_seq?: number;
+                /** @description Более новые сообщения, чем этот seq (догрузка после разрыва). */
+                after_seq?: number;
+                limit?: number;
+                /** @description Показывать текст скрытых мной сообщений. */
+                include_hidden?: boolean;
+            };
+            header?: never;
+            path: {
+                groupId: string;
+                /** @description О чём обсуждение; для GENERAL targetId — id группы. */
+                targetType: "SUBJECT" | "LESSON" | "MATERIAL" | "TASK" | "PROPOSAL" | "GENERAL";
+                targetId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessagePageDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "discussions-post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+                /** @description О чём обсуждение; для GENERAL targetId — id группы. */
+                targetType: "SUBJECT" | "LESSON" | "MATERIAL" | "TASK" | "PROPOSAL" | "GENERAL";
+                targetId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostMessageInputBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "discussions-read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+                /** @description О чём обсуждение; для GENERAL targetId — id группы. */
+                targetType: "SUBJECT" | "LESSON" | "MATERIAL" | "TASK" | "PROPOSAL" | "GENERAL";
+                targetId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkReadInputBody"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Error */
             default: {
@@ -3149,6 +4012,37 @@ export interface operations {
             };
         };
     };
+    "discussions-hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessagesOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "tags-quick": {
         parameters: {
             query?: never;
@@ -3577,6 +4471,120 @@ export interface operations {
             };
         };
     };
+    "tasks-list": {
+        parameters: {
+            query?: {
+                subject_id?: string;
+                /** @description Только задачи без предмета. */
+                no_subject?: boolean;
+                kind?: "TEACHER" | "GROUP" | "PERSONAL";
+                /** @description Один или несколько статусов. */
+                status?: string[] | null;
+                /** @description Только мои: созданные мной, выданные мне или всей группе. */
+                mine?: boolean;
+                /** @description Без закрытых и отменённых. */
+                open?: boolean;
+                /** @description Только просроченные. */
+                overdue?: boolean;
+                /** @description Срок не позже указанного. */
+                due_before?: string;
+                q?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TasksOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "tasks-create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "tasks-board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskCountsDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "materials-get": {
         parameters: {
             query?: never;
@@ -3822,6 +4830,37 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "materials-share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialDTO"];
+                };
             };
             /** @description Error */
             default: {
@@ -4180,6 +5219,225 @@ export interface operations {
             };
         };
     };
+    "messages-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "messages-edit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditMessageInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "messages-hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "messages-unhide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "messages-moderate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "messages-unmoderate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "messages-restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     meta: {
         parameters: {
             query?: never;
@@ -4196,6 +5454,268 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MetaOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "tasks-get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "tasks-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "tasks-update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "tasks-materials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskMaterialsInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "tasks-my-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskStatusInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "tasks-pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "tasks-unpin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "tasks-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskStatusInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDTO"];
                 };
             };
             /** @description Error */

@@ -33,7 +33,7 @@ export type PushProvider = (typeof PUSH_PROVIDERS)[number];
 export const IDENTITY_PROVIDERS = ["GOOGLE", "APPLE"] as const;
 export type IdentityProvider = (typeof IDENTITY_PROVIDERS)[number];
 
-export const EVENT_KINDS = ["group.created", "group.updated", "member.joined", "member.roles_changed", "member.status_changed", "subject.created", "subject.updated", "subject.archived", "subject.restored", "tag.created", "tag.updated", "tag.deleted", "invite.created", "invite.revoked", "group.join_code_rotated", "material.added", "material.updated", "material.classified", "material.bulk_classified", "material.archived", "material.restored", "material.deleted", "drive.connected", "drive.disconnected", "drive.synced", "drive.reclassified", "drive.publisher_connected", "drive.publisher_disconnected"] as const;
+export const EVENT_KINDS = ["group.created", "group.updated", "member.joined", "member.roles_changed", "member.status_changed", "subject.created", "subject.updated", "subject.archived", "subject.restored", "tag.created", "tag.updated", "tag.deleted", "invite.created", "invite.revoked", "group.join_code_rotated", "material.added", "material.updated", "material.classified", "material.bulk_classified", "material.archived", "material.restored", "material.deleted", "drive.connected", "drive.disconnected", "drive.synced", "drive.reclassified", "drive.publisher_connected", "drive.publisher_disconnected", "task.created", "task.updated", "task.status_changed", "task.pinned", "task.unpinned", "task.deleted", "task.due_soon", "task.overdue", "message.created", "message.updated", "message.deleted", "message.undeleted", "message.hidden", "message.restored"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
 export const MATERIAL_KINDS = ["LECTURE", "NOTES", "REPORT", "CALC", "ASSIGNMENT", "OTHER"] as const;
@@ -44,6 +44,24 @@ export type FileType = (typeof FILE_TYPES)[number];
 
 export const ERROR_CODES = ["drive_not_configured", "drive_api_disabled", "drive_auth_failed", "folder_link", "folder_not_shared", "not_a_folder", "folder_trashed", "version_unavailable", "drive_oauth_not_configured", "drive_scope_missing", "drive_publisher_no_access", "drive_publisher_revoked", "drive_publisher_required"] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
+
+export const TASK_KINDS = ["TEACHER", "GROUP", "PERSONAL"] as const;
+export type TaskKind = (typeof TASK_KINDS)[number];
+
+export const TASK_STATUSS = ["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE", "CANCELLED"] as const;
+export type TaskStatus = (typeof TASK_STATUSS)[number];
+
+export const TASK_PRIORITYS = ["LOW", "NORMAL", "HIGH"] as const;
+export type TaskPriority = (typeof TASK_PRIORITYS)[number];
+
+export const TASK_ASSIGN_MODES = ["ALL", "SELECTED", "SELF"] as const;
+export type TaskAssignMode = (typeof TASK_ASSIGN_MODES)[number];
+
+export const TASK_VISIBILITYS = ["GROUP", "PRIVATE"] as const;
+export type TaskVisibility = (typeof TASK_VISIBILITYS)[number];
+
+export const THREAD_TARGETS = ["SUBJECT", "LESSON", "MATERIAL", "TASK", "PROPOSAL", "GENERAL"] as const;
+export type ThreadTarget = (typeof THREAD_TARGETS)[number];
 
 export const MATERIAL_SOURCES = ["UPLOAD", "GDRIVE"] as const;
 export type MaterialSource = (typeof MATERIAL_SOURCES)[number];

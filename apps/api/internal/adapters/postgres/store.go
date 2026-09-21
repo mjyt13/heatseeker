@@ -118,6 +118,12 @@ func (s *Store) Uploads() domain.UploadRepo { return &uploadRepo{s} }
 // Drive returns the Drive connection/index repository.
 func (s *Store) Drive() domain.DriveRepo { return &driveRepo{s} }
 
+// Tasks returns the task repository.
+func (s *Store) Tasks() domain.TaskRepo { return &taskRepo{s} }
+
+// Discussions returns the threads and messages repository.
+func (s *Store) Discussions() domain.DiscussionRepo { return &discussionRepo{s} }
+
 // mapErr converts driver errors into domain errors.
 func mapErr(err error, entity string) error {
 	if err == nil {

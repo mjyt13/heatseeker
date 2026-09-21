@@ -71,6 +71,7 @@ const (
 	JobMaterialHash             = "materials:hash"
 	JobMaterialPreview          = "materials:preview"
 	JobMaterialsReclassify      = "materials:reclassify"
+	JobTasksDeadlineScan        = "tasks:deadline_scan"
 )
 
 // DriveSyncPayload is the payload of JobDriveSync.

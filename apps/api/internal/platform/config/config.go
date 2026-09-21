@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,6 +24,7 @@ type Config struct {
 	Jobs    Jobs
 	Auth    Auth
 	Groups  Groups
+	Tasks   Tasks
 	Events  Events
 	Media   Media
 	Storage Storage
@@ -81,6 +84,62 @@ type Auth struct {
 type Groups struct {
 	DefaultJoinPolicy string `env:"GROUP_DEFAULT_JOIN_POLICY" envDefault:"open"`
 	DefaultMediaMode  string `env:"MEDIA_MODE_DEFAULT" envDefault:"cache"`
+}
+
+// Tasks configures deadline reminders.
+type Tasks struct {
+	// DeadlineOffsets tells how long before a deadline the group is reminded
+	// ("7d", "3h", "45m"); "0" announces the deadline itself.
+	DeadlineOffsets []string `env:"DEADLINE_REMINDER_OFFSETS" envSeparator:"," envDefault:"7d,3d,1d,3h,0"`
+	// ReminderGraceHours: deadlines older than this are never announced (a
+	// task entered long after the fact).
+	ReminderGraceHours int `env:"TASK_REMINDER_GRACE_HOURS" envDefault:"24"`
+	// DueSoonDays is the window the "soon" counter on the board covers.
+	DueSoonDays int `env:"TASK_DUE_SOON_DAYS" envDefault:"7"`
+	// ScanLimit bounds one run of the deadline scanner.
+	ScanLimit int `env:"TASK_DEADLINE_SCAN_LIMIT" envDefault:"500"`
+}
+
+// Offsets parses DeadlineOffsets into minutes before the deadline, sorted from
+// the earliest reminder to the deadline itself.
+func (t Tasks) Offsets() ([]int32, error) {
+	out := make([]int32, 0, len(t.DeadlineOffsets))
+	seen := map[int32]bool{}
+	for _, raw := range t.DeadlineOffsets {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			continue
+		}
+		minutes, err := parseOffset(raw)
+		if err != nil {
+			return nil, err
+		}
+		if !seen[minutes] {
+			seen[minutes] = true
+			out = append(out, minutes)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i] > out[j] })
+	return out, nil
+}
+
+// parseOffset reads "7d", "3h", "45m" or "0" as minutes.
+func parseOffset(raw string) (int32, error) {
+	unit := time.Minute
+	value := raw
+	switch {
+	case strings.HasSuffix(raw, "d"):
+		unit, value = 24*time.Hour, strings.TrimSuffix(raw, "d")
+	case strings.HasSuffix(raw, "h"):
+		unit, value = time.Hour, strings.TrimSuffix(raw, "h")
+	case strings.HasSuffix(raw, "m"):
+		value = strings.TrimSuffix(raw, "m")
+	}
+	n, err := strconv.Atoi(value)
+	if err != nil || n < 0 {
+		return 0, fmt.Errorf("DEADLINE_REMINDER_OFFSETS: %q must be a count of d|h|m, for example 3d", raw)
+	}
+	return int32(time.Duration(n) * unit / time.Minute), nil
 }
 
 // Events configures the group event log.
@@ -202,6 +261,12 @@ func (c *Config) validate() error {
 	case "link", "cache", "import":
 	default:
 		errs = append(errs, fmt.Errorf("MEDIA_MODE_DEFAULT must be link|cache|import, got %q", c.Groups.DefaultMediaMode))
+	}
+	if _, err := c.Tasks.Offsets(); err != nil {
+		errs = append(errs, err)
+	}
+	if c.Tasks.DueSoonDays <= 0 {
+		errs = append(errs, errors.New("TASK_DUE_SOON_DAYS must be positive"))
 	}
 	if c.Events.RetentionDays <= 0 {
 		errs = append(errs, errors.New("EVENT_LOG_RETENTION_DAYS must be positive"))

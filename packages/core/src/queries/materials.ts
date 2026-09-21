@@ -261,6 +261,21 @@ export function useUploadMaterial(groupId: string, putFile: PutFile) {
         }),
       );
     },
+    onSuccess: async (m, form) => {
+      await invalidateMaterial(qc, groupId, m.id);
+      // The server attached the file to the task (D43).
+      if (form.task_id) await qc.invalidateQueries({ queryKey: keys.task(form.task_id) });
+    },
+  });
+}
+
+/** Открыть группе файл, оставленный только в задаче (D43). */
+export function useShareMaterial(groupId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (materialId: string): Promise<Material> =>
+      unwrap(await api.POST('/materials/{materialId}/share', { params: { path: { materialId } } })),
     onSuccess: (m) => invalidateMaterial(qc, groupId, m.id),
   });
 }

@@ -165,6 +165,16 @@ func (s *Service) Search(ctx context.Context, userID uuid.UUID, query string) ([
 	return s.groups.SearchOpen(ctx, userID, query, SearchLimit)
 }
 
+// Discover lists open groups by name before sign-up (D44): the same list a
+// member sees in search, without membership flags.
+func (s *Service) Discover(ctx context.Context, query string) ([]domain.GroupSearchHit, error) {
+	query = strings.Join(strings.Fields(query), " ")
+	if utf8.RuneCountInString(query) > 80 {
+		return nil, domain.Invalid("q", "must be at most 80 characters")
+	}
+	return s.groups.SearchOpen(ctx, uuid.Nil, query, SearchLimit)
+}
+
 // Join adds the user to the group referenced by an invite code or a group join
 // code. Joining twice is idempotent.
 func (s *Service) Join(ctx context.Context, userID uuid.UUID, code string) (*domain.GroupWithMembership, error) {

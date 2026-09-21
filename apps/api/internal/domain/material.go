@@ -183,6 +183,9 @@ type Material struct {
 	DeletedAt        *time.Time
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	// TaskID: the file was uploaded into this task and stays with it — not
+	// in the feed, seen by those who see the task (D43). Nil — group material.
+	TaskID *uuid.UUID
 }
 
 // MaterialVersion is one revision of a material's content.
@@ -323,4 +326,7 @@ type UploadMeta struct {
 	Kind        MaterialKind `json:"kind,omitempty"`
 	TagIDs      []uuid.UUID  `json:"tag_ids,omitempty"`
 	ToDrive     bool         `json:"to_drive,omitempty"`
+	// TaskID attaches the new material to this task; TaskOnly keeps it there (D43).
+	TaskID   *uuid.UUID `json:"task_id,omitempty"`
+	TaskOnly bool       `json:"task_only,omitempty"`
 }

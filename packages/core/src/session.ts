@@ -11,8 +11,12 @@ export interface SessionState {
   currentGroupId: string | null;
   /** Восстановить сессию из хранилища токенов при старте приложения. */
   bootstrap: (tokens: TokenStore, groupStore: GroupIdStore) => Promise<void>;
-  /** Принять сессию после регистрации/входа. */
-  signIn: (session: Session) => Promise<void>;
+  /**
+   * Принять сессию после регистрации/входа. newAccount: группа, запомненная
+   * от прошлого аккаунта на этом устройстве, не переносится — у нового
+   * аккаунта есть только группа из кода приглашения.
+   */
+  signIn: (session: Session, opts?: { newAccount?: boolean }) => Promise<void>;
   /** Обновить профиль в состоянии (после PATCH /me). */
   setUser: (user: User) => void;
   setCurrentGroup: (groupId: string | null) => Promise<void>;
@@ -49,10 +53,11 @@ export const useSession = create<SessionState>((set, get) => {
       set({ currentGroupId: groupId ?? null, status: t ? 'authenticated' : 'anonymous' });
     },
 
-    async signIn(session) {
+    async signIn(session, opts) {
       const next: Tokens = { accessToken: session.access_token, refreshToken: session.refresh_token };
       await stores.tokens?.set(next);
-      const joinedGroupId = session.joined?.group.id ?? get().currentGroupId;
+      const remembered = opts?.newAccount ? null : get().currentGroupId;
+      const joinedGroupId = session.joined?.group.id ?? remembered;
       if (joinedGroupId !== get().currentGroupId) await stores.group?.set(joinedGroupId ?? null);
       set({ status: 'authenticated', user: session.user, currentGroupId: joinedGroupId ?? null });
     },

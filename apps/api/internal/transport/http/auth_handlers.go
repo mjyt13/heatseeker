@@ -26,6 +26,7 @@ type registerInput struct {
 	Body struct {
 		Name       string  `json:"name" minLength:"1" maxLength:"80" doc:"Имя — единственное обязательное поле."`
 		InviteCode *string `json:"invite_code,omitempty" maxLength:"64" doc:"Код приглашения или код группы — сразу вступить."`
+		GroupID    *string `json:"group_id,omitempty" format:"uuid" doc:"Открытая группа, выбранная на экране регистрации (GET /groups/discover), — сразу вступить. Код приглашения важнее."`
 		ClientID   *string `json:"client_id,omitempty" format:"uuid" doc:"Случайный UUID экрана регистрации: повтор запроса в течение 15 минут вернёт тот же аккаунт."`
 		Locale     *string `json:"locale,omitempty" maxLength:"8"`
 		Timezone   *string `json:"timezone,omitempty" maxLength:"64"`
@@ -69,6 +70,13 @@ func registerAuth(api huma.API, d Deps) {
 		reg := auth.RegisterInput{
 			Name: in.Body.Name, InviteCode: deref(in.Body.InviteCode), Locale: deref(in.Body.Locale), Timezone: deref(in.Body.Timezone),
 			Device: in.Body.info(),
+		}
+		if in.Body.GroupID != nil {
+			id, err := parseID("group_id", *in.Body.GroupID)
+			if err != nil {
+				return nil, apiErr(d.Log, err)
+			}
+			reg.GroupID = &id
 		}
 		if in.Body.ClientID != nil {
 			id, err := parseID("client_id", *in.Body.ClientID)

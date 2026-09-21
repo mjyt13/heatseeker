@@ -9,6 +9,8 @@ import { keys } from './keys';
 export interface RegisterInput {
   name: string;
   invite_code?: string;
+  /** Открытая группа, выбранная на первом экране (D44); код приглашения важнее. */
+  group_id?: string;
   /**
    * Случайный UUID, созданный при открытии экрана регистрации: повтор запроса
    * (двойное нажатие, потерянный ответ) вернёт тот же аккаунт.
@@ -45,7 +47,7 @@ export function useRegister() {
     mutationFn: async (body: RegisterInput): Promise<Session> =>
       unwrap(await api.POST('/auth/register', { body })),
     onSuccess: async (session) => {
-      await signIn(session);
+      await signIn(session, { newAccount: true });
       qc.setQueryData(keys.me(), session.user);
       await qc.invalidateQueries({ queryKey: keys.myGroups() });
     },

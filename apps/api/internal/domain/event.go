@@ -45,6 +45,28 @@ const (
 	// EventDriveReclassified summarises Inbox files sorted automatically after
 	// subjects or aliases changed.
 	EventDriveReclassified EventKind = "drive.reclassified"
+
+	EventTaskCreated       EventKind = "task.created"
+	EventTaskUpdated       EventKind = "task.updated"
+	EventTaskStatusChanged EventKind = "task.status_changed"
+	EventTaskPinned        EventKind = "task.pinned"
+	EventTaskUnpinned      EventKind = "task.unpinned"
+	EventTaskDeleted       EventKind = "task.deleted"
+	// EventTaskDueSoon and EventTaskOverdue are announced by the deadline
+	// scanner, once per offset per task.
+	EventTaskDueSoon EventKind = "task.due_soon"
+	EventTaskOverdue EventKind = "task.overdue"
+
+	// Message events carry ids only, never the text (D40); message.created,
+	// message.updated and message.deleted stay out of the activity feed.
+	EventMessageCreated EventKind = "message.created"
+	EventMessageUpdated EventKind = "message.updated"
+	EventMessageDeleted EventKind = "message.deleted"
+	// The author brought back their deleted message.
+	EventMessageUndeleted EventKind = "message.undeleted"
+	// A moderator hid a message for everybody, or brought it back.
+	EventMessageHidden   EventKind = "message.hidden"
+	EventMessageRestored EventKind = "message.restored"
 )
 
 // AllEventKinds lists every kind, exported to packages/shared.
@@ -57,6 +79,10 @@ var AllEventKinds = []EventKind{
 	EventMaterialRestored, EventMaterialDeleted,
 	EventDriveConnected, EventDriveDisconnected, EventDriveSynced, EventDriveReclassified,
 	EventDrivePublisherConnected, EventDrivePublisherDisconnected,
+	EventTaskCreated, EventTaskUpdated, EventTaskStatusChanged, EventTaskPinned, EventTaskUnpinned,
+	EventTaskDeleted, EventTaskDueSoon, EventTaskOverdue,
+	EventMessageCreated, EventMessageUpdated, EventMessageDeleted, EventMessageUndeleted, EventMessageHidden,
+	EventMessageRestored,
 }
 
 // Event is one row of the append-only group log. Seq is monotonic per group

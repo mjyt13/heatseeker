@@ -155,6 +155,7 @@ type Material struct {
 	DeletedAt        *time.Time
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	TaskID           *uuid.UUID
 }
 
 type MaterialTag struct {
@@ -201,6 +202,29 @@ type Membership struct {
 	UpdatedAt time.Time
 }
 
+type Message struct {
+	ID             uuid.UUID
+	GroupID        uuid.UUID
+	ThreadID       uuid.UUID
+	AuthorID       *uuid.UUID
+	ClientID       uuid.UUID
+	Seq            int64
+	Body           string
+	ReplyToID      *uuid.UUID
+	EditedAt       *time.Time
+	DeletedAt      *time.Time
+	HiddenForAllBy *uuid.UUID
+	HiddenForAllAt *time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type MessageHide struct {
+	MessageID uuid.UUID
+	UserID    uuid.UUID
+	CreatedAt time.Time
+}
+
 type RefreshToken struct {
 	ID         uuid.UUID
 	UserID     uuid.UUID
@@ -239,6 +263,66 @@ type Tag struct {
 	SubjectID *uuid.UUID
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+type Task struct {
+	ID              uuid.UUID
+	GroupID         uuid.UUID
+	SubjectID       *uuid.UUID
+	CreatedBy       *uuid.UUID
+	ClientID        *uuid.UUID
+	Title           string
+	Description     string
+	Kind            string
+	Status          string
+	Priority        string
+	AssignMode      string
+	Visibility      string
+	DueAt           *time.Time
+	NotifiedOffsets []int32
+	PinnedBy        *uuid.UUID
+	PinnedAt        *time.Time
+	CompletedAt     *time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	DeletedAt       *time.Time
+}
+
+type TaskAssignment struct {
+	TaskID      uuid.UUID
+	UserID      uuid.UUID
+	Status      string
+	CompletedAt *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type TaskAttachment struct {
+	TaskID     uuid.UUID
+	MaterialID uuid.UUID
+	CreatedAt  time.Time
+}
+
+type Thread struct {
+	ID            uuid.UUID
+	GroupID       uuid.UUID
+	TargetType    string
+	TargetID      uuid.UUID
+	SubjectID     *uuid.UUID
+	Title         *string
+	CreatedBy     *uuid.UUID
+	MessageCount  int32
+	LastMessageAt *time.Time
+	LastSeq       int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+type ThreadRead struct {
+	ThreadID    uuid.UUID
+	UserID      uuid.UUID
+	LastReadSeq int64
+	UpdatedAt   time.Time
 }
 
 type Upload struct {

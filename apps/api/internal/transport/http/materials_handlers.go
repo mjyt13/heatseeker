@@ -125,6 +125,8 @@ type createUploadInput struct {
 		Kind        *string  `json:"kind,omitempty" enum:"LECTURE,NOTES,REPORT,CALC,ASSIGNMENT,OTHER"`
 		TagIDs      []string `json:"tag_ids,omitempty" maxItems:"20"`
 		ToDrive     bool     `json:"to_drive,omitempty" doc:"Опубликовать копию в папке группы на Google Диске (нужен защищённый аккаунт)."`
+		TaskID      *string  `json:"task_id,omitempty" format:"uuid" doc:"Сразу прикрепить к задаче (нужно право править задачу)."`
+		TaskOnly    bool     `json:"task_only,omitempty" doc:"Оставить файл только в задаче: не в ленте, видят те, кто видит задачу (D43). Нужен task_id; не вместе с to_drive."`
 	}
 }
 
@@ -368,6 +370,22 @@ func registerMaterials(api huma.API, d Deps) {
 	})
 
 	huma.Register(api, huma.Operation{
+		OperationID: "materials-share", Method: nethttp.MethodPost, Path: "/materials/{materialId}/share", Tags: []string{"materials"}, Security: bearer,
+		Summary:     "Открыть файл из задачи группе",
+		Description: "Файл, оставленный только в задаче, становится обычным материалом: появляется в ленте и остаётся прикреплённым к задаче. Загрузивший, автор задачи или модератор.",
+	}, func(ctx context.Context, in *materialIDInput) (*materialOutput, error) {
+		p, id, err := principalAndID(ctx, "materialId", in.MaterialID)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		view, err := d.Materials.Share(ctx, p.UserID, id)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		return &materialOutput{Body: toMaterialDTO(view, d.Materials)}, nil
+	})
+
+	huma.Register(api, huma.Operation{
 		OperationID: "materials-preview", Method: nethttp.MethodPost, Path: "/materials/{materialId}/preview", Tags: []string{"materials"}, Security: bearer,
 		Summary: "Запросить PDF-превью офисного файла",
 		Description: "pptx/docx/xlsx и т.п. браузер не показывает: сервер конвертирует их в PDF (Gotenberg). " +
@@ -408,7 +426,12 @@ func registerMaterials(api huma.API, d Deps) {
 		b := in.Body
 		ui := materials.UploadInput{
 			FileName: b.FileName, SizeBytes: b.SizeBytes, Mime: b.Mime, Title: b.Title,
-			Description: b.Description, ToDrive: b.ToDrive,
+			Description: b.Description, ToDrive: b.ToDrive, TaskOnly: b.TaskOnly,
+		}
+		if b.TaskID != nil {
+			if ui.TaskID, err = parseOptionalID("task_id", *b.TaskID); err != nil {
+				return nil, apiErr(d.Log, err)
+			}
 		}
 		if b.SubjectID != nil {
 			if ui.SubjectID, err = parseOptionalID("subject_id", *b.SubjectID); err != nil {

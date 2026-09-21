@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 import { unwrap, type GroupWithMembership, type components } from '@heatseeker/api-client';
 
@@ -19,6 +20,41 @@ export function useMyGroups() {
     enabled: status === 'authenticated',
     queryFn: async () => unwrap(await api.GET('/me/groups')).items,
   });
+}
+
+/** Открытые группы до регистрации (D44): первый экран, без токена. */
+export function useDiscoverGroups(query: string) {
+  const api = useApi();
+  const q = query.trim();
+  return useQuery({
+    queryKey: keys.groupDiscover(q),
+    staleTime: 30_000,
+    placeholderData: (previous) => previous,
+    queryFn: async (): Promise<GroupSearchItem[]> =>
+      unwrap(await api.GET('/groups/discover', { params: { query: q ? { q } : {} } })).items ?? [],
+  });
+}
+
+/** Можно ли работать в группе: я в ней состою и членство активно. */
+export function isActiveMemberOf(groups: readonly GroupWithMembership[], groupId: string): boolean {
+  return groups.some((g) => g.group.id === groupId && g.membership.status === 'ACTIVE');
+}
+
+/**
+ * Сбрасывает выбранную группу, если текущий аккаунт в ней не состоит: вошли
+ * под другим именем на том же телефоне, исключили из группы. Без этого все
+ * экраны получали бы 403. Решает только по свежему списку групп.
+ */
+export function useCurrentGroupGuard() {
+  const groups = useMyGroups();
+  const currentGroupId = useSession((s) => s.currentGroupId);
+  const setCurrentGroup = useSession((s) => s.setCurrentGroup);
+  const fresh = groups.isFetchedAfterMount && !groups.isFetching;
+  const data = groups.data;
+  useEffect(() => {
+    if (!currentGroupId || !fresh || !data) return;
+    if (!isActiveMemberOf(data, currentGroupId)) void setCurrentGroup(null);
+  }, [currentGroupId, fresh, data, setCurrentGroup]);
 }
 
 /** Группа и моё членство в ней. */

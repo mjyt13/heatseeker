@@ -142,6 +142,25 @@ func registerGroups(api huma.API, d Deps) {
 	})
 
 	huma.Register(api, huma.Operation{
+		OperationID: "groups-discover", Method: nethttp.MethodGet, Path: "/groups/discover", Tags: []string{"groups"},
+		Summary:     "Открытые группы до регистрации",
+		Description: "Без аутентификации — для первого экрана (D44): открытые группы по части названия, до 20; пусто — все открытые.",
+	}, func(ctx context.Context, in *groupSearchInput) (*groupSearchOutput, error) {
+		hits, err := d.Groups.Discover(ctx, in.Q)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		out := &groupSearchOutput{}
+		out.Body.Items = make([]GroupSearchItemDTO, len(hits))
+		for i, h := range hits {
+			out.Body.Items[i] = GroupSearchItemDTO{
+				ID: h.Group.ID.String(), Name: h.Group.Name, Kind: string(h.Group.Kind), MemberCount: h.MemberCount,
+			}
+		}
+		return out, nil
+	})
+
+	huma.Register(api, huma.Operation{
 		OperationID: "groups-preview", Method: nethttp.MethodGet, Path: "/groups/join/{code}", Tags: []string{"groups"},
 		Summary: "Что за группа стоит за кодом", Description: "Без аутентификации — для экрана «Вступить в группу?».",
 	}, func(ctx context.Context, in *joinCodeInput) (*previewOutput, error) {

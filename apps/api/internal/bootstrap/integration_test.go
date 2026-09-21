@@ -229,9 +229,23 @@ func TestCoreFlow(t *testing.T) {
 	if hits := search("%" + runID); len(hits) != 0 {
 		t.Fatalf("LIKE metacharacters must be literal, got %+v", hits)
 	}
+	// Before sign-up (D44): the same open groups, no token, no membership flags.
+	var discovered struct {
+		Items []searchHit `json:"items"`
+	}
+	c.do("GET", "/groups/discover?q="+url.QueryEscape(runID), "", nil, 200, &discovered)
+	if len(discovered.Items) != 1 || discovered.Items[0].ID != stream.Group.ID || discovered.Items[0].IsMember {
+		t.Fatalf("discover = %+v", discovered.Items)
+	}
+	// Signing up with a picked group joins it right away.
+	var vera session
+	c.do("POST", "/auth/register", "", map[string]any{"name": "Вера", "group_id": stream.Group.ID}, 201, &vera)
+	if vera.Joined == nil || vera.Joined.Group.ID != stream.Group.ID || !contains(vera.Joined.Membership.Roles, "STUDENT") {
+		t.Fatalf("register with group_id joined = %+v", vera.Joined)
+	}
 	c.do("POST", "/groups/"+stream.Group.ID+"/join", anna.AccessToken, nil, 200, nil)
 	c.do("POST", "/groups/"+stream.Group.ID+"/join", anna.AccessToken, nil, 200, nil) // idempotent
-	if hits := search(runID); len(hits) != 1 || !hits[0].IsMember || hits[0].MemberCount != 2 {
+	if hits := search(runID); len(hits) != 1 || !hits[0].IsMember || hits[0].MemberCount != 3 {
 		t.Fatalf("after join = %+v", hits)
 	}
 	// invitation-only groups are neither listed nor joinable
@@ -243,6 +257,11 @@ func TestCoreFlow(t *testing.T) {
 	c.do("POST", "/auth/register", "", map[string]any{"name": "Боб"}, 201, &bob)
 	c.do("POST", "/groups/"+stream.Group.ID+"/join", bob.AccessToken, nil, 403, nil)
 	c.do("GET", "/groups/search?q="+runID, "", nil, 401, nil)
+	c.do("GET", "/groups/discover?q="+url.QueryEscape(runID), "", nil, 200, &discovered)
+	if len(discovered.Items) != 0 {
+		t.Fatalf("invite-only group discovered: %+v", discovered.Items)
+	}
+	c.do("POST", "/auth/register", "", map[string]any{"name": "Гриша", "group_id": stream.Group.ID}, 403, nil)
 
 	// --- unauthenticated access is rejected ---
 	c.do("GET", "/me", "", nil, 401, nil)

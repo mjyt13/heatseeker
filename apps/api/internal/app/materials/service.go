@@ -53,8 +53,10 @@ type Deps struct {
 	Subjects  domain.SubjectRepo
 	Tags      domain.TagRepo
 	Drive     domain.DriveRepo
-	Store     domain.MediaStore
-	Client    domain.DriveClient // nil when Drive is not configured
+	// Tasks: files kept in a task are seen by those who see the task (D43).
+	Tasks  domain.TaskRepo
+	Store  domain.MediaStore
+	Client domain.DriveClient // nil when Drive is not configured
 	// Converter makes PDF previews of office files; nil disables them.
 	Converter domain.DocumentConverter
 	Access    *access.Service
@@ -298,7 +300,86 @@ func (s *Service) loadView(ctx context.Context, actorID, materialID uuid.UUID) (
 	if view.Material.Status == domain.MaterialDeleted && !actor.Can(authz.MaterialModerate) {
 		return nil, nil, domain.NotFound("material")
 	}
+	ok, err := s.canSeeTaskFile(ctx, actor, &view.Material)
+	if err != nil {
+		return nil, nil, err
+	}
+	if !ok {
+		return nil, nil, domain.NotFound("material")
+	}
 	return view, actor, nil
+}
+
+// canSeeTaskFile: a group material is seen by every member; a file kept in a
+// task — by those who see the task, its uploader and moderators (D43).
+func (s *Service) canSeeTaskFile(ctx context.Context, actor *access.Actor, m *domain.Material) (bool, error) {
+	if m.TaskID == nil || actor.Can(authz.MaterialModerate) {
+		return true, nil
+	}
+	if m.UploaderID != nil && *m.UploaderID == actor.User.ID {
+		return true, nil
+	}
+	task, err := s.Tasks.Get(ctx, *m.TaskID)
+	if errors.Is(err, domain.ErrNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return task.GroupID == m.GroupID && task.VisibleTo(actor.User.ID), nil
+}
+
+// checkTaskManager: the task belongs to the group, the actor sees it and may
+// attach files to it.
+func (s *Service) checkTaskManager(ctx context.Context, actor *access.Actor, groupID, taskID uuid.UUID) error {
+	task, err := s.Tasks.Get(ctx, taskID)
+	if err != nil {
+		return err
+	}
+	if task.GroupID != groupID || !task.VisibleTo(actor.User.ID) {
+		return domain.NotFound("task")
+	}
+	if !task.ManagedBy(actor.User.ID, actor.Can(authz.TaskStatusGroup)) {
+		return domain.Forbidden("only the author, the headman or a moderator can attach files to this task")
+	}
+	return nil
+}
+
+// Share turns a file kept in a task into an ordinary group material: it
+// appears in the feed and stays attached to the task. The uploader, whoever
+// manages the task and moderators may share it.
+func (s *Service) Share(ctx context.Context, actorID, materialID uuid.UUID) (*domain.MaterialView, error) {
+	view, actor, err := s.loadView(ctx, actorID, materialID)
+	if err != nil {
+		return nil, err
+	}
+	m := view.Material
+	if m.TaskID == nil {
+		return view, nil
+	}
+	if !s.canEdit(actor, &m) {
+		if err := s.checkTaskManager(ctx, actor, m.GroupID, *m.TaskID); err != nil {
+			if errors.Is(err, domain.ErrNotFound) {
+				return nil, domain.Forbidden("only the uploader, the task's author or a moderator can share this file")
+			}
+			return nil, err
+		}
+	}
+	err = s.Tx.RunInTx(ctx, func(ctx context.Context) error {
+		shared, err := s.Materials.Share(ctx, m.ID)
+		if err != nil {
+			return err
+		}
+		// For the group the file is new now.
+		return s.emit(ctx, m.GroupID, domain.EventMaterialAdded, &actorID, m.ID, map[string]any{
+			"title": shared.Title, "subject_id": shared.SubjectID, "kind": shared.Kind, "source": shared.Source,
+			"shared_from_task": true,
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.Materials.GetView(ctx, m.ID)
 }
 
 func (s *Service) isOwner(actor *access.Actor, m *domain.Material) bool {
@@ -716,6 +797,14 @@ func (s *Service) checkTags(ctx context.Context, groupID uuid.UUID, ids []uuid.U
 
 func (s *Service) emit(ctx context.Context, groupID uuid.UUID, kind domain.EventKind, actor *uuid.UUID, materialID uuid.UUID, payload any) error {
 	e, err := domain.NewEvent(groupID, kind, actor, "material", &materialID, payload)
+	return s.Events.Emit(ctx, e, err)
+}
+
+// emitQuiet appends an event that stays out of the activity feed: the sync
+// still sees it, the group does not read about it.
+func (s *Service) emitQuiet(ctx context.Context, groupID uuid.UUID, kind domain.EventKind, actor *uuid.UUID, materialID uuid.UUID, payload any) error {
+	e, err := domain.NewEvent(groupID, kind, actor, "material", &materialID, payload)
+	e.Audit = false
 	return s.Events.Emit(ctx, e, err)
 }
 

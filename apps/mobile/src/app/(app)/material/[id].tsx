@@ -11,6 +11,7 @@ import {
   useMaterialTransition,
   useOpenMaterial,
   useRequestPreview,
+  useShareMaterial,
   useUpdateMaterial,
   type MaterialKind,
   type MaterialTransition,
@@ -40,6 +41,7 @@ import {
   useFormatSize,
 } from '@/components/materials';
 import { MediaPlayer, playableKind, type PlayableKind } from '@/components/media-player';
+import { DiscussionButton } from '@/components/discussion-button';
 import { describeError } from '@/lib/errors';
 import { subjectLabel, useGroupContext } from '@/lib/group';
 import { showMaterial } from '@/lib/open';
@@ -65,6 +67,7 @@ function MaterialView({ id }: { id: string }) {
   const material = useMaterial(id);
   const open = useOpenMaterial();
   const transition = useMaterialTransition(ctx.groupId ?? '');
+  const share = useShareMaterial(ctx.groupId ?? '');
   const [editing, setEditing] = useState(false);
   // Audio/video play inline; undefined version = the current one.
   const [playing, setPlaying] = useState<{ versionId?: string; kind: PlayableKind } | null>(null);
@@ -200,6 +203,35 @@ function MaterialView({ id }: { id: string }) {
           uploader={ctx.memberName(m.uploader_id)}
         />
 
+        {m.task_id ? (
+          <YStack gap="$2" padding="$3" borderRadius="$4" backgroundColor="$blue3">
+            <Paragraph fontWeight="600">{t('materials.task_only')}</Paragraph>
+            <Paragraph>{t('materials.task_only_hint')}</Paragraph>
+            <XStack gap="$2" flexWrap="wrap">
+              <Button
+                size="$3"
+                icon={<Ionicons name="checkbox-outline" size={16} />}
+                onPress={() =>
+                  router.push({ pathname: '/(app)/task/[id]', params: { id: m.task_id! } })
+                }
+              >
+                {t('materials.open_task')}
+              </Button>
+              {m.can_edit ? (
+                <Button
+                  size="$3"
+                  icon={<Ionicons name="people-outline" size={16} />}
+                  disabled={share.isPending}
+                  onPress={() => share.mutate(m.id)}
+                >
+                  {t('materials.share')}
+                </Button>
+              ) : null}
+            </XStack>
+            <ErrorText>{share.isError ? describeError(t, share.error) : null}</ErrorText>
+          </YStack>
+        ) : null}
+
         {m.needs_review ? (
           <YStack gap="$1" padding="$3" borderRadius="$4" backgroundColor="$yellow3">
             <Paragraph fontWeight="600">{t('materials.needs_review')}</Paragraph>
@@ -329,6 +361,10 @@ function MaterialView({ id }: { id: string }) {
               </Button>
             )}
           </>
+        ) : null}
+
+        {m.status !== 'DELETED' && !m.task_id ? (
+          <DiscussionButton target={{ type: 'MATERIAL', id: m.id }} title={m.title} />
         ) : null}
 
         <XStack gap="$2" flexWrap="wrap">

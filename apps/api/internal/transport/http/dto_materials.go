@@ -87,6 +87,7 @@ type MaterialDTO struct {
 	DeletedAt      *time.Time         `json:"deleted_at,omitempty"`
 	CreatedAt      time.Time          `json:"created_at"`
 	UpdatedAt      time.Time          `json:"updated_at"`
+	TaskID         *uuid.UUID         `json:"task_id,omitempty" doc:"Файл оставлен только в этой задаче (D43): не в ленте, видят те, кто видит задачу."`
 }
 
 func toMaterialDTO(v *domain.MaterialView, ps previewStater) MaterialDTO {
@@ -97,6 +98,7 @@ func toMaterialDTO(v *domain.MaterialView, ps previewStater) MaterialDTO {
 		TagIDs: v.TagIDs, Classification: toClassificationDTO(m.Classification), NeedsReview: m.NeedsReview,
 		DownloadCount: m.DownloadCount, SortAt: m.SortAt, File: toVersionDTO(&v.Version, ps),
 		ArchivedAt: m.ArchivedAt, DeletedAt: m.DeletedAt, CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt,
+		TaskID: m.TaskID,
 	}
 	if dto.TagIDs == nil {
 		dto.TagIDs = []uuid.UUID{}

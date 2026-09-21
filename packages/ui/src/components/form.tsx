@@ -1,4 +1,4 @@
-import { useState, type ComponentProps } from 'react';
+import { useId, useState, type ComponentProps } from 'react';
 import { Button, Input, Label, Paragraph, XStack, YStack } from 'tamagui';
 
 export interface FieldProps extends ComponentProps<typeof Input> {
@@ -15,6 +15,8 @@ export interface FieldProps extends ComponentProps<typeof Input> {
 /** Поле формы: подпись, ввод, подсказка/ошибка. */
 export function Field({ label, error, hint, id, password, ...input }: FieldProps) {
   const [revealed, setRevealed] = useState(false);
+  // The same form can be mounted twice (hidden tabs stay mounted): keep DOM ids unique.
+  const inputId = `${id ?? 'field'}-${useId()}`;
   const secret: ComponentProps<typeof Input> = password
     ? {
         type: revealed ? 'text' : 'password',
@@ -27,12 +29,12 @@ export function Field({ label, error, hint, id, password, ...input }: FieldProps
     : {};
   return (
     <YStack gap="$1.5">
-      <Label htmlFor={id} size="$3">
+      <Label htmlFor={inputId} size="$3">
         {label}
       </Label>
       <XStack alignItems="center" gap="$2">
         <Input
-          id={id}
+          id={inputId}
           size="$4"
           flex={1}
           borderColor={error ? '$red8' : undefined}

@@ -38,6 +38,7 @@ type materialRow struct {
 	DeletedAt        *time.Time
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	TaskID           *uuid.UUID
 }
 
 func toMaterial(r materialRow) *domain.Material {
@@ -62,6 +63,7 @@ func toMaterial(r materialRow) *domain.Material {
 		DeletedAt:        r.DeletedAt,
 		CreatedAt:        r.CreatedAt,
 		UpdatedAt:        r.UpdatedAt,
+		TaskID:           r.TaskID,
 	}
 	if r.ReviewReason != nil {
 		reason := domain.ReviewReason(*r.ReviewReason)
@@ -128,6 +130,7 @@ func (r *materialRepo) Create(ctx context.Context, m domain.Material) (*domain.M
 		NeedsReview:    m.NeedsReview,
 		ReviewReason:   reasonPtr(m.ReviewReason),
 		SortAt:         m.SortAt,
+		TaskID:         m.TaskID,
 	})
 	if err != nil {
 		return nil, mapErr(err, "material")
@@ -156,7 +159,7 @@ func (r *materialRepo) GetView(ctx context.Context, id uuid.UUID) (*domain.Mater
 			CurrentVersionID: row.CurrentVersionID, Classification: row.Classification, NeedsReview: row.NeedsReview,
 			ReviewReason: row.ReviewReason, DownloadCount: row.DownloadCount, SortAt: row.SortAt,
 			ArchivedBy: row.ArchivedBy, ArchivedAt: row.ArchivedAt, DeletedBy: row.DeletedBy, DeletedAt: row.DeletedAt,
-			CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+			CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, TaskID: row.TaskID,
 		}),
 		Version: *toVersion(row.MaterialVersion),
 		TagIDs:  []uuid.UUID{},
@@ -218,7 +221,7 @@ func (r *materialRepo) List(ctx context.Context, f domain.MaterialFilter) ([]dom
 				CurrentVersionID: row.CurrentVersionID, Classification: row.Classification, NeedsReview: row.NeedsReview,
 				ReviewReason: row.ReviewReason, DownloadCount: row.DownloadCount, SortAt: row.SortAt,
 				ArchivedBy: row.ArchivedBy, ArchivedAt: row.ArchivedAt, DeletedBy: row.DeletedBy, DeletedAt: row.DeletedAt,
-				CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+				CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, TaskID: row.TaskID,
 			}),
 			Version: *toVersion(row.MaterialVersion),
 			TagIDs:  []uuid.UUID{},
@@ -268,6 +271,14 @@ func (r *materialRepo) Update(ctx context.Context, p domain.UpdateMaterialParams
 
 func (r *materialRepo) SetStatus(ctx context.Context, id uuid.UUID, status domain.MaterialStatus, actor *uuid.UUID) (*domain.Material, error) {
 	row, err := r.s.queries(ctx).SetMaterialStatus(ctx, sqlcgen.SetMaterialStatusParams{ID: id, Status: string(status), Actor: actor})
+	if err != nil {
+		return nil, mapErr(err, "material")
+	}
+	return toMaterial(materialRow(row)), nil
+}
+
+func (r *materialRepo) Share(ctx context.Context, id uuid.UUID) (*domain.Material, error) {
+	row, err := r.s.queries(ctx).ShareMaterial(ctx, id)
 	if err != nil {
 		return nil, mapErr(err, "material")
 	}

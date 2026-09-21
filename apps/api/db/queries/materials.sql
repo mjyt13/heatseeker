@@ -1,21 +1,21 @@
 -- name: CreateMaterial :one
 INSERT INTO materials (id, group_id, subject_id, uploader_id, title, description, kind, source, status,
-                       classification, needs_review, review_reason, sort_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                       classification, needs_review, review_reason, sort_at, task_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 RETURNING id, group_id, subject_id, uploader_id, title, description, kind, source, status, current_version_id,
           classification, needs_review, review_reason, download_count, sort_at, archived_by, archived_at,
-          deleted_by, deleted_at, created_at, updated_at;
+          deleted_by, deleted_at, created_at, updated_at, task_id;
 
 -- name: GetMaterial :one
 SELECT id, group_id, subject_id, uploader_id, title, description, kind, source, status, current_version_id,
        classification, needs_review, review_reason, download_count, sort_at, archived_by, archived_at,
-       deleted_by, deleted_at, created_at, updated_at
+       deleted_by, deleted_at, created_at, updated_at, task_id
 FROM materials WHERE id = $1;
 
 -- name: GetMaterialView :one
 SELECT m.id, m.group_id, m.subject_id, m.uploader_id, m.title, m.description, m.kind, m.source, m.status,
        m.current_version_id, m.classification, m.needs_review, m.review_reason, m.download_count, m.sort_at,
-       m.archived_by, m.archived_at, m.deleted_by, m.deleted_at, m.created_at, m.updated_at,
+       m.archived_by, m.archived_at, m.deleted_by, m.deleted_at, m.created_at, m.updated_at, m.task_id,
        sqlc.embed(v)
 FROM materials m
 JOIN material_versions v ON v.id = m.current_version_id
@@ -24,12 +24,14 @@ WHERE m.id = $1;
 -- name: ListMaterials :many
 SELECT m.id, m.group_id, m.subject_id, m.uploader_id, m.title, m.description, m.kind, m.source, m.status,
        m.current_version_id, m.classification, m.needs_review, m.review_reason, m.download_count, m.sort_at,
-       m.archived_by, m.archived_at, m.deleted_by, m.deleted_at, m.created_at, m.updated_at,
+       m.archived_by, m.archived_at, m.deleted_by, m.deleted_at, m.created_at, m.updated_at, m.task_id,
        sqlc.embed(v)
 FROM materials m
 JOIN material_versions v ON v.id = m.current_version_id
 WHERE m.group_id = sqlc.arg(group_id)
   AND m.status = sqlc.arg(status)
+  -- Files kept inside a task are reached through the task only (D43).
+  AND m.task_id IS NULL
   AND (sqlc.narg(subject_id)::uuid IS NULL OR m.subject_id = sqlc.narg(subject_id)::uuid)
   AND (NOT sqlc.arg(no_subject)::boolean OR m.subject_id IS NULL)
   AND (sqlc.narg(kind)::text IS NULL OR m.kind = sqlc.narg(kind)::text)
@@ -62,7 +64,7 @@ SELECT sqlc.arg(material_id)::uuid, unnest(sqlc.arg(tag_ids)::uuid[])
 ON CONFLICT DO NOTHING;
 
 -- name: CountInbox :one
-SELECT count(*) FROM materials WHERE group_id = $1 AND needs_review AND status = 'ACTIVE';
+SELECT count(*) FROM materials WHERE group_id = $1 AND needs_review AND status = 'ACTIVE' AND task_id IS NULL;
 
 -- name: UpdateMaterial :one
 UPDATE materials
@@ -71,7 +73,7 @@ SET title = $2, description = $3, subject_id = $4, kind = $5, classification = $
 WHERE id = $1
 RETURNING id, group_id, subject_id, uploader_id, title, description, kind, source, status, current_version_id,
           classification, needs_review, review_reason, download_count, sort_at, archived_by, archived_at,
-          deleted_by, deleted_at, created_at, updated_at;
+          deleted_by, deleted_at, created_at, updated_at, task_id;
 
 -- name: SetMaterialStatus :one
 UPDATE materials
@@ -85,7 +87,7 @@ SET status = sqlc.arg(status),
 WHERE id = sqlc.arg(id)
 RETURNING id, group_id, subject_id, uploader_id, title, description, kind, source, status, current_version_id,
           classification, needs_review, review_reason, download_count, sort_at, archived_by, archived_at,
-          deleted_by, deleted_at, created_at, updated_at;
+          deleted_by, deleted_at, created_at, updated_at, task_id;
 
 -- name: IncrementMaterialDownloads :exec
 UPDATE materials SET download_count = download_count + 1 WHERE id = $1;
@@ -93,7 +95,7 @@ UPDATE materials SET download_count = download_count + 1 WHERE id = $1;
 -- name: ListPurgeableMaterials :many
 SELECT id, group_id, subject_id, uploader_id, title, description, kind, source, status, current_version_id,
        classification, needs_review, review_reason, download_count, sort_at, archived_by, archived_at,
-       deleted_by, deleted_at, created_at, updated_at
+       deleted_by, deleted_at, created_at, updated_at, task_id
 FROM materials
 WHERE status = 'DELETED' AND deleted_at < $1
 ORDER BY deleted_at
@@ -151,3 +153,11 @@ RETURNING id;
 UPDATE material_versions
 SET preview_status = $2, preview_key = sqlc.narg(preview_key), preview_error = sqlc.narg(preview_error)
 WHERE id = $1;
+
+-- name: ShareMaterial :one
+-- A file kept in a task becomes an ordinary group material (D43).
+UPDATE materials SET task_id = NULL, sort_at = now()
+WHERE id = $1 AND task_id IS NOT NULL
+RETURNING id, group_id, subject_id, uploader_id, title, description, kind, source, status, current_version_id,
+          classification, needs_review, review_reason, download_count, sort_at, archived_by, archived_at,
+          deleted_by, deleted_at, created_at, updated_at, task_id;

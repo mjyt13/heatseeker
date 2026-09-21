@@ -9,12 +9,14 @@ import {
   checkUpload,
   useDriveStatus,
   useServerMeta,
+  useTask,
   useUploadMaterial,
   type MaterialKind,
   type PutFile,
 } from '@heatseeker/core';
 import {
   Button,
+  Chip,
   ErrorText,
   Field,
   Paragraph,
@@ -36,11 +38,16 @@ import { putPickedFile } from '@/lib/upload';
 export default function UploadScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const params = useLocalSearchParams<{ subject?: string }>();
+  // task: upload straight into a task's files (from the task card).
+  const params = useLocalSearchParams<{ subject?: string; task?: string }>();
   const ctx = useGroupContext();
   const meta = useServerMeta();
   const drive = useDriveStatus(ctx.groupId);
   const formatSize = useFormatSize();
+  const task = useTask(params.task);
+  // A file uploaded into a task stays there unless the author shares it (D43).
+  const [taskOnly, setTaskOnly] = useState(true);
+  const keptInTask = !!task.data && taskOnly;
 
   const [asset, setAsset] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [title, setTitle] = useState('');
@@ -110,13 +117,18 @@ export default function UploadScreen() {
         description: description.trim() || undefined,
         subject_id: subjectId ?? undefined,
         kind: kind ?? undefined,
-        to_drive: driveAvailable && toDrive,
+        to_drive: driveAvailable && toDrive && !keptInTask,
+        task_id: task.data?.id,
+        task_only: keptInTask || undefined,
         onProgress: (sent, total) =>
           setProgress(total > 0 ? Math.round((sent / total) * 100) : null),
       },
       {
+        // The server attaches the file to the task; go back to it.
         onSuccess: (m) =>
-          router.replace({ pathname: '/(app)/material/[id]', params: { id: m.id } }),
+          task.data
+            ? router.replace({ pathname: '/(app)/task/[id]', params: { id: task.data.id } })
+            : router.replace({ pathname: '/(app)/material/[id]', params: { id: m.id } }),
         onSettled: () => setProgress(null),
       },
     );
@@ -132,7 +144,10 @@ export default function UploadScreen() {
             icon={<Ionicons name="close" size={22} />}
             onPress={() => router.back()}
           />
-          <ScreenTitle title={t('upload.title')} />
+          <ScreenTitle
+            title={t('upload.title')}
+            subtitle={task.data ? `${t('thread_targets.TASK')}: ${task.data.title}` : undefined}
+          />
         </XStack>
 
         <Button icon={<Ionicons name="attach-outline" size={18} />} onPress={() => void pick()}>
@@ -170,7 +185,28 @@ export default function UploadScreen() {
         <SectionLabel>{t('materials.kind')}</SectionLabel>
         <KindPicker value={kind} onChange={setKind} emptyLabel={t('upload.kind_auto')} />
 
-        {driveAvailable ? (
+        {task.data ? (
+          <YStack gap="$2">
+            <SectionLabel>{t('upload.access')}</SectionLabel>
+            <XStack gap="$2" flexWrap="wrap">
+              <Chip
+                label={t('upload.access_task')}
+                selected={taskOnly}
+                onPress={() => setTaskOnly(true)}
+              />
+              <Chip
+                label={t('upload.access_group')}
+                selected={!taskOnly}
+                onPress={() => setTaskOnly(false)}
+              />
+            </XStack>
+            <Paragraph size="$2" color="$color10">
+              {taskOnly ? t('upload.access_task_hint') : t('upload.access_group_hint')}
+            </Paragraph>
+          </YStack>
+        ) : null}
+
+        {keptInTask ? null : driveAvailable ? (
           <XStack alignItems="center" gap="$3">
             <Switch checked={toDrive} onCheckedChange={setToDrive} size="$3">
               <Switch.Thumb />

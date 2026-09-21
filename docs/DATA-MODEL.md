@@ -33,7 +33,7 @@ sqlc в `apps/api/db/queries/`. Общие правила:
 |---|---|
 | `subjects` | `group_id`, `name`, `short_name`, `teacher`, `teacher_contact`, `color`, `semester`, `aliases` text[] (для классификации; пополняются правками), `archived_at` |
 | `tags` | `group_id`, `name`, `slug` (uniq per group), `color`, `kind` `SUBJECT \| TOPIC \| TYPE \| SYSTEM \| CUSTOM`, `subject_id?` (тег-двойник предмета создаётся автоматически) |
-| `materials` | `group_id`, `subject_id?`, `uploader_id?`, `title`, `description` (md), `kind` `LECTURE \| NOTES \| REPORT \| CALC \| ASSIGNMENT \| OTHER`, `source` `UPLOAD \| GDRIVE`, `status` `ACTIVE \| ARCHIVED \| DELETED`, `current_version_id`, `classification` json `{subject_id, kind, confidence, method}`, `needs_review`, `review_reason` `LOW_CONFIDENCE \| REMOVED_FROM_DRIVE`, `download_count` (открытия не автором), `sort_at` (время загрузки / создания файла на Диске — порядок ленты), `search` tsvector (generated: `russian` + `simple` по названию), `archived_by/at`, `deleted_by/at` |
+| `materials` | `group_id`, `subject_id?`, `uploader_id?`, `title`, `description` (md), `kind` `LECTURE \| NOTES \| REPORT \| CALC \| ASSIGNMENT \| OTHER`, `source` `UPLOAD \| GDRIVE`, `status` `ACTIVE \| ARCHIVED \| DELETED`, `current_version_id`, `classification` json `{subject_id, kind, confidence, method}`, `needs_review`, `review_reason` `LOW_CONFIDENCE \| REMOVED_FROM_DRIVE`, `download_count` (открытия не автором), `sort_at` (время загрузки / создания файла на Диске — порядок ленты), `search` tsvector (generated: `russian` + `simple` по названию), `archived_by/at`, `deleted_by/at`, `task_id?` (файл оставлен только в этой задаче — не в ленте, D43) |
 | `material_versions` | `material_id`, `version_no`, **`storage`** `DRIVE \| S3 \| LOCAL`, `storage_key?`, `cache_expires_at?` (режим CACHE), `drive_file_id?`, `drive_web_view_link?`, `drive_md5?`, `drive_modified_time?`, `drive_revision_id?` (ревизия Диска, из которой проиндексирована версия; старые версии отдаются из неё), `drive_upload_status?` `PENDING \| DONE \| FAILED` + `drive_upload_error?` (публикация загрузки на Диск), `original_name`, `mime`, `size_bytes`, `sha256?`, `scan_status` `PENDING \| CLEAN \| INFECTED \| SKIPPED`, `text_key?`, `preview_key?` + `preview_status?` `PENDING \| READY \| FAILED \| SKIPPED` + `preview_error?` (PDF-превью офисного файла, Gotenberg; NULL — не запрошено), `uploaded_by?` |
 | `material_tags`, `task_tags`, `proposal_tags` | (`entity_id`, `tag_id`) |
 | `uploads` | `group_id`, `user_id`, `storage` `S3 \| LOCAL`, `storage_key` (`tmp/uploads/…`), `file_name`, `mime`, `size_bytes`, `meta` json (форма материала), `status` `PENDING \| COMPLETED \| EXPIRED`, `material_id?`, `expires_at` — прямые загрузки до `complete` |
@@ -43,9 +43,13 @@ sqlc в `apps/api/db/queries/`. Общие правила:
 
 | Таблица | Поля |
 |---|---|
-| `tasks` | `group_id`, `subject_id?`, `created_by` (любой участник), `title`, `description` (md), `kind` `TEACHER \| GROUP \| PERSONAL`, `due_at`, `status` `TODO \| IN_PROGRESS \| IN_REVIEW \| DONE \| CANCELLED`, `priority`, `assign_mode` `ALL \| SELECTED \| SELF`, `visibility` `GROUP \| PRIVATE`, **`pinned_by?`, `pinned_at?`** (староста/модератор/админ) |
+| `tasks` | `group_id`, `subject_id?`, `created_by` (любой участник), **`client_id?`** (идемпотентность создания, uniq в группе), `title`, `description` (md), `kind` `TEACHER \| GROUP \| PERSONAL`, `due_at`, `status` `TODO \| IN_PROGRESS \| IN_REVIEW \| DONE \| CANCELLED`, `priority` `LOW \| NORMAL \| HIGH`, `assign_mode` `ALL \| SELECTED \| SELF`, `visibility` `GROUP \| PRIVATE`, **`notified_offsets` int[]** (уже объявленные напоминания о сроке, в минутах до него — D38), **`pinned_by?`, `pinned_at?`** (староста/модератор/админ), `completed_at?`, `deleted_at?` (мягкое удаление) |
 | `task_assignments` | `task_id` + `user_id`, `status` (персональный прогресс), `completed_at` |
 | `task_attachments` | `task_id`, `material_id` |
+
+Миграция `00008_tasks.sql`. Личные задачи (`visibility=PRIVATE`) видит только автор — фильтр
+в запросах списка и карточки. Строка `task_assignments` появляется, когда участника выбрали
+(`SELECTED`/`SELF`) или когда он впервые отметил свой прогресс.
 
 ## Расписание
 
@@ -59,10 +63,10 @@ sqlc в `apps/api/db/queries/`. Общие правила:
 
 | Таблица | Поля |
 |---|---|
-| `threads` | `group_id`, `target_type` `SUBJECT \| LESSON \| MATERIAL \| TASK \| PROPOSAL \| GENERAL`, `target_id` (для LESSON — `event_id` + `occurrence_date`), `subject_id?` (для навигации по предмету, денормализация), `title?`, `created_by`, `last_message_at`, `message_count` |
-| `messages` | `thread_id`, `author_id`, **`client_id`** (uniq per thread — идемпотентность офлайн-отправки), **`seq`** bigint (монотонный в группе, из `group_events`), `body` (md), `reply_to_id?`, `edited_at`, `deleted_at`, **`hidden_for_all_by?` / `hidden_for_all_at?`** (модерация) |
-| `message_hides` | `message_id` + `user_id` (личное скрытие) |
-| `thread_reads` | `thread_id` + `user_id`, `last_read_seq` |
+| `threads` | `group_id`, `target_type` `SUBJECT \| LESSON \| MATERIAL \| TASK \| PROPOSAL \| GENERAL`, `target_id` (id предмета/материала/задачи; для GENERAL — id группы; для LESSON этап 3 добавит `occurrence_date`), uniq `(group_id, target_type, target_id)`, `subject_id?` (предмет материала/задачи — для навигации, денормализация), `title?` (название материала/задачи на момент первого сообщения), `created_by`, `message_count` (без удалённых), `last_message_at`, `last_seq` (seq последнего сообщения — для непрочитанного). Создаётся первым сообщением (D40) |
+| `messages` | `group_id`, `thread_id`, `author_id`, **`client_id`** (uniq per thread — идемпотентность офлайн-отправки), **`seq`** bigint (seq события `message.created` в `group_events`), `body` (md, до 4000 символов), `reply_to_id?`, `edited_at`, `deleted_at` (удалённое остаётся пометкой), **`hidden_for_all_by?` / `hidden_for_all_at?`** (модерация) |
+| `message_hides` | `message_id` + `user_id`, `created_at` (личное скрытие; «Скрытые мной» — по `created_at`) |
+| `thread_reads` | `thread_id` + `user_id`, `last_read_seq` (только растёт) |
 | `bookmarks` | `user_id`, `target_type`, `target_id` («Сохранённое») |
 
 ## Предложения, объявления, напоминания

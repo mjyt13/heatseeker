@@ -54,6 +54,9 @@ func testConfig(dsn string) *config.Config {
 	cfg.Groups.DefaultJoinPolicy = "open"
 	cfg.Groups.DefaultMediaMode = "cache"
 	cfg.Events.RetentionDays = 90
+	cfg.Tasks = config.Tasks{
+		DeadlineOffsets: []string{"7d", "1d", "0"}, ReminderGraceHours: 24, DueSoonDays: 7, ScanLimit: 100,
+	}
 	cfg.Media = config.Media{
 		ProxyEnabled: true, PresignTTLSec: 900, TmpUploadTTLHours: 24, UploadMaxSizeMB: 1,
 		UploadAllowedExt: []string{"pdf", "docx", "txt", "png"}, HardDeleteAfterDays: 0, // purge immediately when asked

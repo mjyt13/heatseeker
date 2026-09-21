@@ -17,12 +17,14 @@ import (
 	"github.com/go-chi/cors"
 
 	"heatseeker/api/internal/app/auth"
+	"heatseeker/api/internal/app/discussions"
 	"heatseeker/api/internal/app/drive"
 	"heatseeker/api/internal/app/groups"
 	"heatseeker/api/internal/app/materials"
 	"heatseeker/api/internal/app/subjects"
 	appsync "heatseeker/api/internal/app/sync"
 	"heatseeker/api/internal/app/tags"
+	"heatseeker/api/internal/app/tasks"
 	"heatseeker/api/internal/platform/config"
 )
 
@@ -32,17 +34,19 @@ var Version = "dev"
 // Deps are the collaborators the HTTP layer needs. Services may be nil when
 // the router is built only to emit the OpenAPI document.
 type Deps struct {
-	Cfg       *config.Config
-	Log       *slog.Logger
-	Tokens    *auth.Tokens
-	Auth      *auth.Service
-	Groups    *groups.Service
-	Subjects  *subjects.Service
-	Tags      *tags.Service
-	Sync      *appsync.Service
-	Materials *materials.Service
-	Drive     *drive.Service
-	Health    func(ctx context.Context) error
+	Cfg         *config.Config
+	Log         *slog.Logger
+	Tokens      *auth.Tokens
+	Auth        *auth.Service
+	Groups      *groups.Service
+	Subjects    *subjects.Service
+	Tags        *tags.Service
+	Sync        *appsync.Service
+	Materials   *materials.Service
+	Drive       *drive.Service
+	Tasks       *tasks.Service
+	Discussions *discussions.Service
+	Health      func(ctx context.Context) error
 }
 
 // Server bundles the router and the huma API (for spec export).
@@ -79,7 +83,7 @@ func NewServer(d Deps) *Server {
 	r.Get("/readyz", healthHandler(d))
 
 	cfg := huma.DefaultConfig("Heatseeker API", Version)
-	cfg.Info.Description = "API ядра Heatseeker: группы, участники, предметы, теги, материалы, Google Диск, синхронизация."
+	cfg.Info.Description = "API ядра Heatseeker: группы, участники, предметы, теги, материалы, задачи, Google Диск, синхронизация."
 	cfg.Servers = []*huma.Server{{URL: "/api/v1"}}
 	cfg.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 		"bearer": {Type: "http", Scheme: "bearer", BearerFormat: "JWT"},
@@ -99,6 +103,8 @@ func NewServer(d Deps) *Server {
 		registerTags(api, d)
 		registerSync(api, d)
 		registerMaterials(api, d)
+		registerTasks(api, d)
+		registerDiscussions(api, d)
 		registerDrive(api, d)
 		registerMedia(api, d)
 	})
