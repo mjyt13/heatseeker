@@ -124,6 +124,9 @@ func (s *Store) Tasks() domain.TaskRepo { return &taskRepo{s} }
 // Discussions returns the threads and messages repository.
 func (s *Store) Discussions() domain.DiscussionRepo { return &discussionRepo{s} }
 
+// Schedule returns the schedule repository.
+func (s *Store) Schedule() domain.ScheduleRepo { return &scheduleRepo{s} }
+
 // mapErr converts driver errors into domain errors.
 func mapErr(err error, entity string) error {
 	if err == nil {

@@ -20,6 +20,8 @@ import {
   useTheme,
 } from '@heatseeker/ui';
 
+import { selectableText } from '@/lib/text';
+
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 /** Кружок с числом непрочитанных. */
@@ -157,7 +159,7 @@ export function MessageBubble({
             {note}
           </Paragraph>
         ) : (
-          <Paragraph size="$4" selectable>
+          <Paragraph size="$4" {...selectableText}>
             {message.body}
           </Paragraph>
         )}

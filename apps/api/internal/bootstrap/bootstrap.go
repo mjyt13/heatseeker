@@ -25,6 +25,7 @@ import (
 	"heatseeker/api/internal/app/drive"
 	"heatseeker/api/internal/app/groups"
 	"heatseeker/api/internal/app/materials"
+	"heatseeker/api/internal/app/schedule"
 	"heatseeker/api/internal/app/subjects"
 	appsync "heatseeker/api/internal/app/sync"
 	"heatseeker/api/internal/app/tags"
@@ -55,6 +56,7 @@ type Services struct {
 	Drive       *drive.Service
 	Tasks       *tasks.Service
 	Discussions *discussions.Service
+	Schedule    *schedule.Service
 	Media       domain.MediaStore
 	Queue       domain.JobQueue
 
@@ -231,6 +233,13 @@ func wire(pool *pgxpool.Pool, cfg *config.Config, log *slog.Logger, opts Options
 			Discussions: store.Discussions(), Subjects: store.Subjects(), Materials: store.Materials(), Tasks: store.Tasks(),
 			Access: acc, Events: publisher, Tx: store, Clock: clk, Log: log,
 		}),
+		Schedule: schedule.NewService(schedule.Deps{
+			Schedule: store.Schedule(), Subjects: store.Subjects(), Access: acc, Events: publisher, Tx: store,
+			Clock: clk, Log: log,
+		}, schedule.Settings{
+			APIBaseURL:    strings.TrimRight(cfg.App.BaseURL, "/") + "/api/v1",
+			SigningSecret: cfg.Auth.JWTAccessSecret,
+		}),
 		Media: opts.Media,
 		Queue: opts.Queue,
 	}, nil
@@ -292,6 +301,7 @@ func (s *Services) HTTPServer(cfg *config.Config, log *slog.Logger) *httptranspo
 		Drive:       s.Drive,
 		Tasks:       s.Tasks,
 		Discussions: s.Discussions,
+		Schedule:    s.Schedule,
 		Health: func(ctx context.Context) error {
 			pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 			defer cancel()

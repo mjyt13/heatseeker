@@ -21,6 +21,7 @@ import (
 	"heatseeker/api/internal/app/drive"
 	"heatseeker/api/internal/app/groups"
 	"heatseeker/api/internal/app/materials"
+	"heatseeker/api/internal/app/schedule"
 	"heatseeker/api/internal/app/subjects"
 	appsync "heatseeker/api/internal/app/sync"
 	"heatseeker/api/internal/app/tags"
@@ -46,6 +47,7 @@ type Deps struct {
 	Drive       *drive.Service
 	Tasks       *tasks.Service
 	Discussions *discussions.Service
+	Schedule    *schedule.Service
 	Health      func(ctx context.Context) error
 }
 
@@ -105,6 +107,7 @@ func NewServer(d Deps) *Server {
 		registerMaterials(api, d)
 		registerTasks(api, d)
 		registerDiscussions(api, d)
+		registerSchedule(api, d)
 		registerDrive(api, d)
 		registerMedia(api, d)
 	})

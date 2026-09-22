@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	_ "time/tzdata" // schedules follow IANA zones; the static binary may run without /usr/share/zoneinfo
 
 	"heatseeker/api/internal/gen"
 	"heatseeker/api/internal/platform/config"

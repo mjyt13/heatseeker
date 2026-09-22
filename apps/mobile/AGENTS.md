@@ -28,6 +28,12 @@ Expo SDK 57 (React Native 0.86, React 19.2, Expo Router 57). API Expo меняе
   скрытые вкладки держат одну форму смонтированной дважды. В вебе — `aria-*`, не `accessibility*`.
 - Стартовый экран — `src/app/(app)/index.tsx` (перенаправление, сейчас на «Задачи»); лента —
   `feed.tsx`. Вкладки возвращаются «назад» по истории (`backBehavior="history"`), а не на первую.
+- Расписание — вкладка `schedule.tsx`, занятие — `class/[eventId]/[date].tsx`, форма —
+  `class/edit.tsx` (новое занятие, серия целиком или с даты, одно занятие; переход передаёт `n`,
+  чтобы форма открывалась чистой). Часовой пояс серии — `deviceTimeZone()` из `src/lib/timezone.ts`;
+  календарь месяца — общий `src/components/calendar-month.tsx`.
+- Картинки: `Thumbnail` и `PictureViewer` из `src/components/picture.tsx` (expo-image, кеш по id
+  версии: `thumbnail_url` временная, картинка — нет).
 - Проверка без устройства: `pnpm typecheck`, `pnpm lint`, `pnpm export:check` (бандл Metro).
 - Babel-плагин Tamagui (оптимизирующий компилятор) пока не подключён — включить, когда
   сборка стабилизируется (см. docs/adr/0005).

@@ -44,11 +44,13 @@ type MaterialVersionDTO struct {
 	UploadedBy        *uuid.UUID `json:"uploaded_by,omitempty"`
 	CreatedAt         time.Time  `json:"created_at"`
 	PreviewStatus     string     `json:"preview_status,omitempty" enum:"NONE,PENDING,READY,FAILED,SKIPPED" doc:"PDF-превью офисного файла: NONE — не запрошено (POST /materials/{materialId}/preview). Нет поля — файл показывается как есть."`
+	ThumbnailURL      *string    `json:"thumbnail_url,omitempty" doc:"Уменьшенная копия картинки (JPEG); ссылка временная, кешировать по id версии. Нет поля — не картинка."`
 }
 
 // previewStater tells the preview state of a version (materials.Service).
 type previewStater interface {
 	PreviewState(v *domain.MaterialVersion) string
+	ThumbnailURL(v *domain.MaterialVersion) *string
 }
 
 func toVersionDTO(v *domain.MaterialVersion, ps previewStater) MaterialVersionDTO {
@@ -56,7 +58,7 @@ func toVersionDTO(v *domain.MaterialVersion, ps previewStater) MaterialVersionDT
 		ID: v.ID, VersionNo: v.VersionNo, Storage: string(v.Storage), OriginalName: v.OriginalName, Mime: v.Mime,
 		SizeBytes: v.SizeBytes, ScanStatus: string(v.ScanStatus), DriveWebViewLink: v.DriveWebViewLink,
 		DriveModifiedTime: v.DriveModifiedTime, DriveUploadError: v.DriveUploadError, UploadedBy: v.UploadedBy,
-		CreatedAt: v.CreatedAt, PreviewStatus: ps.PreviewState(v),
+		CreatedAt: v.CreatedAt, PreviewStatus: ps.PreviewState(v), ThumbnailURL: ps.ThumbnailURL(v),
 	}
 	if v.DriveUploadStatus != nil {
 		s := string(*v.DriveUploadStatus)

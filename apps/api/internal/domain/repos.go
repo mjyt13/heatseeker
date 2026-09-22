@@ -330,3 +330,27 @@ type DiscussionRepo interface {
 	// ReadSeq is the user's read mark in a thread, 0 before the first read.
 	ReadSeq(ctx context.Context, threadID, userID uuid.UUID) (int64, error)
 }
+
+// ScheduleRepo persists classes and their exceptions. Edits of an event name
+// the version they started from and fail with ErrConflict when it moved on.
+type ScheduleRepo interface {
+	Create(ctx context.Context, e ScheduleEvent) (*ScheduleEvent, error)
+	Get(ctx context.Context, id uuid.UUID) (*ScheduleEvent, error)
+	GetByClientID(ctx context.Context, groupID, clientID uuid.UUID) (*ScheduleEvent, error)
+	// ListInWindow returns the events that may have a class overlapping [from, to).
+	ListInWindow(ctx context.Context, groupID uuid.UUID, from, to time.Time) ([]ScheduleEvent, error)
+	ListAll(ctx context.Context, groupID uuid.UUID) ([]ScheduleEvent, error)
+	Update(ctx context.Context, e ScheduleEvent) (*ScheduleEvent, error)
+	// EndSeries makes until the last date of a series.
+	EndSeries(ctx context.Context, id uuid.UUID, version int32, until time.Time, by uuid.UUID) (*ScheduleEvent, error)
+	SoftDelete(ctx context.Context, id uuid.UUID, version int32, at time.Time, by uuid.UUID) error
+
+	ListExceptions(ctx context.Context, eventIDs []uuid.UUID) ([]ScheduleException, error)
+	GetException(ctx context.Context, eventID uuid.UUID, date time.Time) (*ScheduleException, error)
+	PutException(ctx context.Context, x ScheduleException) (*ScheduleException, error)
+	// DeleteException fails with ErrNotFound when there was none.
+	DeleteException(ctx context.Context, eventID uuid.UUID, date time.Time) error
+	// MoveExceptions hands the exceptions from a date on to another event.
+	MoveExceptions(ctx context.Context, fromEventID, toEventID uuid.UUID, fromDate time.Time) error
+	DeleteExceptionsFrom(ctx context.Context, eventID uuid.UUID, fromDate time.Time) error
+}

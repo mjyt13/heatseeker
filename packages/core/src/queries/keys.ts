@@ -29,4 +29,11 @@ export const keys = {
   thread: (id: string, targetType: string, targetId: string, includeHidden = false) =>
     ['group', id, 'thread', targetType, targetId, { includeHidden }] as const,
   hiddenMessages: (id: string) => ['group', id, 'messages', 'hidden'] as const,
+  scheduleAll: (id: string) => ['group', id, 'schedule'] as const,
+  schedule: (id: string, from: string, to: string) =>
+    ['group', id, 'schedule', { from, to }] as const,
+  scheduleEvent: (eventId: string) => ['schedule-event', eventId] as const,
+  occurrence: (eventId: string, date: string) =>
+    ['schedule-event', eventId, 'occurrence', date] as const,
+  calendarLink: (id: string) => ['group', id, 'calendar-link'] as const,
 };

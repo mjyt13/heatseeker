@@ -236,6 +236,43 @@ type RefreshToken struct {
 	CreatedAt  time.Time
 }
 
+type ScheduleEvent struct {
+	ID         uuid.UUID
+	GroupID    uuid.UUID
+	SubjectID  *uuid.UUID
+	ClientID   *uuid.UUID
+	Title      string
+	Kind       string
+	StartsAt   time.Time
+	EndsAt     time.Time
+	Timezone   string
+	Location   string
+	Teacher    string
+	Note       string
+	Rrule      *string
+	RruleUntil *time.Time
+	CreatedBy  *uuid.UUID
+	UpdatedBy  *uuid.UUID
+	Version    int32
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	DeletedAt  *time.Time
+}
+
+type ScheduleException struct {
+	EventID      uuid.UUID
+	OriginalDate time.Time
+	Kind         string
+	StartsAt     *time.Time
+	EndsAt       *time.Time
+	Location     *string
+	Teacher      *string
+	Note         string
+	UpdatedBy    *uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
 type Subject struct {
 	ID             uuid.UUID
 	GroupID        uuid.UUID

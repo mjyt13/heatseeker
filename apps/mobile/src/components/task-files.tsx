@@ -23,14 +23,16 @@ import {
 } from '@heatseeker/ui';
 
 import { FileGlyph, MaterialRow, SectionLabel } from '@/components/materials';
+import { PictureViewer, Thumbnail } from '@/components/picture';
 import { describeError } from '@/lib/errors';
 import { useGroupContext } from '@/lib/group';
 
 const MAX_ATTACHMENTS = 20;
 
 /**
- * Файлы задачи. Список — из кеша материалов; сам файл открывается на экране
- * материала по нажатию («Смотреть» / «Скачать»), заранее ничего не грузится.
+ * Файлы задачи. Список — из кеша материалов; у картинок сразу видна
+ * уменьшенная копия (она остаётся в кеше), полный размер — по нажатию на неё.
+ * Остальные файлы открываются на экране материала («Смотреть» / «Скачать»).
  */
 export function TaskFiles({ task, canManage }: { task: Task; canManage: boolean }) {
   const { t } = useTranslation();
@@ -128,42 +130,49 @@ function AttachedFile({
   const material = useMaterial(materialId);
   const m = material.data;
   const keptInTask = !!m?.task_id;
+  const [viewing, setViewing] = useState(false);
   return (
-    <ListRow
-      leading={m ? <FileGlyph mime={m.file.mime} /> : <Spinner size="small" />}
-      title={m?.title ?? (material.isError ? t('tasks.files_unavailable') : '…')}
-      subtitle={
-        m
-          ? [t(`kinds.${m.kind}`), keptInTask ? t('materials.task_only') : null]
-              .filter(Boolean)
-              .join(' · ')
-          : null
-      }
-      onPress={m ? onOpen : undefined}
-      trailing={
-        <XStack gap="$1" alignItems="center">
-          {m && keptInTask && canShare(m.uploader_id) ? (
-            <Button
-              size="$2"
-              icon={<Ionicons name="people-outline" size={16} />}
-              disabled={sharing}
-              onPress={onShare}
-            >
-              {t('materials.share')}
-            </Button>
-          ) : null}
-          {onRemove ? (
-            <Button
-              size="$2"
-              chromeless
-              aria-label={t('tasks.files_detach')}
-              icon={<Ionicons name="close-circle-outline" size={20} color={theme.color10?.val} />}
-              onPress={onRemove}
-            />
-          ) : null}
-        </XStack>
-      }
-    />
+    <YStack gap="$1">
+      {m?.file.thumbnail_url ? <Thumbnail file={m.file} onPress={() => setViewing(true)} /> : null}
+      {viewing && m ? (
+        <PictureViewer materialId={m.id} file={m.file} onClose={() => setViewing(false)} />
+      ) : null}
+      <ListRow
+        leading={m ? <FileGlyph mime={m.file.mime} /> : <Spinner size="small" />}
+        title={m?.title ?? (material.isError ? t('tasks.files_unavailable') : '…')}
+        subtitle={
+          m
+            ? [t(`kinds.${m.kind}`), keptInTask ? t('materials.task_only') : null]
+                .filter(Boolean)
+                .join(' · ')
+            : null
+        }
+        onPress={m ? onOpen : undefined}
+        trailing={
+          <XStack gap="$1" alignItems="center">
+            {m && keptInTask && canShare(m.uploader_id) ? (
+              <Button
+                size="$2"
+                icon={<Ionicons name="people-outline" size={16} />}
+                disabled={sharing}
+                onPress={onShare}
+              >
+                {t('materials.share')}
+              </Button>
+            ) : null}
+            {onRemove ? (
+              <Button
+                size="$2"
+                chromeless
+                aria-label={t('tasks.files_detach')}
+                icon={<Ionicons name="close-circle-outline" size={20} color={theme.color10?.val} />}
+                onPress={onRemove}
+              />
+            ) : null}
+          </XStack>
+        }
+      />
+    </YStack>
   );
 }
 

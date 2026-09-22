@@ -11,6 +11,7 @@ import {
   useMaterialTransition,
   useOpenMaterial,
   useRequestPreview,
+  usePublishToDrive,
   useShareMaterial,
   useUpdateMaterial,
   type MaterialKind,
@@ -42,6 +43,7 @@ import {
 } from '@/components/materials';
 import { MediaPlayer, playableKind, type PlayableKind } from '@/components/media-player';
 import { DiscussionButton } from '@/components/discussion-button';
+import { PictureViewer, Thumbnail } from '@/components/picture';
 import { describeError } from '@/lib/errors';
 import { subjectLabel, useGroupContext } from '@/lib/group';
 import { showMaterial } from '@/lib/open';
@@ -68,9 +70,13 @@ function MaterialView({ id }: { id: string }) {
   const open = useOpenMaterial();
   const transition = useMaterialTransition(ctx.groupId ?? '');
   const share = useShareMaterial(ctx.groupId ?? '');
+  const publish = usePublishToDrive(ctx.groupId ?? '');
   const [editing, setEditing] = useState(false);
+  const [viewing, setViewing] = useState(false);
   // Audio/video play inline; undefined version = the current one.
   const [playing, setPlaying] = useState<{ versionId?: string; kind: PlayableKind } | null>(null);
+  // "Close" hides the player: opening it again resumes without loading the file anew.
+  const [playerHidden, setPlayerHidden] = useState(false);
   // Leaving the screen stops playback (the tab itself is not unmounted).
   useFocusEffect(useCallback(() => () => setPlaying(null), []));
   const requestPreview = useRequestPreview(id);
@@ -111,6 +117,16 @@ function MaterialView({ id }: { id: string }) {
       : undefined;
 
   const playable = playableKind(m.file.mime);
+  // The headman, a moderator or an admin puts a member's upload on the group's Drive.
+  const canPublish =
+    (ctx.permissions.can('material.moderate') || ctx.permissions.can('drive.manage')) &&
+    m.file.storage !== 'DRIVE' &&
+    !m.file.drive_web_view_link &&
+    !m.task_id &&
+    (!m.file.drive_upload_status || m.file.drive_upload_status === 'FAILED');
+  const playerOpen = !!playing && !playing.versionId && !playerHidden;
+  // Pictures open in the app, not in a browser.
+  const picture = !!m.file.thumbnail_url;
 
   /**
    * Office files are shown through a PDF preview made by the server: request
@@ -153,14 +169,18 @@ function MaterialView({ id }: { id: string }) {
   };
 
   const doOpen = (preferDrive: boolean, download = false) =>
-    !preferDrive && !download && playable
-      ? setPlaying(playing && !playing.versionId ? null : { kind: playable })
-      : !preferDrive && !download
-        ? void view(m.file.id, m.file.preview_status)
-        : open.mutate(
-            { materialId: m.id, download },
-            { onSuccess: (links) => void showMaterial(links, preferDrive) },
-          );
+    !preferDrive && !download && picture
+      ? setViewing(true)
+      : !preferDrive && !download && playable
+        ? playing && !playing.versionId
+          ? setPlayerHidden((v) => !v)
+          : (setPlaying({ kind: playable }), setPlayerHidden(false))
+        : !preferDrive && !download
+          ? void view(m.file.id, m.file.preview_status)
+          : open.mutate(
+              { materialId: m.id, download },
+              { onSuccess: (links) => void showMaterial(links, preferDrive) },
+            );
 
   const doTransition = (action: MaterialTransition) => {
     const run = () =>
@@ -202,6 +222,11 @@ function MaterialView({ id }: { id: string }) {
           subjectName={subjectLabel(subject)}
           uploader={ctx.memberName(m.uploader_id)}
         />
+
+        {picture ? <Thumbnail file={m.file} height={220} onPress={() => setViewing(true)} /> : null}
+        {viewing ? (
+          <PictureViewer materialId={m.id} file={m.file} onClose={() => setViewing(false)} />
+        ) : null}
 
         {m.task_id ? (
           <YStack gap="$2" padding="$3" borderRadius="$4" backgroundColor="$blue3">
@@ -254,15 +279,19 @@ function MaterialView({ id }: { id: string }) {
         <YStack gap="$2">
           <Button
             theme="accent"
-            icon={<Ionicons name={playable ? 'play' : 'eye-outline'} size={18} />}
+            icon={
+              <Ionicons name={playerOpen ? 'close' : playable ? 'play' : 'eye-outline'} size={18} />
+            }
             disabled={open.isPending || preparing !== null}
             onPress={() => doOpen(false)}
           >
             {preparing === m.file.id
               ? t('materials.preview_preparing')
-              : playable
-                ? t('player.listen', { context: playable })
-                : t('materials.open_in_app')}
+              : playerOpen
+                ? t('player.close')
+                : playable
+                  ? t('player.listen', { context: playable })
+                  : t('materials.open_in_app')}
           </Button>
           {previewProblem ? (
             <Paragraph color="$color10">
@@ -274,7 +303,7 @@ function MaterialView({ id }: { id: string }) {
           </ErrorText>
           {playing ? (
             <YStack gap="$1">
-              {playing.versionId ? (
+              {playing.versionId && !playerHidden ? (
                 <Paragraph size="$2" color="$color10">
                   {t('materials.version_n', {
                     n: m.versions?.find((v) => v.id === playing.versionId)?.version_no,
@@ -286,6 +315,7 @@ function MaterialView({ id }: { id: string }) {
                 materialId={m.id}
                 versionId={playing.versionId}
                 kind={playing.kind}
+                hidden={playerHidden}
               />
             </YStack>
           ) : null}
@@ -298,6 +328,18 @@ function MaterialView({ id }: { id: string }) {
               {t('materials.open_in_drive')}
             </Button>
           ) : null}
+          {canPublish ? (
+            <Button
+              icon={<Ionicons name="cloud-upload-outline" size={18} />}
+              disabled={publish.isPending}
+              onPress={() => publish.mutate(m.id)}
+            >
+              {m.file.drive_upload_status === 'FAILED'
+                ? t('materials.publish_drive_retry')
+                : t('materials.publish_drive')}
+            </Button>
+          ) : null}
+          <ErrorText>{publish.isError ? describeError(t, publish.error) : null}</ErrorText>
           {m.file.storage !== 'DRIVE' ? (
             <Button
               icon={<Ionicons name="download-outline" size={18} />}
@@ -339,7 +381,8 @@ function MaterialView({ id }: { id: string }) {
                 }
                 onPress={() =>
                   playableKind(v.mime)
-                    ? setPlaying({ versionId: v.id, kind: playableKind(v.mime)! })
+                    ? (setPlaying({ versionId: v.id, kind: playableKind(v.mime)! }),
+                      setPlayerHidden(false))
                     : void view(v.id, v.preview_status)
                 }
               />

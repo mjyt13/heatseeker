@@ -33,10 +33,13 @@ export function MediaPlayer({
   materialId,
   versionId,
   kind,
+  hidden = false,
 }: {
   materialId: string;
   versionId?: string;
   kind: PlayableKind;
+  /** Спрятан и на паузе, но загруженное не теряется: повторный показ продолжает с того же места. */
+  hidden?: boolean;
 }) {
   const { t } = useTranslation();
   const open = useOpenMaterial();
@@ -70,7 +73,15 @@ export function MediaPlayer({
       <Spinner alignSelf="flex-start" />
     );
   }
-  return kind === 'video' ? <VideoPlayerView uri={uri} /> : <AudioPlayerView uri={uri} />;
+  return (
+    <YStack display={hidden ? 'none' : 'flex'}>
+      {kind === 'video' ? (
+        <VideoPlayerView uri={uri} hidden={hidden} />
+      ) : (
+        <AudioPlayerView uri={uri} hidden={hidden} />
+      )}
+    </YStack>
+  );
 }
 
 /** Меняет источник, не теряя позицию и состояние воспроизведения. */
@@ -83,9 +94,12 @@ function useSourceSwap(uri: string, swap: (uri: string) => void) {
   }, [uri, swap]);
 }
 
-function VideoPlayerView({ uri }: { uri: string }) {
+function VideoPlayerView({ uri, hidden }: { uri: string; hidden: boolean }) {
   const [initial] = useState(uri);
   const player = useVideoPlayer({ uri: initial });
+  useEffect(() => {
+    if (hidden) player.pause();
+  }, [hidden, player]);
   const swap = useCallback(
     (next: string) => {
       const position = player.currentTime;
@@ -110,10 +124,13 @@ function VideoPlayerView({ uri }: { uri: string }) {
   );
 }
 
-function AudioPlayerView({ uri }: { uri: string }) {
+function AudioPlayerView({ uri, hidden }: { uri: string; hidden: boolean }) {
   const { t } = useTranslation();
   const [initial] = useState(uri);
   const player = useAudioPlayer({ uri: initial });
+  useEffect(() => {
+    if (hidden) player.pause();
+  }, [hidden, player]);
   const status = useAudioPlayerStatus(player);
   const [trackWidth, setTrackWidth] = useState(0);
   const swap = useCallback(

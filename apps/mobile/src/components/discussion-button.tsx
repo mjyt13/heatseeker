@@ -8,13 +8,13 @@ import { Button } from '@heatseeker/ui';
 import { discussionHref } from '@/lib/discussion';
 import { useGroupContext } from '@/lib/group';
 
-/** Кнопка «Обсуждение (N)» на карточке материала или задачи. */
+/** Кнопка «Обсуждение (N)» на карточке материала, задачи или занятия (обсуждение предмета). */
 export function DiscussionButton({ target, title }: { target: DiscussionTarget; title: string }) {
   const { t } = useTranslation();
   const router = useRouter();
   const { groupId } = useGroupContext();
   const discussions = useDiscussions(groupId);
-  const found = discussions.data?.others?.find(
+  const found = [...(discussions.data?.others ?? []), ...(discussions.data?.subjects ?? [])].find(
     (d) => d.target_type === target.type && d.target_id === target.id,
   );
   const count = found?.message_count ?? 0;

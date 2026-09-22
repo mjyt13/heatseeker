@@ -623,6 +623,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/groups/{groupId}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Занятия за период
+         * @description Серии разворачиваются в занятия; отменённые тоже возвращаются (status=CANCELLED), перенесённые — на новом месте.
+         */
+        get: operations["schedule-window"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/schedule.ics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Расписание в формате iCalendar */
+        get: operations["schedule-calendar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/schedule/calendar-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ссылка на расписание для календаря
+         * @description Личная ссылка на ICS; работает, пока вы в группе.
+         */
+        get: operations["schedule-calendar-link"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/schedule/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Добавить занятие
+         * @description Разовое или еженедельное (каждую неделю, через неделю). Староста или админ с защищённым аккаунтом.
+         */
+        post: operations["schedule-create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/groups/{groupId}/subjects": {
         parameters: {
             query?: never;
@@ -918,6 +995,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/materials/{materialId}/publish-drive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Опубликовать загруженный файл на Google Диск
+         * @description Копия файла из хранилища приложения уходит в папку группы на Диске (как загрузка с галочкой «на Диск»); после неудачи — пробует снова. Староста, модератор или админ с защищённым аккаунтом.
+         */
+        post: operations["materials-publish-drive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/materials/{materialId}/restore": {
         parameters: {
             query?: never;
@@ -970,6 +1067,26 @@ export interface paths {
          * @description Ссылка берётся из /materials/{materialId}/open. Поддерживает Range; документы Google отдаются в PDF.
          */
         get: operations["materials-stream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/materials/{materialId}/thumbnail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Уменьшенная копия картинки
+         * @description JPEG до 640 px по длинной стороне; ссылка — thumbnail_url версии материала. Делается при первом запросе и хранится рядом с файлами.
+         */
+        get: operations["materials-thumbnail"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1219,6 +1336,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/schedule/events/{eventId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Занятие или серия
+         * @description С отменами и изменениями отдельных занятий.
+         */
+        get: operations["schedule-get"];
+        put?: never;
+        post?: never;
+        /**
+         * Удалить занятие или серию
+         * @description scope=FOLLOWING удаляет занятия начиная с from; чтобы убрать одно занятие, его отменяют.
+         */
+        delete: operations["schedule-delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Изменить занятие или серию
+         * @description Поля заменяются целиком. scope=FOLLOWING меняет занятия с from: старая серия заканчивается накануне, ответ — новая серия.
+         */
+        patch: operations["schedule-update"];
+        trace?: never;
+    };
+    "/schedule/events/{eventId}/occurrences/{date}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Одно занятие
+         * @description С отменой или изменением, если они есть.
+         */
+        get: operations["schedule-occurrence-get"];
+        /**
+         * Отменить или изменить одно занятие
+         * @description Время, аудитория, преподаватель или причина; остальные занятия серии не меняются.
+         */
+        put: operations["schedule-occurrence-set"];
+        post?: never;
+        /**
+         * Вернуть занятие как по плану
+         * @description Снимает отмену или изменение одного занятия.
+         */
+        delete: operations["schedule-occurrence-reset"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tasks/{taskId}": {
         parameters: {
             query?: never;
@@ -1395,6 +1568,18 @@ export interface components {
              * @description Сколько материалов разобрано (чужие и удалённые пропускаются).
              */
             classified: number;
+        };
+        CalendarLinkOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/CalendarLinkOutputBody.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** @description Ссылка для подписки в календаре телефона или Google Календаре. */
+            url: string;
         };
         ClassificationDTO: {
             /** Format: double */
@@ -2099,6 +2284,8 @@ export interface components {
             size_bytes: number;
             /** @enum {string} */
             storage: "DRIVE" | "S3" | "LOCAL";
+            /** @description Уменьшенная копия картинки (JPEG); ссылка временная, кешировать по id версии. Нет поля — не картинка. */
+            thumbnail_url?: string;
             uploaded_by?: string;
             /** Format: int32 */
             version_no: number;
@@ -2266,6 +2453,56 @@ export interface components {
             material_kinds: string[] | null;
             upload: components["schemas"]["UploadLimitsDTO"];
         };
+        OccurrenceDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/OccurrenceDTO.json
+             */
+            readonly $schema?: string;
+            /** @description Почему отменено или изменено. */
+            change_note?: string;
+            /**
+             * Format: date
+             * @description День по плану; вместе с event_id — адрес занятия.
+             */
+            date: string;
+            /** Format: date-time */
+            ends_at: string;
+            event_id: string;
+            /** @enum {string} */
+            kind: "LECTURE" | "SEMINAR" | "LAB" | "EXAM" | "CONSULTATION" | "OTHER";
+            location: string;
+            note: string;
+            /**
+             * Format: date-time
+             * @description Есть, когда занятие перенесено на другое время.
+             */
+            planned_starts_at?: string;
+            recurring: boolean;
+            /** Format: date-time */
+            starts_at: string;
+            /** @enum {string} */
+            status: "SCHEDULED" | "CANCELLED" | "CHANGED";
+            subject_id?: string;
+            teacher: string;
+            timezone: string;
+            title: string;
+            /**
+             * Format: int32
+             * @description Версия серии — для правки из карточки занятия.
+             */
+            version: number;
+        };
+        OccurrencesOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/OccurrencesOutputBody.json
+             */
+            readonly $schema?: string;
+            items: components["schemas"]["OccurrenceDTO"][] | null;
+        };
         OpenDTO: {
             /**
              * Format: uri
@@ -2415,6 +2652,114 @@ export interface components {
             platform?: "IOS" | "ANDROID" | "WEB";
             timezone?: string;
         };
+        RepeatDTO: {
+            /**
+             * Format: int64
+             * @description 1 — каждую неделю, 2 — через неделю (числитель/знаменатель).
+             */
+            interval_weeks: number;
+            /** @description Дни недели; пусто — день первого занятия (он добавляется всегда). */
+            weekdays?: ("MO" | "TU" | "WE" | "TH" | "FR" | "SA" | "SU")[] | null;
+        };
+        ScheduleEventBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/ScheduleEventBody.json
+             */
+            readonly $schema?: string;
+            /**
+             * Format: uuid
+             * @description Идемпотентность создания: повтор с тем же id вернёт созданное занятие.
+             */
+            client_id?: string;
+            /** Format: date-time */
+            ends_at: string;
+            /** @enum {string} */
+            kind?: "LECTURE" | "SEMINAR" | "LAB" | "EXAM" | "CONSULTATION" | "OTHER";
+            location?: string;
+            note?: string;
+            /** @description Нет — разовое занятие. */
+            repeat?: components["schemas"]["RepeatDTO"];
+            /**
+             * Format: date-time
+             * @description Первое занятие серии.
+             */
+            starts_at: string;
+            /** Format: uuid */
+            subject_id?: string;
+            teacher?: string;
+            /** @description Часовой пояс IANA (Europe/Moscow): серия держит время по его часам. */
+            timezone: string;
+            /** @description Можно не заполнять, если выбран предмет. */
+            title?: string;
+            /**
+             * Format: date
+             * @description Последний день серии включительно.
+             */
+            until?: string;
+        };
+        ScheduleEventDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/ScheduleEventDTO.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            created_at: string;
+            created_by?: string;
+            /** Format: date-time */
+            ends_at: string;
+            exceptions: components["schemas"]["ScheduleExceptionDTO"][] | null;
+            group_id: string;
+            id: string;
+            /** @enum {string} */
+            kind: "LECTURE" | "SEMINAR" | "LAB" | "EXAM" | "CONSULTATION" | "OTHER";
+            location: string;
+            note: string;
+            /** @description Нет — разовое занятие. */
+            repeat?: components["schemas"]["RepeatDTO"];
+            /**
+             * Format: date-time
+             * @description Первое занятие.
+             */
+            starts_at: string;
+            subject_id?: string;
+            teacher: string;
+            timezone: string;
+            /** @description Пусто — показывается название предмета. */
+            title: string;
+            /**
+             * Format: date
+             * @description Последний день серии включительно; нет — без конца.
+             */
+            until?: string;
+            /** Format: date-time */
+            updated_at: string;
+            updated_by?: string;
+            /**
+             * Format: int32
+             * @description Передаётся при правке и удалении.
+             */
+            version: number;
+        };
+        ScheduleExceptionDTO: {
+            /**
+             * Format: date
+             * @description День, на который занятие было запланировано.
+             */
+            date: string;
+            /** Format: date-time */
+            ends_at?: string;
+            /** @enum {string} */
+            kind: "CANCELLED" | "CHANGED";
+            location?: string;
+            note?: string;
+            /** Format: date-time */
+            starts_at?: string;
+            teacher?: string;
+        };
         SessionDTO: {
             /**
              * Format: uri
@@ -2430,6 +2775,27 @@ export interface components {
             joined?: components["schemas"]["GroupWithMembershipDTO"];
             refresh_token: string;
             user: components["schemas"]["UserDTO"];
+        };
+        SetOccurrenceInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/SetOccurrenceInputBody.json
+             */
+            readonly $schema?: string;
+            /** @description Отменить занятие; остальные поля, кроме note, не нужны. */
+            cancelled?: boolean;
+            /** Format: date-time */
+            ends_at?: string;
+            location?: string;
+            /** @description Причина: «перенос из-за праздника». */
+            note?: string;
+            /**
+             * Format: date-time
+             * @description Новое время (вместе с ends_at).
+             */
+            starts_at?: string;
+            teacher?: string;
         };
         SubjectBody: {
             /**
@@ -2618,7 +2984,10 @@ export interface components {
              * @enum {string}
              */
             assign_mode: "ALL" | "SELECTED" | "SELF";
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Кому выдана: выбранным — их число; всей группе — активные участники группы.
+             */
             assigned_count: number;
             assignee_ids: string[] | null;
             /** Format: date-time */
@@ -2627,7 +2996,10 @@ export interface components {
             created_at: string;
             created_by?: string;
             description?: string;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Сколько участников сделали задачу.
+             */
             done_count: number;
             /** Format: date-time */
             due_at?: string;
@@ -2745,6 +3117,60 @@ export interface components {
             /** @description Произвольные настройки клиента (набор быстрых тегов и т.п.). */
             settings?: unknown;
             timezone?: string;
+        };
+        UpdateScheduleEventInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/UpdateScheduleEventInputBody.json
+             */
+            readonly $schema?: string;
+            /**
+             * Format: uuid
+             * @description Идемпотентность создания: повтор с тем же id вернёт созданное занятие.
+             */
+            client_id?: string;
+            /** Format: date-time */
+            ends_at: string;
+            /**
+             * Format: date
+             * @description Первый день, который меняется, при scope=FOLLOWING.
+             */
+            from?: string;
+            /** @enum {string} */
+            kind?: "LECTURE" | "SEMINAR" | "LAB" | "EXAM" | "CONSULTATION" | "OTHER";
+            location?: string;
+            note?: string;
+            /** @description Нет — разовое занятие. */
+            repeat?: components["schemas"]["RepeatDTO"];
+            /**
+             * @description ALL — вся серия; FOLLOWING — занятия начиная с from (серия делится на две).
+             * @default ALL
+             * @enum {string}
+             */
+            scope: "ALL" | "FOLLOWING";
+            /**
+             * Format: date-time
+             * @description Первое занятие серии.
+             */
+            starts_at: string;
+            /** Format: uuid */
+            subject_id?: string;
+            teacher?: string;
+            /** @description Часовой пояс IANA (Europe/Moscow): серия держит время по его часам. */
+            timezone: string;
+            /** @description Можно не заполнять, если выбран предмет. */
+            title?: string;
+            /**
+             * Format: date
+             * @description Последний день серии включительно.
+             */
+            until?: string;
+            /**
+             * Format: int32
+             * @description Версия, которую видел редактор; иначе 409.
+             */
+            version: number;
         };
         UploadLimitsDTO: {
             allowed_ext: string[] | null;
@@ -4074,6 +4500,142 @@ export interface operations {
             };
         };
     };
+    "schedule-window": {
+        parameters: {
+            query: {
+                /** @description Начало окна (момент времени; обычно начало недели по часам телефона). */
+                from: string;
+                /** @description Конец окна, не включая. Окно — до 190 дней. */
+                to: string;
+            };
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccurrencesOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "schedule-calendar": {
+        parameters: {
+            query: {
+                /** @description Из /groups/{groupId}/schedule/calendar-link. */
+                token: string;
+            };
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description text/calendar */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/calendar": string;
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "schedule-calendar-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarLinkOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "schedule-create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleEventBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleEventDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "subjects-list": {
         parameters: {
             query?: {
@@ -4813,6 +5375,37 @@ export interface operations {
             };
         };
     };
+    "materials-publish-drive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaterialDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "materials-restore": {
         parameters: {
             query?: never;
@@ -4905,6 +5498,40 @@ export interface operations {
                 };
                 content: {
                     "application/octet-stream": string;
+                };
+            };
+        };
+    };
+    "materials-thumbnail": {
+        parameters: {
+            query: {
+                /** @description Из thumbnail_url версии материала. */
+                token: string;
+            };
+            header?: never;
+            path: {
+                materialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description JPEG. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
                 };
             };
         };
@@ -5454,6 +6081,208 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MetaOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "schedule-get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                eventId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleEventDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "schedule-delete": {
+        parameters: {
+            query: {
+                version: number;
+                scope?: "ALL" | "FOLLOWING";
+                /** @description Первый удаляемый день при scope=FOLLOWING. */
+                from?: string;
+            };
+            header?: never;
+            path: {
+                eventId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "schedule-update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                eventId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateScheduleEventInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleEventDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "schedule-occurrence-get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                eventId: string;
+                /** @description День, на который занятие запланировано. */
+                date: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccurrenceDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "schedule-occurrence-set": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                eventId: string;
+                date: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetOccurrenceInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccurrenceDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "schedule-occurrence-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                eventId: string;
+                /** @description День, на который занятие запланировано. */
+                date: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OccurrenceDTO"];
                 };
             };
             /** @description Error */

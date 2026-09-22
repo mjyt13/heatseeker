@@ -731,6 +731,27 @@ func TestMaterialsAndDrive(t *testing.T) {
 		t.Fatalf("published file was indexed as a duplicate: %d → %d", before, after)
 	}
 
+	// A member's upload is published later by the headman.
+	laterUp := upload(student.AccessToken, "later.pdf", []byte("%PDF-1.4 later"), nil)
+	var later material
+	c.do("POST", "/uploads/"+laterUp.UploadID+"/complete", student.AccessToken, nil, 200, &later)
+	e.queue.Drain()
+	c.do("POST", "/materials/"+later.ID+"/publish-drive", student.AccessToken, nil, 403, nil)
+	c.do("POST", "/materials/"+later.ID+"/publish-drive", owner.AccessToken, nil, 200, &later)
+	if later.File.DriveUploadStatus == nil || *later.File.DriveUploadStatus != "PENDING" {
+		t.Fatalf("publish later = %+v", later.File)
+	}
+	if jobs = e.queue.Drain(); len(jobs) != 1 || jobs[0].Type != domain.JobDriveUpload {
+		t.Fatalf("jobs after publishing later = %+v", jobs)
+	}
+	if err := e.svc.Drive.UploadVersion(ctx, uuid.MustParse(later.ID), uuid.MustParse(later.File.ID)); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := d.FindByName("later.pdf"); !ok {
+		t.Fatal("the later file was not created on Drive")
+	}
+	c.do("POST", "/materials/"+later.ID+"/publish-drive", owner.AccessToken, nil, 409, nil)
+
 	// Access revoked at Google: the upload fails with a hint, the account is
 	// flagged and new uploads to Drive are refused until it is reconnected.
 	if err := e.oauth.Revoke(ctx, "refresh-first-code"); err != nil {

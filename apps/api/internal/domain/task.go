@@ -127,7 +127,7 @@ type TaskView struct {
 	AssigneeIDs   []uuid.UUID
 	AttachmentIDs []uuid.UUID
 	// DoneCount counts members who finished; AssignedCount is how many the
-	// task was handed to (0 for AssignAll: everybody).
+	// task was handed to (for AssignAll — the active members of the group).
 	DoneCount     int32
 	AssignedCount int32
 }

@@ -179,6 +179,8 @@ type Content struct {
 	Partial       bool
 	FileName      string
 	Inline        bool
+	// CacheControl overrides the default short private caching.
+	CacheControl string
 }
 
 // Stream proxies a Drive file through the service account.

@@ -10,30 +10,29 @@ import (
 
 // TaskDTO is a task as the lists and the card show it.
 type TaskDTO struct {
-	ID          uuid.UUID   `json:"id"`
-	GroupID     uuid.UUID   `json:"group_id"`
-	SubjectID   *uuid.UUID  `json:"subject_id,omitempty"`
-	CreatedBy   *uuid.UUID  `json:"created_by,omitempty"`
-	Title       string      `json:"title"`
-	Description string      `json:"description,omitempty"`
-	Kind        string      `json:"kind" enum:"TEACHER,GROUP,PERSONAL"`
-	Status      string      `json:"status" enum:"TODO,IN_PROGRESS,IN_REVIEW,DONE,CANCELLED" doc:"Статус задачи для всей группы."`
-	Priority    string      `json:"priority" enum:"LOW,NORMAL,HIGH"`
-	AssignMode  string      `json:"assign_mode" enum:"ALL,SELECTED,SELF" doc:"Кому задача: всей группе, выбранным участникам или только автору."`
-	Visibility  string      `json:"visibility" enum:"GROUP,PRIVATE"`
-	DueAt       *time.Time  `json:"due_at,omitempty"`
-	Overdue     bool        `json:"overdue" doc:"Срок прошёл, а задача открыта."`
-	PinnedBy    *uuid.UUID  `json:"pinned_by,omitempty"`
-	PinnedAt    *time.Time  `json:"pinned_at,omitempty"`
-	CompletedAt *time.Time  `json:"completed_at,omitempty"`
-	CreatedAt   time.Time   `json:"created_at"`
-	UpdatedAt   time.Time   `json:"updated_at"`
-	MyStatus    string      `json:"my_status,omitempty" enum:"TODO,IN_PROGRESS,IN_REVIEW,DONE,CANCELLED" doc:"Мой личный прогресс; пусто — я к задаче не притрагивался."`
-	AssigneeIDs []uuid.UUID `json:"assignee_ids"`
-	MaterialIDs []uuid.UUID `json:"material_ids" doc:"Прикреплённые материалы."`
-	// DoneCount and AssignedCount are 0 when the task is for everybody.
-	DoneCount     int32 `json:"done_count"`
-	AssignedCount int32 `json:"assigned_count"`
+	ID            uuid.UUID   `json:"id"`
+	GroupID       uuid.UUID   `json:"group_id"`
+	SubjectID     *uuid.UUID  `json:"subject_id,omitempty"`
+	CreatedBy     *uuid.UUID  `json:"created_by,omitempty"`
+	Title         string      `json:"title"`
+	Description   string      `json:"description,omitempty"`
+	Kind          string      `json:"kind" enum:"TEACHER,GROUP,PERSONAL"`
+	Status        string      `json:"status" enum:"TODO,IN_PROGRESS,IN_REVIEW,DONE,CANCELLED" doc:"Статус задачи для всей группы."`
+	Priority      string      `json:"priority" enum:"LOW,NORMAL,HIGH"`
+	AssignMode    string      `json:"assign_mode" enum:"ALL,SELECTED,SELF" doc:"Кому задача: всей группе, выбранным участникам или только автору."`
+	Visibility    string      `json:"visibility" enum:"GROUP,PRIVATE"`
+	DueAt         *time.Time  `json:"due_at,omitempty"`
+	Overdue       bool        `json:"overdue" doc:"Срок прошёл, а задача открыта."`
+	PinnedBy      *uuid.UUID  `json:"pinned_by,omitempty"`
+	PinnedAt      *time.Time  `json:"pinned_at,omitempty"`
+	CompletedAt   *time.Time  `json:"completed_at,omitempty"`
+	CreatedAt     time.Time   `json:"created_at"`
+	UpdatedAt     time.Time   `json:"updated_at"`
+	MyStatus      string      `json:"my_status,omitempty" enum:"TODO,IN_PROGRESS,IN_REVIEW,DONE,CANCELLED" doc:"Мой личный прогресс; пусто — я к задаче не притрагивался."`
+	AssigneeIDs   []uuid.UUID `json:"assignee_ids"`
+	MaterialIDs   []uuid.UUID `json:"material_ids" doc:"Прикреплённые материалы."`
+	DoneCount     int32       `json:"done_count" doc:"Сколько участников сделали задачу."`
+	AssignedCount int32       `json:"assigned_count" doc:"Кому выдана: выбранным — их число; всей группе — активные участники группы."`
 }
 
 func toTaskDTO(v *domain.TaskView, now time.Time) TaskDTO {

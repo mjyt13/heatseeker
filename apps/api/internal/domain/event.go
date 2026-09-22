@@ -67,6 +67,16 @@ const (
 	// A moderator hid a message for everybody, or brought it back.
 	EventMessageHidden   EventKind = "message.hidden"
 	EventMessageRestored EventKind = "message.restored"
+
+	// A class (one-off or a series) was added, edited or removed; editing
+	// "from this date on" ends the old series and adds a new one.
+	EventScheduleCreated EventKind = "schedule.created"
+	EventScheduleUpdated EventKind = "schedule.updated"
+	EventScheduleDeleted EventKind = "schedule.deleted"
+	// One class was cancelled, changed (time, room, teacher) or put back as planned.
+	EventScheduleCancelled EventKind = "schedule.cancelled"
+	EventScheduleChanged   EventKind = "schedule.changed"
+	EventScheduleReset     EventKind = "schedule.reset"
 )
 
 // AllEventKinds lists every kind, exported to packages/shared.
@@ -83,6 +93,8 @@ var AllEventKinds = []EventKind{
 	EventTaskDeleted, EventTaskDueSoon, EventTaskOverdue,
 	EventMessageCreated, EventMessageUpdated, EventMessageDeleted, EventMessageUndeleted, EventMessageHidden,
 	EventMessageRestored,
+	EventScheduleCreated, EventScheduleUpdated, EventScheduleDeleted, EventScheduleCancelled, EventScheduleChanged,
+	EventScheduleReset,
 }
 
 // Event is one row of the append-only group log. Seq is monotonic per group

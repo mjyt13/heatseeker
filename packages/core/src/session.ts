@@ -54,7 +54,10 @@ export const useSession = create<SessionState>((set, get) => {
     },
 
     async signIn(session, opts) {
-      const next: Tokens = { accessToken: session.access_token, refreshToken: session.refresh_token };
+      const next: Tokens = {
+        accessToken: session.access_token,
+        refreshToken: session.refresh_token,
+      };
       await stores.tokens?.set(next);
       const remembered = opts?.newAccount ? null : get().currentGroupId;
       const joinedGroupId = session.joined?.group.id ?? remembered;

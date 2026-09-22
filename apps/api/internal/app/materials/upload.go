@@ -19,6 +19,7 @@ import (
 	"heatseeker/api/internal/domain"
 	"heatseeker/api/internal/platform/filenames"
 	"heatseeker/api/internal/platform/ids"
+	"heatseeker/api/internal/platform/imaging"
 )
 
 // UploadInput starts an upload: file facts plus the material form.
@@ -174,6 +175,47 @@ func (s *Service) checkDriveUpload(ctx context.Context, allowed, secured bool, g
 	}
 	return domain.WithCode(domain.CodeDrivePublisherRequired,
 		domain.Unavailable(`publishing to "My Drive" needs the head's Google account connected on the Drive screen`))
+}
+
+// PublishToDrive copies an uploaded file to the group's Drive folder later:
+// the headman, a moderator or an admin publishes a member's upload. A failed
+// publication is tried again the same way.
+func (s *Service) PublishToDrive(ctx context.Context, actorID, materialID uuid.UUID) (*domain.MaterialView, error) {
+	view, actor, err := s.loadView(ctx, actorID, materialID)
+	if err != nil {
+		return nil, err
+	}
+	m, v := view.Material, view.Version
+	allowed := actor.Can(authz.MaterialModerate) || actor.Can(authz.DriveManage)
+	if err := s.checkDriveUpload(ctx, allowed, actor.User.Secured(), m.GroupID); err != nil {
+		return nil, err
+	}
+	switch {
+	case m.TaskID != nil:
+		return nil, domain.Invalid("material", "the file is kept in its task: share it with the group first")
+	case v.Storage == domain.StorageDrive || v.DriveFileID != nil:
+		return nil, domain.Conflict("the file is already on Google Drive")
+	case v.StorageKey == nil:
+		return nil, domain.NotFound("file")
+	case v.DriveUploadStatus != nil && *v.DriveUploadStatus == domain.DriveUploadPending:
+		return view, nil
+	}
+	err = s.Tx.RunInTx(ctx, func(ctx context.Context) error {
+		if err := s.Materials.SetVersionDriveUpload(ctx, v.ID, domain.DriveUploadPending, nil, nil, nil); err != nil {
+			return err
+		}
+		payload := domain.MaterialVersionPayload{MaterialID: m.ID.String(), VersionID: v.ID.String()}
+		s.Tx.AfterCommit(ctx, func() {
+			s.enqueue(domain.Job{Type: domain.JobDriveUpload, Payload: payload, Queue: "default", MaxRetry: 5})
+		})
+		return s.emit(ctx, m.GroupID, domain.EventMaterialUpdated, &actorID, m.ID, map[string]any{
+			"title": m.Title, "drive_upload": string(domain.DriveUploadPending),
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.Materials.GetView(ctx, m.ID)
 }
 
 // CompleteUpload checks the stored file and turns the upload into a
@@ -432,6 +474,11 @@ func (s *Service) PurgeDeleted(ctx context.Context) (int, error) {
 			}
 			if v.PreviewKey != nil {
 				if err := s.Store.Delete(ctx, *v.PreviewKey); err != nil && !errors.Is(err, domain.ErrNotFound) {
+					return 0, err
+				}
+			}
+			if imaging.Supported(v.Mime) {
+				if err := s.Store.Delete(ctx, thumbnailKey(m.GroupID, v.ID)); err != nil && !errors.Is(err, domain.ErrNotFound) {
 					return 0, err
 				}
 			}

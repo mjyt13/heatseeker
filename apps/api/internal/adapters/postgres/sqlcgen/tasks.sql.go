@@ -261,7 +261,12 @@ SELECT t.id, t.group_id, t.subject_id, t.created_by, t.client_id, t.title, t.des
        COALESCE((SELECT array_agg(a.user_id ORDER BY a.created_at) FROM task_assignments a WHERE a.task_id = t.id), '{}')::uuid[] AS assignee_ids,
        COALESCE((SELECT array_agg(att.material_id ORDER BY att.created_at) FROM task_attachments att WHERE att.task_id = t.id), '{}')::uuid[] AS attachment_ids,
        (SELECT count(*) FROM task_assignments a WHERE a.task_id = t.id AND a.status = 'DONE')::int AS done_count,
-       (SELECT count(*) FROM task_assignments a WHERE a.task_id = t.id)::int AS assigned_count
+       -- A task for everybody is handed to every active member, not just to
+       -- those who already marked their progress.
+       (CASE WHEN t.assign_mode = 'ALL'
+             THEN (SELECT count(*) FROM memberships m WHERE m.group_id = t.group_id AND m.status = 'ACTIVE')
+             ELSE (SELECT count(*) FROM task_assignments a WHERE a.task_id = t.id)
+        END)::int AS assigned_count
 FROM tasks t
 WHERE t.id = $2 AND t.deleted_at IS NULL
 `
@@ -464,7 +469,12 @@ SELECT t.id, t.group_id, t.subject_id, t.created_by, t.client_id, t.title, t.des
        COALESCE((SELECT array_agg(a.user_id ORDER BY a.created_at) FROM task_assignments a WHERE a.task_id = t.id), '{}')::uuid[] AS assignee_ids,
        COALESCE((SELECT array_agg(att.material_id ORDER BY att.created_at) FROM task_attachments att WHERE att.task_id = t.id), '{}')::uuid[] AS attachment_ids,
        (SELECT count(*) FROM task_assignments a WHERE a.task_id = t.id AND a.status = 'DONE')::int AS done_count,
-       (SELECT count(*) FROM task_assignments a WHERE a.task_id = t.id)::int AS assigned_count
+       -- A task for everybody is handed to every active member, not just to
+       -- those who already marked their progress.
+       (CASE WHEN t.assign_mode = 'ALL'
+             THEN (SELECT count(*) FROM memberships m WHERE m.group_id = t.group_id AND m.status = 'ACTIVE')
+             ELSE (SELECT count(*) FROM task_assignments a WHERE a.task_id = t.id)
+        END)::int AS assigned_count
 FROM tasks t
 WHERE t.group_id = $2
   AND t.deleted_at IS NULL

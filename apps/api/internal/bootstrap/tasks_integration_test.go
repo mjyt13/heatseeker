@@ -117,6 +117,13 @@ func TestTasksFlow(t *testing.T) {
 	if shared.MyStatus != "DONE" || shared.Status != "TODO" || shared.DoneCount != 1 {
 		t.Fatalf("after my status: %+v", shared)
 	}
+	// A task for everybody counts the whole group, however many marked progress.
+	var forAll taskDTO
+	c.do("PATCH", "/tasks/"+task.ID+"/me/status", student.AccessToken, map[string]any{"status": "DONE"}, 200, &forAll)
+	if forAll.DoneCount != 1 || forAll.AssignedCount != 2 {
+		t.Fatalf("task for everybody: %d/%d, want 1/2", forAll.DoneCount, forAll.AssignedCount)
+	}
+	c.do("PATCH", "/tasks/"+task.ID+"/me/status", student.AccessToken, map[string]any{"status": "TODO"}, 200, &forAll)
 
 	// --- pinning is for the headman; the student is refused ---
 	c.do("POST", "/tasks/"+task.ID+"/pin", student.AccessToken, nil, 403, nil)

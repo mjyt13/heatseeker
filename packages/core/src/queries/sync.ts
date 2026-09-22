@@ -69,12 +69,16 @@ export async function pollGroupChanges(
     return head();
   }
   if (changed.length > 0) {
-    const materialIds = new Set(
-      changed.filter((e) => e.entity_type === 'material' && e.entity_id).map((e) => e.entity_id!),
-    );
+    const idsOf = (type: string) =>
+      new Set(
+        changed.filter((e) => e.entity_type === type && e.entity_id).map((e) => e.entity_id!),
+      );
     await Promise.all([
       qc.invalidateQueries({ queryKey: keys.group(groupId), predicate: notSyncQuery }),
-      ...[...materialIds].map((id) => qc.invalidateQueries({ queryKey: keys.material(id) })),
+      ...[...idsOf('material')].map((id) => qc.invalidateQueries({ queryKey: keys.material(id) })),
+      ...[...idsOf('schedule_event')].map((id) =>
+        qc.invalidateQueries({ queryKey: keys.scheduleEvent(id) }),
+      ),
     ]);
   }
   return since;

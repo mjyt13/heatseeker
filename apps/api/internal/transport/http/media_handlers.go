@@ -22,6 +22,11 @@ type streamInput struct {
 	Range      string `header:"Range"`
 }
 
+type thumbnailInput struct {
+	MaterialID string `path:"materialId" format:"uuid"`
+	Token      string `query:"token" required:"true" doc:"Из thumbnail_url версии материала."`
+}
+
 type mediaGetInput struct {
 	Token string `path:"token"`
 	Range string `header:"Range"`
@@ -62,6 +67,23 @@ func registerMedia(api huma.API, d Deps) {
 			return nil, apiErr(d.Log, err)
 		}
 		content, err := d.Materials.Stream(ctx, id, in.Token, in.Range)
+		if err != nil {
+			return nil, mediaErr(d, err)
+		}
+		return streamContent(d, content), nil
+	})
+
+	huma.Register(api, huma.Operation{
+		OperationID: "materials-thumbnail", Method: nethttp.MethodGet, Path: "/materials/{materialId}/thumbnail", Tags: []string{"media"},
+		Summary:     "Уменьшенная копия картинки",
+		Description: "JPEG до 640 px по длинной стороне; ссылка — thumbnail_url версии материала. Делается при первом запросе и хранится рядом с файлами.",
+		Responses:   map[string]*huma.Response{"200": {Description: "JPEG.", Content: map[string]*huma.MediaType{"image/jpeg": {Schema: binarySchema}}}},
+	}, func(ctx context.Context, in *thumbnailInput) (*huma.StreamResponse, error) {
+		id, err := parseID("materialId", in.MaterialID)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		content, err := d.Materials.Thumbnail(ctx, id, in.Token)
 		if err != nil {
 			return nil, mediaErr(d, err)
 		}
@@ -127,7 +149,11 @@ func streamContent(d Deps, c *materials.Content) *huma.StreamResponse {
 			// Browser PDF viewers refuse to run inside a sandboxed document.
 			ctx.SetHeader("Content-Security-Policy", "default-src 'none'; sandbox")
 		}
-		ctx.SetHeader("Cache-Control", "private, max-age=300")
+		cacheControl := c.CacheControl
+		if cacheControl == "" {
+			cacheControl = "private, max-age=300"
+		}
+		ctx.SetHeader("Cache-Control", cacheControl)
 		if c.ContentRange != "" || c.Partial || c.ContentLength >= 0 {
 			ctx.SetHeader("Accept-Ranges", "bytes")
 		}

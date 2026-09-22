@@ -44,6 +44,8 @@ type Settings struct {
 	PreviewMaxBytes int64
 	MinConfidence   float64
 	SigningSecret   string
+	// ThumbnailTTL is how long a picture thumbnail link works.
+	ThumbnailTTL time.Duration
 }
 
 // Deps are the collaborators of the service.
@@ -73,16 +75,21 @@ type Service struct {
 	cfg     Settings
 	links   *signed.Signer // local storage links
 	streams *signed.Signer // Drive proxy links
+	thumbs  *signed.Signer // picture thumbnails
 }
 
 // NewService wires the service.
 func NewService(d Deps, cfg Settings) *Service {
 	cfg.APIBaseURL = strings.TrimRight(cfg.APIBaseURL, "/")
+	if cfg.ThumbnailTTL <= 0 {
+		cfg.ThumbnailTTL = 24 * time.Hour
+	}
 	return &Service{
 		Deps:    d,
 		cfg:     cfg,
 		links:   signed.New(cfg.SigningSecret, "media-local"),
 		streams: signed.New(cfg.SigningSecret, "media-stream"),
+		thumbs:  signed.New(cfg.SigningSecret, "media-thumb"),
 	}
 }
 

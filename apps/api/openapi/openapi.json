@@ -125,6 +125,33 @@
         ],
         "type": "object"
       },
+      "CalendarLinkOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/CalendarLinkOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "url": {
+            "description": "Ссылка для подписки в календаре телефона или Google Календаре.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "expires_at"
+        ],
+        "type": "object"
+      },
       "ClassificationDTO": {
         "additionalProperties": false,
         "properties": {
@@ -1995,6 +2022,10 @@
             ],
             "type": "string"
           },
+          "thumbnail_url": {
+            "description": "Уменьшенная копия картинки (JPEG); ссылка временная, кешировать по id версии. Нет поля — не картинка.",
+            "type": "string"
+          },
           "uploaded_by": {
             "type": "string"
           },
@@ -2470,6 +2501,133 @@
         ],
         "type": "object"
       },
+      "OccurrenceDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/OccurrenceDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "change_note": {
+            "description": "Почему отменено или изменено.",
+            "type": "string"
+          },
+          "date": {
+            "description": "День по плану; вместе с event_id — адрес занятия.",
+            "format": "date",
+            "type": "string"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "LECTURE",
+              "SEMINAR",
+              "LAB",
+              "EXAM",
+              "CONSULTATION",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "planned_starts_at": {
+            "description": "Есть, когда занятие перенесено на другое время.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "recurring": {
+            "type": "boolean"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "SCHEDULED",
+              "CANCELLED",
+              "CHANGED"
+            ],
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "teacher": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "version": {
+            "description": "Версия серии — для правки из карточки занятия.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "event_id",
+          "date",
+          "starts_at",
+          "ends_at",
+          "timezone",
+          "title",
+          "kind",
+          "location",
+          "teacher",
+          "note",
+          "status",
+          "recurring",
+          "version"
+        ],
+        "type": "object"
+      },
+      "OccurrencesOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/OccurrencesOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OccurrenceDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
       "OpenDTO": {
         "additionalProperties": false,
         "properties": {
@@ -2838,6 +2996,275 @@
         ],
         "type": "object"
       },
+      "RepeatDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "interval_weeks": {
+            "description": "1 — каждую неделю, 2 — через неделю (числитель/знаменатель).",
+            "format": "int64",
+            "maximum": 4,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "weekdays": {
+            "description": "Дни недели; пусто — день первого занятия (он добавляется всегда).",
+            "items": {
+              "enum": [
+                "MO",
+                "TU",
+                "WE",
+                "TH",
+                "FR",
+                "SA",
+                "SU"
+              ],
+              "type": "string"
+            },
+            "maxItems": 7,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "interval_weeks"
+        ],
+        "type": "object"
+      },
+      "ScheduleEventBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/ScheduleEventBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "client_id": {
+            "description": "Идемпотентность создания: повтор с тем же id вернёт созданное занятие.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "LECTURE",
+              "SEMINAR",
+              "LAB",
+              "EXAM",
+              "CONSULTATION",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "location": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "repeat": {
+            "$ref": "#/components/schemas/RepeatDTO",
+            "description": "Нет — разовое занятие."
+          },
+          "starts_at": {
+            "description": "Первое занятие серии.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "teacher": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Часовой пояс IANA (Europe/Moscow): серия держит время по его часам.",
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Можно не заполнять, если выбран предмет.",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "until": {
+            "description": "Последний день серии включительно.",
+            "format": "date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "starts_at",
+          "ends_at",
+          "timezone"
+        ],
+        "type": "object"
+      },
+      "ScheduleEventDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/ScheduleEventDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "exceptions": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleExceptionDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "group_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "LECTURE",
+              "SEMINAR",
+              "LAB",
+              "EXAM",
+              "CONSULTATION",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "repeat": {
+            "$ref": "#/components/schemas/RepeatDTO",
+            "description": "Нет — разовое занятие."
+          },
+          "starts_at": {
+            "description": "Первое занятие.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "teacher": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "title": {
+            "description": "Пусто — показывается название предмета.",
+            "type": "string"
+          },
+          "until": {
+            "description": "Последний день серии включительно; нет — без конца.",
+            "format": "date",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updated_by": {
+            "type": "string"
+          },
+          "version": {
+            "description": "Передаётся при правке и удалении.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "group_id",
+          "title",
+          "kind",
+          "starts_at",
+          "ends_at",
+          "timezone",
+          "location",
+          "teacher",
+          "note",
+          "version",
+          "created_at",
+          "updated_at",
+          "exceptions"
+        ],
+        "type": "object"
+      },
+      "ScheduleExceptionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "description": "День, на который занятие было запланировано.",
+            "format": "date",
+            "type": "string"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "CANCELLED",
+              "CHANGED"
+            ],
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "teacher": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "kind"
+        ],
+        "type": "object"
+      },
       "SessionDTO": {
         "additionalProperties": false,
         "properties": {
@@ -2878,6 +3305,47 @@
           "device_id",
           "user"
         ],
+        "type": "object"
+      },
+      "SetOccurrenceInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/SetOccurrenceInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "cancelled": {
+            "description": "Отменить занятие; остальные поля, кроме note, не нужны.",
+            "type": "boolean"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "location": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "note": {
+            "description": "Причина: «перенос из-за праздника».",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "starts_at": {
+            "description": "Новое время (вместе с ends_at).",
+            "format": "date-time",
+            "type": "string"
+          },
+          "teacher": {
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "SubjectBody": {
@@ -3363,6 +3831,7 @@
             "type": "string"
           },
           "assigned_count": {
+            "description": "Кому выдана: выбранным — их число; всей группе — активные участники группы.",
             "format": "int32",
             "type": "integer"
           },
@@ -3390,6 +3859,7 @@
             "type": "string"
           },
           "done_count": {
+            "description": "Сколько участников сделали задачу.",
             "format": "int32",
             "type": "integer"
           },
@@ -3744,6 +4214,108 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "UpdateScheduleEventInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/UpdateScheduleEventInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "client_id": {
+            "description": "Идемпотентность создания: повтор с тем же id вернёт созданное занятие.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "from": {
+            "description": "Первый день, который меняется, при scope=FOLLOWING.",
+            "format": "date",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "LECTURE",
+              "SEMINAR",
+              "LAB",
+              "EXAM",
+              "CONSULTATION",
+              "OTHER"
+            ],
+            "type": "string"
+          },
+          "location": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "repeat": {
+            "$ref": "#/components/schemas/RepeatDTO",
+            "description": "Нет — разовое занятие."
+          },
+          "scope": {
+            "default": "ALL",
+            "description": "ALL — вся серия; FOLLOWING — занятия начиная с from (серия делится на две).",
+            "enum": [
+              "ALL",
+              "FOLLOWING"
+            ],
+            "type": "string"
+          },
+          "starts_at": {
+            "description": "Первое занятие серии.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "teacher": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Часовой пояс IANA (Europe/Moscow): серия держит время по его часам.",
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Можно не заполнять, если выбран предмет.",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "until": {
+            "description": "Последний день серии включительно.",
+            "format": "date",
+            "type": "string"
+          },
+          "version": {
+            "description": "Версия, которую видел редактор; иначе 409.",
+            "format": "int32",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "starts_at",
+          "ends_at",
+          "timezone"
+        ],
         "type": "object"
       },
       "UploadLimitsDTO": {
@@ -6084,6 +6656,237 @@
         ]
       }
     },
+    "/groups/{groupId}/schedule": {
+      "get": {
+        "description": "Серии разворачиваются в занятия; отменённые тоже возвращаются (status=CANCELLED), перенесённые — на новом месте.",
+        "operationId": "schedule-window",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Начало окна (момент времени; обычно начало недели по часам телефона).",
+            "explode": false,
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "description": "Начало окна (момент времени; обычно начало недели по часам телефона).",
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Конец окна, не включая. Окно — до 190 дней.",
+            "explode": false,
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "description": "Конец окна, не включая. Окно — до 190 дней.",
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccurrencesOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Занятия за период",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/groups/{groupId}/schedule.ics": {
+      "get": {
+        "operationId": "schedule-calendar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Из /groups/{groupId}/schedule/calendar-link.",
+            "explode": false,
+            "in": "query",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "description": "Из /groups/{groupId}/schedule/calendar-link.",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/calendar": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "text/calendar"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Расписание в формате iCalendar",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/groups/{groupId}/schedule/calendar-link": {
+      "get": {
+        "description": "Личная ссылка на ICS; работает, пока вы в группе.",
+        "operationId": "schedule-calendar-link",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarLinkOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ссылка на расписание для календаря",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/groups/{groupId}/schedule/events": {
+      "post": {
+        "description": "Разовое или еженедельное (каждую неделю, через неделю). Староста или админ с защищённым аккаунтом.",
+        "operationId": "schedule-create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleEventBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleEventDTO"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Добавить занятие",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
     "/groups/{groupId}/subjects": {
       "get": {
         "operationId": "subjects-list",
@@ -7388,6 +8191,54 @@
         ]
       }
     },
+    "/materials/{materialId}/publish-drive": {
+      "post": {
+        "description": "Копия файла из хранилища приложения уходит в папку группы на Диске (как загрузка с галочкой «на Диск»); после неудачи — пробует снова. Староста, модератор или админ с защищённым аккаунтом.",
+        "operationId": "materials-publish-drive",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "materialId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Опубликовать загруженный файл на Google Диск",
+        "tags": [
+          "materials"
+        ]
+      }
+    },
     "/materials/{materialId}/restore": {
       "post": {
         "description": "Удалённый (до окончательной очистки) возвращает только модератор.",
@@ -7537,6 +8388,62 @@
           }
         },
         "summary": "Файл с Google Диска через сервер",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/materials/{materialId}/thumbnail": {
+      "get": {
+        "description": "JPEG до 640 px по длинной стороне; ссылка — thumbnail_url версии материала. Делается при первом запросе и хранится рядом с файлами.",
+        "operationId": "materials-thumbnail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "materialId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Из thumbnail_url версии материала.",
+            "explode": false,
+            "in": "query",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "description": "Из thumbnail_url версии материала.",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "contentMediaType": "application/octet-stream",
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JPEG."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Уменьшенная копия картинки",
         "tags": [
           "media"
         ]
@@ -8322,6 +9229,365 @@
         "summary": "Ограничения и возможности сервера",
         "tags": [
           "meta"
+        ]
+      }
+    },
+    "/schedule/events/{eventId}": {
+      "delete": {
+        "description": "scope=FOLLOWING удаляет занятия начиная с from; чтобы убрать одно занятие, его отменяют.",
+        "operationId": "schedule-delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "eventId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "scope",
+            "schema": {
+              "default": "ALL",
+              "enum": [
+                "ALL",
+                "FOLLOWING"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Первый удаляемый день при scope=FOLLOWING.",
+            "explode": false,
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "description": "Первый удаляемый день при scope=FOLLOWING.",
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Удалить занятие или серию",
+        "tags": [
+          "schedule"
+        ]
+      },
+      "get": {
+        "description": "С отменами и изменениями отдельных занятий.",
+        "operationId": "schedule-get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "eventId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleEventDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Занятие или серия",
+        "tags": [
+          "schedule"
+        ]
+      },
+      "patch": {
+        "description": "Поля заменяются целиком. scope=FOLLOWING меняет занятия с from: старая серия заканчивается накануне, ответ — новая серия.",
+        "operationId": "schedule-update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "eventId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateScheduleEventInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleEventDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Изменить занятие или серию",
+        "tags": [
+          "schedule"
+        ]
+      }
+    },
+    "/schedule/events/{eventId}/occurrences/{date}": {
+      "delete": {
+        "description": "Снимает отмену или изменение одного занятия.",
+        "operationId": "schedule-occurrence-reset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "eventId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "День, на который занятие запланировано.",
+            "in": "path",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "description": "День, на который занятие запланировано.",
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccurrenceDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Вернуть занятие как по плану",
+        "tags": [
+          "schedule"
+        ]
+      },
+      "get": {
+        "description": "С отменой или изменением, если они есть.",
+        "operationId": "schedule-occurrence-get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "eventId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "День, на который занятие запланировано.",
+            "in": "path",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "description": "День, на который занятие запланировано.",
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccurrenceDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Одно занятие",
+        "tags": [
+          "schedule"
+        ]
+      },
+      "put": {
+        "description": "Время, аудитория, преподаватель или причина; остальные занятия серии не меняются.",
+        "operationId": "schedule-occurrence-set",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "eventId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetOccurrenceInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccurrenceDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Отменить или изменить одно занятие",
+        "tags": [
+          "schedule"
         ]
       }
     },

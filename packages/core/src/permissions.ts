@@ -12,7 +12,10 @@ export interface Permissions {
 }
 
 /** Права текущего участника: серверный ответ `permissions` — источник правды, матрица — запасной путь. */
-export function usePermissions(membership: Membership | null | undefined, secured: boolean): Permissions {
+export function usePermissions(
+  membership: Membership | null | undefined,
+  secured: boolean,
+): Permissions {
   return useMemo(() => {
     const roles = (membership?.roles ?? []) as Role[];
     const granted = membership?.permissions ? new Set(membership.permissions) : null;

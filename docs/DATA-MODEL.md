@@ -55,9 +55,12 @@ sqlc в `apps/api/db/queries/`. Общие правила:
 
 | Таблица | Поля |
 |---|---|
-| `schedule_events` | `group_id`, `subject_id?`, `title`, `kind` `LECTURE \| SEMINAR \| LAB \| EXAM \| CONSULTATION \| OTHER`, `starts_at`, `ends_at`, `timezone`, `location`, `teacher`, `rrule?`, `rrule_until?`, `created_by`, `updated_by`, `version` |
-| `schedule_exceptions` | `event_id`, `original_date`, `kind` `CANCELLED \| MOVED`, `overrides` json |
-| `schedule_change_requests` (этап 3) | `group_id`, `event_id?`, `proposed_by`, `op` `CREATE \| UPDATE \| DELETE`, `payload` json, `status` `PENDING \| APPROVED \| REJECTED`, `reviewed_by/at`, `comment` |
+| `schedule_events` | `group_id`, `subject_id?`, `client_id?` (uniq per group — идемпотентность), `title` (пусто — название предмета), `kind` `LECTURE \| SEMINAR \| LAB \| EXAM \| CONSULTATION \| OTHER`, `starts_at` / `ends_at` (первое занятие), `timezone` (IANA — по его часам серия держит время), `location`, `teacher`, `note`, `rrule?` (`FREQ=WEEKLY;INTERVAL=n;BYDAY=…`, NULL — разовое), `rrule_until?` (date, последний день включительно), `created_by`, `updated_by`, `version` (оптимистичная блокировка), `deleted_at`. Занятия не хранятся — разворачиваются при чтении (D45) |
+| `schedule_exceptions` | PK `event_id` + `original_date` (день плана), `kind` `CANCELLED \| CHANGED`, переопределения `starts_at?` / `ends_at?` / `location?` / `teacher?` (NULL — как в серии), `note` (причина), `updated_by` |
+| `schedule_change_requests` (вторая половина этапа 3) | `group_id`, `event_id?`, `proposed_by`, `op` `CREATE \| UPDATE \| DELETE`, `payload` json, `status` `PENDING \| APPROVED \| REJECTED`, `reviewed_by/at`, `comment` |
+
+Миграция `00011_schedule.sql`. Уменьшенные копии картинок (D47) хранятся в хранилище
+файлов (`groups/{g}/thumbs/{version}.jpg`), в БД их нет.
 
 ## Обсуждения
 

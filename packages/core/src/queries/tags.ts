@@ -12,7 +12,9 @@ export function useQuickTags(groupId: string | null | undefined) {
     queryKey: keys.quickTags(groupId ?? ''),
     enabled: !!groupId,
     queryFn: async () =>
-      unwrap(await api.GET('/groups/{groupId}/quick-tags', { params: { path: { groupId: groupId! } } })).items,
+      unwrap(
+        await api.GET('/groups/{groupId}/quick-tags', { params: { path: { groupId: groupId! } } }),
+      ).items,
   });
 }
 
@@ -23,6 +25,7 @@ export function useTags(groupId: string | null | undefined) {
     queryKey: keys.tags(groupId ?? ''),
     enabled: !!groupId,
     queryFn: async () =>
-      unwrap(await api.GET('/groups/{groupId}/tags', { params: { path: { groupId: groupId! } } })).items,
+      unwrap(await api.GET('/groups/{groupId}/tags', { params: { path: { groupId: groupId! } } }))
+        .items,
   });
 }

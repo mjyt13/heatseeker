@@ -160,7 +160,13 @@ export function useSetTaskMaterials(groupId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ taskId, materialIds }: { taskId: string; materialIds: string[] }): Promise<Task> =>
+    mutationFn: async ({
+      taskId,
+      materialIds,
+    }: {
+      taskId: string;
+      materialIds: string[];
+    }): Promise<Task> =>
       unwrap(
         await api.PUT('/tasks/{taskId}/materials', {
           params: { path: { taskId } },

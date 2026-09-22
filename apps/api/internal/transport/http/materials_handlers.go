@@ -386,6 +386,22 @@ func registerMaterials(api huma.API, d Deps) {
 	})
 
 	huma.Register(api, huma.Operation{
+		OperationID: "materials-publish-drive", Method: nethttp.MethodPost, Path: "/materials/{materialId}/publish-drive", Tags: []string{"materials"}, Security: bearer,
+		Summary:     "Опубликовать загруженный файл на Google Диск",
+		Description: "Копия файла из хранилища приложения уходит в папку группы на Диске (как загрузка с галочкой «на Диск»); после неудачи — пробует снова. Староста, модератор или админ с защищённым аккаунтом.",
+	}, func(ctx context.Context, in *materialIDInput) (*materialOutput, error) {
+		p, id, err := principalAndID(ctx, "materialId", in.MaterialID)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		view, err := d.Materials.PublishToDrive(ctx, p.UserID, id)
+		if err != nil {
+			return nil, apiErr(d.Log, err)
+		}
+		return &materialOutput{Body: toMaterialDTO(view, d.Materials)}, nil
+	})
+
+	huma.Register(api, huma.Operation{
 		OperationID: "materials-preview", Method: nethttp.MethodPost, Path: "/materials/{materialId}/preview", Tags: []string{"materials"}, Security: bearer,
 		Summary: "Запросить PDF-превью офисного файла",
 		Description: "pptx/docx/xlsx и т.п. браузер не показывает: сервер конвертирует их в PDF (Gotenberg). " +

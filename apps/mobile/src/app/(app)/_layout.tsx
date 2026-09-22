@@ -82,6 +82,8 @@ export default function AppLayout() {
       <Tabs.Screen name="task/new" options={{ href: null }} />
       <Tabs.Screen name="discussion/[type]/[id]" options={{ href: null }} />
       <Tabs.Screen name="discussion/hidden" options={{ href: null }} />
+      <Tabs.Screen name="class/[eventId]/[date]" options={{ href: null }} />
+      <Tabs.Screen name="class/edit" options={{ href: null }} />
     </Tabs>
   );
 }

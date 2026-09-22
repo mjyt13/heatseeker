@@ -280,6 +280,21 @@ export function useShareMaterial(groupId: string) {
   });
 }
 
+/** Опубликовать загруженный файл на Google Диск группы (староста, модератор, админ); после неудачи — повторить. */
+export function usePublishToDrive(groupId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (materialId: string): Promise<Material> =>
+      unwrap(
+        await api.POST('/materials/{materialId}/publish-drive', {
+          params: { path: { materialId } },
+        }),
+      ),
+    onSuccess: (m) => invalidateMaterial(qc, groupId, m.id),
+  });
+}
+
 /** Реализация PutFile через fetch (веб и тесты). */
 export function putWithFetch(body: BodyInit, fetchImpl: typeof fetch = fetch): PutFile {
   return async (ticket) => {
