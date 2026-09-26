@@ -4,7 +4,13 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useInboxCount, useLogout, useMe, useSetCredentials } from '@heatseeker/core';
+import {
+  useInboxCount,
+  useLogout,
+  useMe,
+  useSetCredentials,
+  useUnreadNotifications,
+} from '@heatseeker/core';
 import { LIMITS } from '@heatseeker/shared';
 import {
   Avatar,
@@ -33,6 +39,7 @@ export default function MoreScreen() {
   const ctx = useGroupContext();
   const moderator = ctx.permissions.can('material.moderate');
   const inbox = useInboxCount(ctx.groupId, moderator);
+  const unreadNotifications = useUnreadNotifications(ctx.groupId).data ?? 0;
   const secure = useSetCredentials();
   const logout = useLogout(async () => (await tokenStore.get())?.refreshToken ?? null);
   const [email, setEmail] = useState('');
@@ -82,6 +89,27 @@ export default function MoreScreen() {
                 onPress={() => router.push('/(app)/inbox')}
               />
             ) : null}
+            <ListRow
+              leading={<Ionicons name="megaphone-outline" size={22} />}
+              title={t('announcements.title')}
+              onPress={() => router.push('/(app)/announcements')}
+            />
+            <ListRow
+              leading={<Ionicons name="alarm-outline" size={22} />}
+              title={t('reminders.title')}
+              onPress={() => router.push('/(app)/reminders')}
+            />
+            <ListRow
+              leading={<Ionicons name="notifications-outline" size={22} />}
+              title={t('notifications.title')}
+              trailing={unreadNotifications > 0 ? <H4>{unreadNotifications}</H4> : undefined}
+              onPress={() => router.push('/(app)/notifications')}
+            />
+            <ListRow
+              leading={<Ionicons name="options-outline" size={22} />}
+              title={t('notifications.settings')}
+              onPress={() => router.push('/(app)/notification-settings')}
+            />
             <ListRow
               leading={<Ionicons name="pulse-outline" size={22} />}
               title={t('activity.title')}

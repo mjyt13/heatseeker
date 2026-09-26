@@ -37,6 +37,7 @@ import {
   YStack,
 } from '@heatseeker/ui';
 
+import { NotificationsBell } from '@/components/notifications-bell';
 import { CopyButton } from '@/components/copy-button';
 import { formatDayTitle, OccurrenceRow } from '@/components/schedule';
 import { describeError } from '@/lib/errors';
@@ -88,6 +89,7 @@ export default function ScheduleScreen() {
       <YStack flex={1} backgroundColor="$background">
         <XStack paddingHorizontal="$4" paddingTop="$2" alignItems="center" gap="$2">
           <H3 flex={1}>{t('schedule.title')}</H3>
+          <NotificationsBell groupId={groupId} />
           <Button
             size="$3"
             chromeless

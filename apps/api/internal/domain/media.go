@@ -72,12 +72,22 @@ const (
 	JobMaterialPreview          = "materials:preview"
 	JobMaterialsReclassify      = "materials:reclassify"
 	JobTasksDeadlineScan        = "tasks:deadline_scan"
+	JobNotifyFanout             = "notify:fanout"
+	JobNotifyScan               = "notify:scan"
+	JobNotifyPush               = "notify:push"
+	JobNotifyCleanup            = "notify:cleanup"
+	JobRemindersScan            = "reminders:scan"
 )
 
 // DriveSyncPayload is the payload of JobDriveSync.
 type DriveSyncPayload struct {
 	ConnectionID string `json:"connection_id"`
 	Full         bool   `json:"full,omitempty"`
+}
+
+// NotifyPushPayload lists the notifications to put on devices.
+type NotifyPushPayload struct {
+	IDs []string `json:"ids"`
 }
 
 // GroupPayload targets a whole group (JobMaterialsReclassify).

@@ -15,8 +15,11 @@ import (
 	"path"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 
 	"heatseeker/api/internal/adapters/gdrive"
 	"heatseeker/api/internal/adapters/media"
@@ -36,6 +39,52 @@ type env struct {
 	drive *gdrive.Fake
 	oauth *gdrive.FakeOAuth // the publishing account signs in as publisher@example.com
 	queue *queue.Recorder
+	push  *fakePusher
+}
+
+// fakePusher records what would have gone to a device.
+type fakePusher struct {
+	mu   sync.Mutex
+	sent []pushCall
+}
+
+type pushCall struct {
+	UserID uuid.UUID
+	Title  string
+	Body   string
+}
+
+func (p *fakePusher) Push(_ context.Context, n domain.Notification, targets []domain.PushTarget) ([]domain.PushResult, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	out := make([]domain.PushResult, 0, len(targets))
+	for _, t := range targets {
+		p.sent = append(p.sent, pushCall{UserID: t.UserID, Title: n.Title, Body: n.Body})
+		out = append(out, domain.PushResult{DeviceID: t.DeviceID, Sent: true})
+	}
+	return out, nil
+}
+
+// jobs drains the queue, leaving out the notification fan-out: almost every
+// change schedules one, and these tests are about the work itself.
+func (e *env) jobs() []domain.Job {
+	out := []domain.Job{}
+	for _, j := range e.queue.Drain() {
+		if j.Type == domain.JobNotifyFanout || j.Type == domain.JobNotifyPush {
+			continue
+		}
+		out = append(out, j)
+	}
+	return out
+}
+
+// drain returns and forgets the recorded pushes.
+func (p *fakePusher) drain() []pushCall {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	out := p.sent
+	p.sent = nil
+	return out
 }
 
 func testConfig(dsn string) *config.Config {
@@ -61,6 +110,10 @@ func testConfig(dsn string) *config.Config {
 		ProxyEnabled: true, PresignTTLSec: 900, TmpUploadTTLHours: 24, UploadMaxSizeMB: 1,
 		UploadAllowedExt: []string{"pdf", "docx", "txt", "png"}, HardDeleteAfterDays: 0, // purge immediately when asked
 		MaterialHashMaxMB: 10, StreamTokenTTLMinute: 60, OfficePreviewMaxMB: 1,
+	}
+	cfg.Notify = config.Notify{
+		Provider: "none", DelaySec: 0, MaterialBatchMin: 3, ScanLimit: 100, RetentionDays: 60,
+		QuietHours: "23:00-08:00", DPODefault: "off",
 	}
 	cfg.Storage.Driver = "local"
 	cfg.App.EncryptionKey = "integration-test-encryption-key-0123456789"
@@ -91,11 +144,12 @@ func setup(t *testing.T) *env {
 	fake := gdrive.NewFake()
 	oauth := gdrive.NewFakeOAuth(fake, "publisher@example.com")
 	rec := &queue.Recorder{}
+	pusher := &fakePusher{}
 	// The API base URL is only known once the test server listens, and the
 	// services need it for signed links: start the listener first.
 	srv := httptest.NewUnstartedServer(nil)
 	cfg.App.BaseURL = "http://" + srv.Listener.Addr().String()
-	svc, err := bootstrap.BuildWith(ctx, cfg, log, bootstrap.Options{Queue: rec, DriveClient: fake, DriveAuthorizer: oauth, Converter: fakeConverter{}, Media: store})
+	svc, err := bootstrap.BuildWith(ctx, cfg, log, bootstrap.Options{Queue: rec, DriveClient: fake, DriveAuthorizer: oauth, Converter: fakeConverter{}, Media: store, Push: pusher})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +159,7 @@ func setup(t *testing.T) *env {
 		srv.Close()
 		svc.Close()
 	})
-	return &env{cfg: cfg, svc: svc, srv: srv, c: &client{t: t, base: srv.URL + "/api/v1"}, drive: fake, oauth: oauth, queue: rec}
+	return &env{cfg: cfg, svc: svc, srv: srv, c: &client{t: t, base: srv.URL + "/api/v1"}, drive: fake, oauth: oauth, queue: rec, push: pusher}
 }
 
 type client struct {

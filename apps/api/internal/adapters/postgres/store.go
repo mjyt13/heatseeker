@@ -127,6 +127,15 @@ func (s *Store) Discussions() domain.DiscussionRepo { return &discussionRepo{s} 
 // Schedule returns the schedule repository.
 func (s *Store) Schedule() domain.ScheduleRepo { return &scheduleRepo{s} }
 
+// Notify returns the notifications repository.
+func (s *Store) Notify() domain.NotifyRepo { return &notifyRepo{s} }
+
+// Announcements returns the announcements repository.
+func (s *Store) Announcements() domain.AnnouncementRepo { return &announcementRepo{s} }
+
+// Reminders returns the personal reminders repository.
+func (s *Store) Reminders() domain.ReminderRepo { return &reminderRepo{s} }
+
 // mapErr converts driver errors into domain errors.
 func mapErr(err error, entity string) error {
 	if err == nil {

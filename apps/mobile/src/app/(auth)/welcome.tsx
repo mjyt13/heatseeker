@@ -1,5 +1,4 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { randomUUID } from 'expo-crypto';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -30,6 +29,7 @@ import {
 import { useCodePreview } from '@/components/join-by-code';
 import { API_URL } from '@/lib/api';
 import { describeError } from '@/lib/errors';
+import { newId } from '@/lib/ids';
 
 const platform = Platform.OS === 'ios' ? 'IOS' : Platform.OS === 'android' ? 'ANDROID' : 'WEB';
 
@@ -51,7 +51,7 @@ export default function WelcomeScreen() {
   const [picked, setPicked] = useState<GroupSearchItem | null>(null);
   const discover = useDiscoverGroups(useDebouncedValue(query));
   // One id per screen: repeated taps and retries map to the same account.
-  const [clientId] = useState(randomUUID);
+  const [clientId] = useState(newId);
   const codePreview = useCodePreview(code);
   const register = useRegister();
 

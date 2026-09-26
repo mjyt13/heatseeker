@@ -16,6 +16,7 @@ import {
   YStack,
 } from '@heatseeker/ui';
 
+import { NotificationsBell } from '@/components/notifications-bell';
 import { DiscussionRow } from '@/components/discussions';
 import { SectionLabel } from '@/components/materials';
 import { describeError } from '@/lib/errors';
@@ -45,7 +46,8 @@ export default function ThreadsScreen() {
           alignItems="center"
           justifyContent="space-between"
         >
-          <H3>{t('discussions.title')}</H3>
+          <H3 flex={1}>{t('discussions.title')}</H3>
+          <NotificationsBell groupId={groupId} />
           <Button
             size="$3"
             chromeless

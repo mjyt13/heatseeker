@@ -16,11 +16,14 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
+	"heatseeker/api/internal/app/announcements"
 	"heatseeker/api/internal/app/auth"
 	"heatseeker/api/internal/app/discussions"
 	"heatseeker/api/internal/app/drive"
 	"heatseeker/api/internal/app/groups"
 	"heatseeker/api/internal/app/materials"
+	"heatseeker/api/internal/app/notify"
+	"heatseeker/api/internal/app/reminders"
 	"heatseeker/api/internal/app/schedule"
 	"heatseeker/api/internal/app/subjects"
 	appsync "heatseeker/api/internal/app/sync"
@@ -35,20 +38,23 @@ var Version = "dev"
 // Deps are the collaborators the HTTP layer needs. Services may be nil when
 // the router is built only to emit the OpenAPI document.
 type Deps struct {
-	Cfg         *config.Config
-	Log         *slog.Logger
-	Tokens      *auth.Tokens
-	Auth        *auth.Service
-	Groups      *groups.Service
-	Subjects    *subjects.Service
-	Tags        *tags.Service
-	Sync        *appsync.Service
-	Materials   *materials.Service
-	Drive       *drive.Service
-	Tasks       *tasks.Service
-	Discussions *discussions.Service
-	Schedule    *schedule.Service
-	Health      func(ctx context.Context) error
+	Cfg           *config.Config
+	Log           *slog.Logger
+	Tokens        *auth.Tokens
+	Auth          *auth.Service
+	Groups        *groups.Service
+	Subjects      *subjects.Service
+	Tags          *tags.Service
+	Sync          *appsync.Service
+	Materials     *materials.Service
+	Drive         *drive.Service
+	Tasks         *tasks.Service
+	Discussions   *discussions.Service
+	Schedule      *schedule.Service
+	Notify        *notify.Service
+	Reminders     *reminders.Service
+	Announcements *announcements.Service
+	Health        func(ctx context.Context) error
 }
 
 // Server bundles the router and the huma API (for spec export).
@@ -108,6 +114,9 @@ func NewServer(d Deps) *Server {
 		registerTasks(api, d)
 		registerDiscussions(api, d)
 		registerSchedule(api, d)
+		registerNotifications(api, d)
+		registerAnnouncements(api, d)
+		registerReminders(api, d)
 		registerDrive(api, d)
 		registerMedia(api, d)
 	})

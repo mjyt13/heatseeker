@@ -4,6 +4,27 @@
  */
 
 export interface paths {
+    "/announcements/{announcementId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Снять объявление */
+        delete: operations["announcement-delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Изменить объявление
+         * @description Повторного уведомления не будет: группа его уже слышала.
+         */
+        patch: operations["announcement-update"];
+        trace?: never;
+    };
     "/auth/google": {
         parameters: {
             query?: never;
@@ -225,6 +246,30 @@ export interface paths {
         get: operations["activity-list"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/announcements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Объявления группы
+         * @description Закреплённые сверху, дальше — по времени.
+         */
+        get: operations["announcements-list"];
+        put?: never;
+        /**
+         * Объявить группе
+         * @description Староста или админ с защищённым аккаунтом. Уведомление получают все; срочное — даже в тихие часы.
+         */
+        post: operations["announcement-create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -603,6 +648,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/groups/{groupId}/notification-mutes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Приглушить на время
+         * @description Предмет, обсуждение, тип уведомлений или всю группу — до указанного момента (не дольше года).
+         */
+        post: operations["notification-mute"];
+        /** Вернуть звук */
+        delete: operations["notification-unmute"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/notification-prefs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Что присылать в этой группе
+         * @description Все типы уведомлений со значением по умолчанию, если участник его не менял.
+         */
+        get: operations["notification-prefs"];
+        /** Изменить, что присылать */
+        put: operations["notification-prefs-set"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/groups/{groupId}/quick-tags": {
         parameters: {
             query?: never;
@@ -617,6 +704,27 @@ export interface paths {
         get: operations["tags-quick"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/groups/{groupId}/reminders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Мои напоминания
+         * @description Личные: чужие не видны никому, включая старосту.
+         */
+        get: operations["reminders-list"];
+        put?: never;
+        /** Поставить напоминание */
+        post: operations["reminder-create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1218,6 +1326,98 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/notification-mutes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Что сейчас молчит */
+        get: operations["notification-mutes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/notification-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Push и тихие часы */
+        get: operations["notification-settings"];
+        /** Изменить push и тихие часы */
+        put: operations["notification-settings-save"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Мои уведомления
+         * @description Новые сверху. Уведомление хранится для каждого участника отдельно; в списке только свои.
+         */
+        get: operations["notifications-list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Пометить прочитанными */
+        post: operations["notifications-read"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/notifications/unread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Сколько непрочитанных
+         * @description Для бейджа на иконке.
+         */
+        get: operations["notifications-unread"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/media/{token}": {
         parameters: {
             query?: never;
@@ -1330,6 +1530,64 @@ export interface paths {
         get: operations["meta"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reminders/{reminderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Удалить напоминание */
+        delete: operations["reminder-delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Изменить напоминание
+         * @description Поля заменяются целиком; напоминание снова встаёт в очередь.
+         */
+        patch: operations["reminder-update"];
+        trace?: never;
+    };
+    "/reminders/{reminderId}/done": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Готово
+         * @description Повторяющееся напоминание закрывается совсем.
+         */
+        post: operations["reminder-done"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reminders/{reminderId}/snooze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Отложить */
+        post: operations["reminder-snooze"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1536,6 +1794,51 @@ export interface components {
              */
             readonly $schema?: string;
             aliases: string[] | null;
+        };
+        AnnouncementBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/AnnouncementBody.json
+             */
+            readonly $schema?: string;
+            /** @description Markdown. */
+            body?: string;
+            /** @description Держать наверху списка. */
+            pinned?: boolean;
+            title: string;
+            /** @description Придёт на телефон даже в тихие часы. */
+            urgent?: boolean;
+        };
+        AnnouncementDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/AnnouncementDTO.json
+             */
+            readonly $schema?: string;
+            author_id?: string;
+            author_name?: string;
+            body: string;
+            /** Format: date-time */
+            created_at: string;
+            group_id: string;
+            id: string;
+            pinned: boolean;
+            title: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** @description Срочное приходит на телефон даже в тихие часы. */
+            urgent: boolean;
+        };
+        AnnouncementsOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/AnnouncementsOutputBody.json
+             */
+            readonly $schema?: string;
+            items: components["schemas"]["AnnouncementDTO"][] | null;
         };
         BulkClassifyInputBody: {
             /**
@@ -1809,6 +2112,16 @@ export interface components {
              * @description Всего непрочитанных сообщений.
              */
             unread: number;
+        };
+        DoneReminderInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/DoneReminderInputBody.json
+             */
+            readonly $schema?: string;
+            /** @description false — вернуть напоминание в работу. */
+            done: boolean;
         };
         DriveConnectionDTO: {
             /**
@@ -2123,6 +2436,11 @@ export interface components {
              */
             readonly $schema?: string;
             items: components["schemas"]["InviteDTO"][] | null;
+        };
+        Item: {
+            enabled: boolean;
+            /** @enum {string} */
+            type: "MESSAGE_NEW" | "MESSAGE_REPLY" | "MATERIAL_ADDED" | "MATERIAL_BATCH" | "TASK_CREATED" | "TASK_PINNED" | "TASK_DUE_SOON" | "TASK_OVERDUE" | "TASK_STATUS_CHANGED" | "SCHEDULE_CHANGED" | "MEMBER_JOINED" | "ANNOUNCEMENT" | "REMINDER" | "PROPOSAL_NEW" | "MODERATION";
         };
         LoginInputBody: {
             /**
@@ -2453,6 +2771,102 @@ export interface components {
             material_kinds: string[] | null;
             upload: components["schemas"]["UploadLimitsDTO"];
         };
+        MuteDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/MuteDTO.json
+             */
+            readonly $schema?: string;
+            group_id: string;
+            id: string;
+            /** @description id предмета или обсуждения; для TYPE — тип уведомления. */
+            scope_id: string;
+            /** @enum {string} */
+            scope_type: "GROUP" | "SUBJECT" | "THREAD" | "TYPE";
+            /** Format: date-time */
+            until: string;
+        };
+        MuteInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/MuteInputBody.json
+             */
+            readonly $schema?: string;
+            /** @description id предмета или обсуждения; для TYPE — тип уведомления; для GROUP не нужен. */
+            scope_id?: string;
+            /** @enum {string} */
+            scope_type: "GROUP" | "SUBJECT" | "THREAD" | "TYPE";
+            /**
+             * Format: date-time
+             * @description До какого момента молчать: тишина всегда заканчивается.
+             */
+            until: string;
+        };
+        MutesOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/MutesOutputBody.json
+             */
+            readonly $schema?: string;
+            items: components["schemas"]["MuteDTO"][] | null;
+        };
+        NotificationDTO: {
+            body: string;
+            /** Format: date-time */
+            created_at: string;
+            /** @description Куда вести по нажатию: {"screen":"thread","thread_id":"…"}. */
+            data: unknown;
+            group_id: string;
+            id: string;
+            /** Format: date-time */
+            read_at?: string;
+            title: string;
+            /** @enum {string} */
+            type: "MESSAGE_NEW" | "MESSAGE_REPLY" | "MATERIAL_ADDED" | "MATERIAL_BATCH" | "TASK_CREATED" | "TASK_PINNED" | "TASK_DUE_SOON" | "TASK_OVERDUE" | "TASK_STATUS_CHANGED" | "SCHEDULE_CHANGED" | "MEMBER_JOINED" | "ANNOUNCEMENT" | "REMINDER" | "PROPOSAL_NEW" | "MODERATION";
+        };
+        NotificationPrefDTO: {
+            /** @description true — участник задал это сам; false — значение по умолчанию. */
+            custom: boolean;
+            enabled: boolean;
+            /** @enum {string} */
+            type: "MESSAGE_NEW" | "MESSAGE_REPLY" | "MATERIAL_ADDED" | "MATERIAL_BATCH" | "TASK_CREATED" | "TASK_PINNED" | "TASK_DUE_SOON" | "TASK_OVERDUE" | "TASK_STATUS_CHANGED" | "SCHEDULE_CHANGED" | "MEMBER_JOINED" | "ANNOUNCEMENT" | "REMINDER" | "PROPOSAL_NEW" | "MODERATION";
+        };
+        NotificationSettingsDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/NotificationSettingsDTO.json
+             */
+            readonly $schema?: string;
+            push_enabled: boolean;
+            /**
+             * Format: int32
+             * @description Минуты от полуночи по часам участника; нет — без тихих часов.
+             */
+            quiet_from?: number;
+            /** Format: int32 */
+            quiet_to?: number;
+            /** @description Пускать срочные объявления в тихие часы; по умолчанию нет. */
+            urgent_in_quiet?: boolean;
+        };
+        NotificationsOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/NotificationsOutputBody.json
+             */
+            readonly $schema?: string;
+            items: components["schemas"]["NotificationDTO"][] | null;
+            next_cursor?: string;
+            /**
+             * Format: int64
+             * @description Сколько всего непрочитанных в этой выборке, не только на странице.
+             */
+            unread: number;
+        };
         OccurrenceDTO: {
             /**
              * Format: uri
@@ -2556,6 +2970,15 @@ export interface components {
             /** Format: uuid */
             reply_to_id?: string;
         };
+        PrefsOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/PrefsOutputBody.json
+             */
+            readonly $schema?: string;
+            items: components["schemas"]["NotificationPrefDTO"][] | null;
+        };
         PreviewOutputBody: {
             /**
              * Format: uri
@@ -2613,6 +3036,32 @@ export interface components {
             readonly $schema?: string;
             items: components["schemas"]["QuickTagDTO"][] | null;
         };
+        ReadNotificationsInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/ReadNotificationsInputBody.json
+             */
+            readonly $schema?: string;
+            /** @description Пометить всё непрочитанное (в группе, если указана). */
+            all?: boolean;
+            /** Format: uuid */
+            group_id?: string;
+            /** @description Что пометить прочитанным. */
+            ids?: string[] | null;
+        };
+        ReadNotificationsOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/ReadNotificationsOutputBody.json
+             */
+            readonly $schema?: string;
+            /** Format: int64 */
+            marked: number;
+            /** Format: int64 */
+            unread: number;
+        };
         RefreshInputBody: {
             /**
              * Format: uri
@@ -2651,6 +3100,64 @@ export interface components {
              */
             platform?: "IOS" | "ANDROID" | "WEB";
             timezone?: string;
+        };
+        ReminderBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/ReminderBody.json
+             */
+            readonly $schema?: string;
+            note?: string;
+            /**
+             * Format: date-time
+             * @description Момент времени; на телефоне — по его часам.
+             */
+            remind_at: string;
+            /** @enum {string} */
+            repeat?: "NONE" | "DAILY" | "WEEKLY" | "MONTHLY";
+            /** Format: uuid */
+            target_id?: string;
+            /**
+             * @description К чему привязано; вместе с target_id.
+             * @enum {string}
+             */
+            target_type?: "TASK" | "MATERIAL" | "SCHEDULE";
+            title: string;
+        };
+        ReminderDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/ReminderDTO.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            created_at: string;
+            group_id: string;
+            id: string;
+            /** Format: date-time */
+            last_fired_at?: string;
+            note: string;
+            /** Format: date-time */
+            remind_at: string;
+            /** @enum {string} */
+            repeat: "NONE" | "DAILY" | "WEEKLY" | "MONTHLY";
+            /** @enum {string} */
+            status: "SCHEDULED" | "SENT" | "DONE";
+            target_id?: string;
+            /** @enum {string} */
+            target_type?: "TASK" | "MATERIAL" | "SCHEDULE";
+            title: string;
+        };
+        RemindersOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/RemindersOutputBody.json
+             */
+            readonly $schema?: string;
+            items: components["schemas"]["ReminderDTO"][] | null;
         };
         RepeatDTO: {
             /**
@@ -2796,6 +3303,29 @@ export interface components {
              */
             starts_at?: string;
             teacher?: string;
+        };
+        SetPrefsInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/SetPrefsInputBody.json
+             */
+            readonly $schema?: string;
+            items: components["schemas"]["Item"][] | null;
+        };
+        SnoozeReminderInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/SnoozeReminderInputBody.json
+             */
+            readonly $schema?: string;
+            /**
+             * Format: int32
+             * @description Через сколько напомнить снова.
+             * @default 60
+             */
+            minutes: number;
         };
         SubjectBody: {
             /**
@@ -3071,6 +3601,16 @@ export interface components {
             /** @description Название материала или задачи на момент первого сообщения. */
             title?: string;
         };
+        UnreadOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/schemas/UnreadOutputBody.json
+             */
+            readonly $schema?: string;
+            /** Format: int64 */
+            unread: number;
+        };
         UpdateGroupInputBody: {
             /**
              * Format: uri
@@ -3229,6 +3769,70 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    "announcement-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                announcementId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "announcement-update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                announcementId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnouncementBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnouncementDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "auth-google": {
         parameters: {
             query?: never;
@@ -3673,6 +4277,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActivityOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "announcements-list": {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnouncementsOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "announcement-create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnouncementBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnouncementDTO"];
                 };
             };
             /** @description Error */
@@ -4469,6 +5141,139 @@ export interface operations {
             };
         };
     };
+    "notification-mute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MuteInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MuteDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "notification-unmute": {
+        parameters: {
+            query: {
+                scope_type: "GROUP" | "SUBJECT" | "THREAD" | "TYPE";
+                scope_id?: string;
+            };
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "notification-prefs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrefsOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "notification-prefs-set": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPrefsInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrefsOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "tags-quick": {
         parameters: {
             query?: never;
@@ -4487,6 +5292,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuickTagsOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "reminders-list": {
+        parameters: {
+            query?: {
+                /** @description Только незакрытые. */
+                open_only?: boolean;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemindersOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "reminder-create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReminderBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReminderDTO"];
                 };
             };
             /** @description Error */
@@ -5780,6 +6655,201 @@ export interface operations {
             };
         };
     };
+    "notification-mutes": {
+        parameters: {
+            query?: {
+                /** @description Только эта группа; пусто — все. */
+                group_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MutesOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "notification-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSettingsDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "notification-settings-save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationSettingsDTO"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSettingsDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "notifications-list": {
+        parameters: {
+            query?: {
+                /** @description Только эта группа; пусто — все мои группы. */
+                group_id?: string;
+                /** @description Только непрочитанные. */
+                unread_only?: boolean;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationsOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "notifications-read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadNotificationsInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadNotificationsOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "notifications-unread": {
+        parameters: {
+            query?: {
+                /** @description Только эта группа; пусто — все. */
+                group_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "media-get": {
         parameters: {
             query?: never;
@@ -6081,6 +7151,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MetaOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "reminder-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reminderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "reminder-update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reminderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReminderBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReminderDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "reminder-done": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reminderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DoneReminderInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReminderDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "reminder-snooze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reminderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SnoozeReminderInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReminderDTO"];
                 };
             };
             /** @description Error */

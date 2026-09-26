@@ -354,3 +354,104 @@ type ScheduleRepo interface {
 	MoveExceptions(ctx context.Context, fromEventID, toEventID uuid.UUID, fromDate time.Time) error
 	DeleteExceptionsFrom(ctx context.Context, eventID uuid.UUID, fromDate time.Time) error
 }
+
+// NotifyRepo persists notifications, the reader's position in each group's
+// log and every member's delivery preferences.
+type NotifyRepo interface {
+	// Cursor is the last group event the reader has handled. The second
+	// result is false when the group has never been read: nobody is notified
+	// about what happened before the reader existed.
+	Cursor(ctx context.Context, groupID uuid.UUID) (int64, bool, error)
+	SetCursor(ctx context.Context, groupID uuid.UUID, seq int64) error
+	// GroupsWithPending lists groups whose log has moved past the reader.
+	GroupsWithPending(ctx context.Context, limit int32) ([]uuid.UUID, error)
+
+	// Recipients are the members a notification should reach.
+	Recipients(ctx context.Context, q NotifyRecipients) ([]Recipient, error)
+	// ThreadParticipants are the members who have written in a discussion.
+	ThreadParticipants(ctx context.Context, threadID uuid.UUID) ([]uuid.UUID, error)
+	// TaskAssignees are the members with their own part of a task, done or not.
+	TaskAssignees(ctx context.Context, taskID uuid.UUID) ([]TaskAssignee, error)
+
+	// Insert stores one notification, or nothing when its dedupe key is taken.
+	Insert(ctx context.Context, n Notification) (*Notification, error)
+	List(ctx context.Context, f NotificationFilter) ([]Notification, error)
+	Unread(ctx context.Context, userID uuid.UUID, groupID *uuid.UUID) (int, error)
+	// MarkRead marks the listed notifications, or every unread one when all is set.
+	MarkRead(ctx context.Context, userID uuid.UUID, groupID *uuid.UUID, ids []uuid.UUID, all bool) (int, error)
+	DeleteOlderThan(ctx context.Context, t time.Time) (int64, error)
+
+	Prefs(ctx context.Context, userID, groupID uuid.UUID) ([]NotificationPref, error)
+	SetPref(ctx context.Context, p NotificationPref) error
+	Settings(ctx context.Context, userID uuid.UUID) (*NotificationSettings, error)
+	SaveSettings(ctx context.Context, s NotificationSettings) (*NotificationSettings, error)
+
+	Mutes(ctx context.Context, userID uuid.UUID, groupID *uuid.UUID) ([]NotificationMute, error)
+	SetMute(ctx context.Context, m NotificationMute) (*NotificationMute, error)
+	DeleteMute(ctx context.Context, userID, groupID uuid.UUID, scope MuteScope, scopeID string) error
+	DeleteExpiredMutes(ctx context.Context, now time.Time) (int64, error)
+
+	// Message and Task fill in what an event's payload does not carry.
+	Message(ctx context.Context, id uuid.UUID) (*NotifyMessage, error)
+	Task(ctx context.Context, id uuid.UUID) (*NotifyTask, error)
+	UserName(ctx context.Context, id uuid.UUID) (string, error)
+	SubjectName(ctx context.Context, id uuid.UUID) (string, error)
+	// MaterialOwner is who uploaded a material, when anybody did.
+	MaterialOwner(ctx context.Context, id uuid.UUID) (*uuid.UUID, error)
+
+	// PushTargets are the devices of the given members that can take a push.
+	PushTargets(ctx context.Context, userIDs []uuid.UUID) ([]PushTarget, error)
+	Notifications(ctx context.Context, ids []uuid.UUID) ([]Notification, error)
+	RecordDelivery(ctx context.Context, d NotificationDelivery) error
+	// DisableDevicePush forgets a token the push service rejected for good.
+	DisableDevicePush(ctx context.Context, deviceID uuid.UUID) error
+}
+
+// NotificationDelivery is one attempt to put a notification on a device.
+type NotificationDelivery struct {
+	ID             uuid.UUID
+	NotificationID uuid.UUID
+	Channel        NotifyChannel
+	DeviceID       *uuid.UUID
+	Status         DeliveryStatus
+	Error          string
+	SentAt         *time.Time
+}
+
+// Pusher sends notifications to devices (Adapter). Implementations are Expo
+// today, Web Push and Telegram later.
+type Pusher interface {
+	// Push delivers one notification to the given devices and reports, per
+	// device, whether it went out. A token the service rejected for good is
+	// returned in dead so its device can be cleaned up.
+	Push(ctx context.Context, n Notification, targets []PushTarget) (results []PushResult, err error)
+}
+
+// PushResult is the outcome for one device.
+type PushResult struct {
+	DeviceID uuid.UUID
+	Sent     bool
+	// Dead means the token will never work again (the app was uninstalled).
+	Dead  bool
+	Error string
+}
+
+// AnnouncementRepo persists announcements.
+type AnnouncementRepo interface {
+	Create(ctx context.Context, a Announcement) (*Announcement, error)
+	Get(ctx context.Context, id uuid.UUID) (*Announcement, error)
+	List(ctx context.Context, groupID uuid.UUID, limit int32) ([]AnnouncementView, error)
+	Update(ctx context.Context, a Announcement) (*Announcement, error)
+	SoftDelete(ctx context.Context, id uuid.UUID) error
+}
+
+// ReminderRepo persists personal reminders.
+type ReminderRepo interface {
+	Create(ctx context.Context, r Reminder) (*Reminder, error)
+	Get(ctx context.Context, id uuid.UUID) (*Reminder, error)
+	List(ctx context.Context, userID, groupID uuid.UUID, openOnly bool, limit int32) ([]Reminder, error)
+	Update(ctx context.Context, r Reminder) (*Reminder, error)
+	Delete(ctx context.Context, id, userID uuid.UUID) error
+	// Due lists reminders whose moment has come.
+	Due(ctx context.Context, now time.Time, limit int32) ([]Reminder, error)
+}

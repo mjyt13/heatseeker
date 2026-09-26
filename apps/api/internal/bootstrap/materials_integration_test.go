@@ -178,7 +178,7 @@ func TestMaterialsAndDrive(t *testing.T) {
 	if conn.Status != "PENDING" || !conn.Writable {
 		t.Fatalf("connection = %+v", conn)
 	}
-	jobs := e.queue.Drain()
+	jobs := e.jobs()
 	if len(jobs) != 1 || jobs[0].Type != domain.JobDriveSync || !jobs[0].Payload.(domain.DriveSyncPayload).Full {
 		t.Fatalf("expected a full sync job, got %+v", jobs)
 	}
@@ -434,7 +434,7 @@ func TestMaterialsAndDrive(t *testing.T) {
 	if _, err := e.svc.Drive.Sync(ctx, connID, false); err != nil {
 		t.Fatal(err)
 	}
-	e.queue.Drain()
+	e.jobs()
 	c.do("POST", "/materials/"+notes.ID+"/classify", student.AccessToken, map[string]any{"subject_id": bd.ID}, 403, nil)
 	var classified material
 	c.do("POST", "/materials/"+notes.ID+"/classify", owner.AccessToken, map[string]any{"subject_id": bd.ID, "kind": "NOTES", "learn_alias": true}, 200, &classified)
@@ -452,7 +452,7 @@ func TestMaterialsAndDrive(t *testing.T) {
 	// the learned alias sorts the sibling that was already waiting in the Inbox
 	reclassify := func() int {
 		t.Helper()
-		jobs := e.queue.Drain()
+		jobs := e.jobs()
 		if len(jobs) != 1 || jobs[0].Type != domain.JobMaterialsReclassify ||
 			jobs[0].Payload.(domain.GroupPayload).GroupID != groupID {
 			t.Fatalf("expected one reclassify job, got %+v", jobs)
@@ -485,7 +485,7 @@ func TestMaterialsAndDrive(t *testing.T) {
 	if _, err := e.svc.Drive.Sync(ctx, connID, false); err != nil {
 		t.Fatal(err)
 	}
-	e.queue.Drain()
+	e.jobs()
 	var econSubject struct{ ID string }
 	c.do("POST", g+"/subjects", owner.AccessToken, map[string]any{"name": "Эконометрика"}, 201, &econSubject)
 	if n := reclassify(); n != 1 {
@@ -603,7 +603,7 @@ func TestMaterialsAndDrive(t *testing.T) {
 	if again.ID != mine.ID {
 		t.Fatal("completing twice must return the same material")
 	}
-	jobs = e.queue.Drain()
+	jobs = e.jobs()
 	if len(jobs) != 1 || jobs[0].Type != domain.JobMaterialHash {
 		t.Fatalf("jobs after upload = %+v", jobs)
 	}
@@ -684,7 +684,7 @@ func TestMaterialsAndDrive(t *testing.T) {
 	// --- publishing an upload to Drive (D32, D34) ---
 	c.do("POST", g+"/materials/uploads", student.AccessToken, map[string]any{"file_name": "a.pdf", "size_bytes": 10, "to_drive": true}, 403, nil)
 	c.do("POST", "/me/credentials", student.AccessToken, map[string]any{"email": "student-" + runID + "@example.com", "password": "correct horse"}, 200, nil)
-	e.queue.Drain()
+	e.jobs()
 	// The folder is in "My Drive": the service account has no quota there, so
 	// uploads wait for the head's Google account.
 	problem.Type = ""
@@ -700,7 +700,7 @@ func TestMaterialsAndDrive(t *testing.T) {
 	if published.File.DriveUploadStatus == nil || *published.File.DriveUploadStatus != "PENDING" {
 		t.Fatalf("published = %+v", published.File)
 	}
-	jobs = e.queue.Drain()
+	jobs = e.jobs()
 	if len(jobs) != 2 || jobs[1].Type != domain.JobDriveUpload {
 		t.Fatalf("jobs after publishing = %+v", jobs)
 	}
@@ -735,13 +735,13 @@ func TestMaterialsAndDrive(t *testing.T) {
 	laterUp := upload(student.AccessToken, "later.pdf", []byte("%PDF-1.4 later"), nil)
 	var later material
 	c.do("POST", "/uploads/"+laterUp.UploadID+"/complete", student.AccessToken, nil, 200, &later)
-	e.queue.Drain()
+	e.jobs()
 	c.do("POST", "/materials/"+later.ID+"/publish-drive", student.AccessToken, nil, 403, nil)
 	c.do("POST", "/materials/"+later.ID+"/publish-drive", owner.AccessToken, nil, 200, &later)
 	if later.File.DriveUploadStatus == nil || *later.File.DriveUploadStatus != "PENDING" {
 		t.Fatalf("publish later = %+v", later.File)
 	}
-	if jobs = e.queue.Drain(); len(jobs) != 1 || jobs[0].Type != domain.JobDriveUpload {
+	if jobs = e.jobs(); len(jobs) != 1 || jobs[0].Type != domain.JobDriveUpload {
 		t.Fatalf("jobs after publishing later = %+v", jobs)
 	}
 	if err := e.svc.Drive.UploadVersion(ctx, uuid.MustParse(later.ID), uuid.MustParse(later.File.ID)); err != nil {
@@ -846,7 +846,7 @@ func TestMaterialsAndDrive(t *testing.T) {
 	}
 	c.do("GET", g+"/drive/items", student.AccessToken, nil, 403, nil)
 	c.do("POST", g+"/drive/sync", student.AccessToken, map[string]any{"full": true}, 403, nil)
-	e.queue.Drain()
+	e.jobs()
 	// --- PDF previews of office files ---
 	docx := []byte("PK\x03\x04 lecture slides")
 	officeTicket := upload(student.AccessToken, "Лекция 5.docx", docx, nil)
@@ -855,12 +855,12 @@ func TestMaterialsAndDrive(t *testing.T) {
 	if office.File.PreviewStatus != "PENDING" {
 		t.Fatalf("an uploaded office file is converted right away: %+v", office.File)
 	}
-	jobs = e.queue.Drain()
+	jobs = e.jobs()
 	if len(jobs) != 2 || jobs[1].Type != domain.JobMaterialPreview {
 		t.Fatalf("jobs after an office upload = %+v", jobs)
 	}
 	c.do("POST", "/materials/"+office.ID+"/preview", student.AccessToken, nil, 202, nil)
-	if jobs := e.queue.Drain(); len(jobs) != 0 {
+	if jobs := e.jobs(); len(jobs) != 0 {
 		t.Fatalf("a pending preview must not be enqueued twice: %+v", jobs)
 	}
 	var officeLinks openLinks
@@ -933,7 +933,7 @@ func TestMaterialsAndDrive(t *testing.T) {
 		t.Fatalf("drive office files = %d", len(filtered.Items))
 	}
 	// Two requests and a retry after the failure.
-	if jobs := e.queue.Drain(); len(jobs) != 3 || jobs[2].Type != domain.JobMaterialPreview {
+	if jobs := e.jobs(); len(jobs) != 3 || jobs[2].Type != domain.JobMaterialPreview {
 		t.Fatalf("preview jobs = %+v", jobs)
 	}
 
@@ -952,7 +952,7 @@ func TestMaterialsAndDrive(t *testing.T) {
 	}
 
 	c.do("POST", g+"/drive/sync", owner.AccessToken, map[string]any{"full": true}, 202, nil)
-	if jobs := e.queue.Drain(); len(jobs) != 1 || jobs[0].Type != domain.JobDriveSync {
+	if jobs := e.jobs(); len(jobs) != 1 || jobs[0].Type != domain.JobDriveSync {
 		t.Fatalf("manual sync jobs = %+v", jobs)
 	}
 	c.do("DELETE", g+"/drive/connection", student.AccessToken, nil, 403, nil)

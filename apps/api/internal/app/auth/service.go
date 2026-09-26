@@ -172,25 +172,32 @@ func (s *Service) joinOnRegister(ctx context.Context, session *Session, in Regis
 	return nil
 }
 
+// invalidCredentials hides which half was wrong — the email or the password.
+func invalidCredentials() error {
+	return domain.WithCode(domain.CodeInvalidCredentials,
+		fmt.Errorf("%w: invalid credentials", domain.ErrUnauthorized))
+}
+
 // Login authenticates a secured account with email and password.
 func (s *Service) Login(ctx context.Context, email, password string, device DeviceInfo) (*Session, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 	user, hash, err := s.users.GetByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return nil, fmt.Errorf("%w: invalid credentials", domain.ErrUnauthorized)
+			return nil, invalidCredentials()
 		}
 		return nil, err
 	}
 	if hash == "" {
-		return nil, fmt.Errorf("%w: this account has no password; use another sign-in method", domain.ErrUnauthorized)
+		return nil, domain.WithCode(domain.CodePasswordNotSet,
+			fmt.Errorf("%w: this account has no password; use another sign-in method", domain.ErrUnauthorized))
 	}
 	ok, err := VerifyPassword(hash, password)
 	if err != nil {
 		return nil, fmt.Errorf("verify password: %w", err)
 	}
 	if !ok {
-		return nil, fmt.Errorf("%w: invalid credentials", domain.ErrUnauthorized)
+		return nil, invalidCredentials()
 	}
 	var session *Session
 	err = s.tx.RunInTx(ctx, func(ctx context.Context) error {

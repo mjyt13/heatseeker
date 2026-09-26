@@ -78,17 +78,19 @@ sqlc в `apps/api/db/queries/`. Общие правила:
 |---|---|
 | `proposals` | `group_id`, `author_id`, `title`, `body` (md), `status` `NEW \| DISCUSSION \| ACCEPTED \| REJECTED \| DONE`; обсуждение — тред `PROPOSAL` |
 | `proposal_votes` | `proposal_id` + `user_id`, `value` ±1 |
-| `announcements` | `group_id`, `author_id`, `title`, `body` (md), `pinned`, `urgent`, `sent_at` |
-| `reminders` | `user_id`, `group_id?`, `text`, `remind_at`, `rrule?`, `target_type?` / `target_id?`, `status` `SCHEDULED \| SENT \| CANCELLED`, `last_fired_at` |
+| `announcements` | `group_id`, `author_id?`, `title`, `body` (md), `urgent` (мимо тихих часов), `pinned`, `created_at`, `deleted_at` |
+| `reminders` | `user_id`, `group_id`, `title`, `note`, `remind_at`, `repeat` `NONE \| DAILY \| WEEKLY \| MONTHLY`, `target_type?` `TASK \| MATERIAL \| SCHEDULE` / `target_id?`, `status` `SCHEDULED \| SENT \| DONE`, `last_fired_at` |
 
 ## Уведомления
 
 | Таблица | Поля |
 |---|---|
-| `notifications` | `user_id`, `group_id?`, `type`, `title`, `body`, `data` json (deep link), `read_at`, `dedupe_key` (uniq) |
-| `notification_deliveries` | `notification_id`, `channel` `PUSH \| WEBPUSH \| EMAIL \| TELEGRAM`, `device_id?`, `status` `QUEUED \| SENT \| FAILED`, `error`, `sent_at` |
-| `notification_preferences` | `user_id`, `group_id?`, `type`, `channel`, `enabled`; на уровне пользователя — `quiet_hours`, `deadline_offsets` int[] |
-| `notification_mutes` | `user_id`, `scope_type` `GROUP \| SUBJECT \| THREAD \| TYPE`, `scope_id`, `until` (обязательно) |
+| `notifications` | `user_id`, `group_id`, `type`, `title`, `body`, `data` json (deep link), `seq` (событие-источник), `dedupe_key` (uniq с `user_id`), `read_at`, `created_at` |
+| `notifier_cursors` | `group_id` (pk), `last_seq` — докуда читатель журнала дошёл; нет строки — группа читается с текущей головы, история не переигрывается |
+| `notification_prefs` | `user_id`, `group_id`, `type`, `enabled` (pk — тройка); нет строки — значение по умолчанию для типа и вида группы (D50) |
+| `notification_mutes` | `user_id`, `group_id`, `scope_type` `GROUP \| SUBJECT \| THREAD \| TYPE`, `scope_id` (id предмета/обсуждения или тип), `until` (обязательно, uniq по scope) |
+| `notification_settings` | `user_id` (pk), `push_enabled`, `quiet_from` / `quiet_to` — минуты от полуночи по часам участника (NULL — без тихих часов), `urgent_in_quiet` — пускать ли срочные объявления в тихие часы (по умолчанию нет) |
+| `notification_deliveries` | `notification_id`, `channel` `PUSH \| WEBPUSH \| EMAIL \| TELEGRAM`, `device_id?`, `status` `QUEUED \| SENT \| FAILED \| SKIPPED`, `error`, `sent_at` |
 
 ## Журнал событий и активность
 

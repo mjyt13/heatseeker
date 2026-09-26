@@ -17,6 +17,8 @@ import (
 
 	"heatseeker/api/internal/app/drive"
 	"heatseeker/api/internal/app/materials"
+	"heatseeker/api/internal/app/notify"
+	"heatseeker/api/internal/app/reminders"
 	"heatseeker/api/internal/app/tasks"
 	"heatseeker/api/internal/domain"
 	"heatseeker/api/internal/platform/config"
@@ -37,6 +39,8 @@ type Deps struct {
 	Drive          *drive.Service
 	Materials      *materials.Service
 	Tasks          *tasks.Service
+	Notify         *notify.Service
+	Reminders      *reminders.Service
 	Log            *slog.Logger
 }
 
@@ -173,6 +177,58 @@ func NewMux(d Deps) *asynq.ServeMux {
 		}
 		return err
 	})
+	mux.HandleFunc(domain.JobNotifyScan, func(ctx context.Context, _ *asynq.Task) error {
+		n, err := d.Notify.ScanPending(ctx)
+		if n > 0 {
+			d.Log.Debug("notification fan-out scheduled", "groups", n)
+		}
+		return err
+	})
+	mux.HandleFunc(domain.JobNotifyFanout, func(ctx context.Context, t *asynq.Task) error {
+		var p domain.GroupPayload
+		id, err := decodeID(t, &p, func() string { return p.GroupID })
+		if err != nil {
+			return err
+		}
+		n, err := d.Notify.Fanout(ctx, id)
+		if n > 0 {
+			d.Log.Info("notifications written", "group", id, "count", n)
+		}
+		return permanent(err)
+	})
+	mux.HandleFunc(domain.JobNotifyPush, func(ctx context.Context, t *asynq.Task) error {
+		var p domain.NotifyPushPayload
+		if err := json.Unmarshal(t.Payload(), &p); err != nil {
+			return fmt.Errorf("%s: bad payload: %v: %w", t.Type(), err, asynq.SkipRetry)
+		}
+		ids := make([]uuid.UUID, 0, len(p.IDs))
+		for _, raw := range p.IDs {
+			id, err := uuid.Parse(raw)
+			if err != nil {
+				return fmt.Errorf("%s: bad id: %w", t.Type(), asynq.SkipRetry)
+			}
+			ids = append(ids, id)
+		}
+		n, err := d.Notify.Deliver(ctx, ids)
+		if n > 0 {
+			d.Log.Debug("push sent", "count", n)
+		}
+		return err
+	})
+	mux.HandleFunc(domain.JobRemindersScan, func(ctx context.Context, _ *asynq.Task) error {
+		n, err := d.Reminders.Scan(ctx)
+		if n > 0 {
+			d.Log.Info("reminders delivered", "count", n)
+		}
+		return err
+	})
+	mux.HandleFunc(domain.JobNotifyCleanup, func(ctx context.Context, _ *asynq.Task) error {
+		n, err := d.Notify.Cleanup(ctx)
+		if n > 0 {
+			d.Log.Info("old notifications removed", "count", n)
+		}
+		return err
+	})
 	mux.HandleFunc(domain.JobUploadsCleanup, func(ctx context.Context, _ *asynq.Task) error {
 		n, err := d.Materials.CleanupUploads(ctx)
 		if n > 0 {
@@ -237,6 +293,9 @@ func Schedule() []Entry {
 		{"45 3 * * *", asynq.NewTask(domain.JobEventsPrune, nil), []asynq.Option{asynq.Queue(QueueLow), asynq.MaxRetry(2)}},
 		{"* * * * *", asynq.NewTask(domain.JobDriveSyncDue, nil), []asynq.Option{asynq.Queue(QueueDefault), asynq.MaxRetry(0), asynq.Unique(50 * time.Second)}},
 		{"* * * * *", asynq.NewTask(domain.JobTasksDeadlineScan, nil), []asynq.Option{asynq.Queue(QueueDefault), asynq.MaxRetry(0), asynq.Unique(50 * time.Second)}},
+		{"* * * * *", asynq.NewTask(domain.JobNotifyScan, nil), []asynq.Option{asynq.Queue(QueueDefault), asynq.MaxRetry(0), asynq.Unique(50 * time.Second)}},
+		{"* * * * *", asynq.NewTask(domain.JobRemindersScan, nil), []asynq.Option{asynq.Queue(QueueDefault), asynq.MaxRetry(0), asynq.Unique(50 * time.Second)}},
+		{"50 4 * * *", asynq.NewTask(domain.JobNotifyCleanup, nil), []asynq.Option{asynq.Queue(QueueLow), asynq.MaxRetry(2)}},
 		{"20 * * * *", asynq.NewTask(domain.JobUploadsCleanup, nil), []asynq.Option{asynq.Queue(QueueLow), asynq.MaxRetry(2)}},
 		{"30 4 * * *", asynq.NewTask(domain.JobMaterialsPurge, nil), []asynq.Option{asynq.Queue(QueueLow), asynq.MaxRetry(2)}},
 	}

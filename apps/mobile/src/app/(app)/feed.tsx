@@ -27,6 +27,7 @@ import {
   YStack,
 } from '@heatseeker/ui';
 
+import { NotificationsBell } from '@/components/notifications-bell';
 import { FileTypePicker, MaterialRow } from '@/components/materials';
 import { describeError } from '@/lib/errors';
 import { useGroupContext } from '@/lib/group';
@@ -66,6 +67,7 @@ export default function FeedScreen() {
           <H3 numberOfLines={1} flex={1}>
             {group.data?.group.name ?? '…'}
           </H3>
+          <NotificationsBell groupId={groupId} />
           <Button
             size="$3"
             chromeless

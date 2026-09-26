@@ -14,6 +14,8 @@ export * from './queries/drive';
 export * from './queries/tasks';
 export * from './queries/discussions';
 export * from './queries/schedule';
+export * from './queries/notifications';
+export * from './queries/reminders';
 export * from './materials';
 export * from './tasks';
 export * from './outbox';

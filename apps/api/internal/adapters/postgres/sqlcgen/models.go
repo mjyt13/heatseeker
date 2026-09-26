@@ -10,6 +10,19 @@ import (
 	"github.com/google/uuid"
 )
 
+type Announcement struct {
+	ID        uuid.UUID
+	GroupID   uuid.UUID
+	AuthorID  *uuid.UUID
+	Title     string
+	Body      string
+	Urgent    bool
+	Pinned    bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time
+}
+
 type AuthIdentity struct {
 	ID              uuid.UUID
 	UserID          uuid.UUID
@@ -225,6 +238,64 @@ type MessageHide struct {
 	CreatedAt time.Time
 }
 
+type Notification struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	GroupID   uuid.UUID
+	Type      string
+	Title     string
+	Body      string
+	Data      []byte
+	Seq       int64
+	DedupeKey string
+	ReadAt    *time.Time
+	CreatedAt time.Time
+}
+
+type NotificationDelivery struct {
+	ID             uuid.UUID
+	NotificationID uuid.UUID
+	Channel        string
+	DeviceID       *uuid.UUID
+	Status         string
+	Error          *string
+	SentAt         *time.Time
+	CreatedAt      time.Time
+}
+
+type NotificationMute struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	GroupID   uuid.UUID
+	ScopeType string
+	ScopeID   string
+	Until     time.Time
+	CreatedAt time.Time
+}
+
+type NotificationPref struct {
+	UserID    uuid.UUID
+	GroupID   uuid.UUID
+	Type      string
+	Enabled   bool
+	UpdatedAt time.Time
+}
+
+type NotificationSetting struct {
+	UserID        uuid.UUID
+	PushEnabled   bool
+	QuietFrom     *int16
+	QuietTo       *int16
+	UpdatedAt     time.Time
+	UrgentInQuiet bool
+}
+
+type NotifierCursor struct {
+	GroupID   uuid.UUID
+	LastSeq   int64
+	UpdatedAt time.Time
+}
+
 type RefreshToken struct {
 	ID         uuid.UUID
 	UserID     uuid.UUID
@@ -234,6 +305,22 @@ type RefreshToken struct {
 	RevokedAt  *time.Time
 	ReplacedBy *uuid.UUID
 	CreatedAt  time.Time
+}
+
+type Reminder struct {
+	ID          uuid.UUID
+	GroupID     uuid.UUID
+	UserID      uuid.UUID
+	Title       string
+	Note        string
+	RemindAt    time.Time
+	Repeat      string
+	TargetType  *string
+	TargetID    *uuid.UUID
+	Status      string
+	LastFiredAt *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type ScheduleEvent struct {

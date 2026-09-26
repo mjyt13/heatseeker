@@ -1,5 +1,4 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { randomUUID } from 'expo-crypto';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +10,7 @@ import { Button, Screen, ScreenTitle, XStack } from '@heatseeker/ui';
 import { TaskForm } from '@/components/task-form';
 import { describeError } from '@/lib/errors';
 import { useGroupContext } from '@/lib/group';
+import { newId } from '@/lib/ids';
 
 /** Новая задача. client_id делает повтор отправки безопасным. */
 export default function NewTaskScreen() {
@@ -20,9 +20,9 @@ export default function NewTaskScreen() {
   const create = useCreateTask(groupId ?? '');
   // A hidden tab stays mounted: every new task needs a fresh client_id and
   // an empty form, or the next one would be taken for a repeat of this one.
-  const [clientId, setClientId] = useState(randomUUID);
+  const [clientId, setClientId] = useState(newId);
   const reset = () => {
-    setClientId(randomUUID());
+    setClientId(newId());
     create.reset();
   };
 

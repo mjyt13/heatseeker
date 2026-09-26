@@ -56,6 +56,127 @@
         ],
         "type": "object"
       },
+      "AnnouncementBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/AnnouncementBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "body": {
+            "description": "Markdown.",
+            "maxLength": 5000,
+            "type": "string"
+          },
+          "pinned": {
+            "description": "Держать наверху списка.",
+            "type": "boolean"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "urgent": {
+            "description": "Придёт на телефон даже в тихие часы.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "type": "object"
+      },
+      "AnnouncementDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/AnnouncementDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "author_id": {
+            "type": "string"
+          },
+          "author_name": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "group_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "urgent": {
+            "description": "Срочное приходит на телефон даже в тихие часы.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "group_id",
+          "title",
+          "body",
+          "urgent",
+          "pinned",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "AnnouncementsOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/AnnouncementsOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AnnouncementDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
       "BulkClassifyInputBody": {
         "additionalProperties": false,
         "properties": {
@@ -749,6 +870,28 @@
           "subjects",
           "others",
           "unread"
+        ],
+        "type": "object"
+      },
+      "DoneReminderInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/DoneReminderInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "done": {
+            "description": "false — вернуть напоминание в работу.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "done"
         ],
         "type": "object"
       },
@@ -1566,6 +1709,39 @@
         },
         "required": [
           "items"
+        ],
+        "type": "object"
+      },
+      "Item": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "type": {
+            "enum": [
+              "MESSAGE_NEW",
+              "MESSAGE_REPLY",
+              "MATERIAL_ADDED",
+              "MATERIAL_BATCH",
+              "TASK_CREATED",
+              "TASK_PINNED",
+              "TASK_DUE_SOON",
+              "TASK_OVERDUE",
+              "TASK_STATUS_CHANGED",
+              "SCHEDULE_CHANGED",
+              "MEMBER_JOINED",
+              "ANNOUNCEMENT",
+              "REMINDER",
+              "PROPOSAL_NEW",
+              "MODERATION"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "enabled"
         ],
         "type": "object"
       },
@@ -2501,6 +2677,285 @@
         ],
         "type": "object"
       },
+      "MuteDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/MuteDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "group_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "scope_id": {
+            "description": "id предмета или обсуждения; для TYPE — тип уведомления.",
+            "type": "string"
+          },
+          "scope_type": {
+            "enum": [
+              "GROUP",
+              "SUBJECT",
+              "THREAD",
+              "TYPE"
+            ],
+            "type": "string"
+          },
+          "until": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "group_id",
+          "scope_type",
+          "scope_id",
+          "until"
+        ],
+        "type": "object"
+      },
+      "MuteInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/MuteInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "scope_id": {
+            "description": "id предмета или обсуждения; для TYPE — тип уведомления; для GROUP не нужен.",
+            "type": "string"
+          },
+          "scope_type": {
+            "enum": [
+              "GROUP",
+              "SUBJECT",
+              "THREAD",
+              "TYPE"
+            ],
+            "type": "string"
+          },
+          "until": {
+            "description": "До какого момента молчать: тишина всегда заканчивается.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope_type",
+          "until"
+        ],
+        "type": "object"
+      },
+      "MutesOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/MutesOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MuteDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "NotificationDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "data": {
+            "description": "Куда вести по нажатию: {\"screen\":\"thread\",\"thread_id\":\"…\"}."
+          },
+          "group_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "read_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "MESSAGE_NEW",
+              "MESSAGE_REPLY",
+              "MATERIAL_ADDED",
+              "MATERIAL_BATCH",
+              "TASK_CREATED",
+              "TASK_PINNED",
+              "TASK_DUE_SOON",
+              "TASK_OVERDUE",
+              "TASK_STATUS_CHANGED",
+              "SCHEDULE_CHANGED",
+              "MEMBER_JOINED",
+              "ANNOUNCEMENT",
+              "REMINDER",
+              "PROPOSAL_NEW",
+              "MODERATION"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "group_id",
+          "type",
+          "title",
+          "body",
+          "data",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "NotificationPrefDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "custom": {
+            "description": "true — участник задал это сам; false — значение по умолчанию.",
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "type": {
+            "enum": [
+              "MESSAGE_NEW",
+              "MESSAGE_REPLY",
+              "MATERIAL_ADDED",
+              "MATERIAL_BATCH",
+              "TASK_CREATED",
+              "TASK_PINNED",
+              "TASK_DUE_SOON",
+              "TASK_OVERDUE",
+              "TASK_STATUS_CHANGED",
+              "SCHEDULE_CHANGED",
+              "MEMBER_JOINED",
+              "ANNOUNCEMENT",
+              "REMINDER",
+              "PROPOSAL_NEW",
+              "MODERATION"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "enabled",
+          "custom"
+        ],
+        "type": "object"
+      },
+      "NotificationSettingsDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/NotificationSettingsDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "push_enabled": {
+            "type": "boolean"
+          },
+          "quiet_from": {
+            "description": "Минуты от полуночи по часам участника; нет — без тихих часов.",
+            "format": "int32",
+            "maximum": 1439,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "quiet_to": {
+            "format": "int32",
+            "maximum": 1439,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "urgent_in_quiet": {
+            "description": "Пускать срочные объявления в тихие часы; по умолчанию нет.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "push_enabled"
+        ],
+        "type": "object"
+      },
+      "NotificationsOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/NotificationsOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "next_cursor": {
+            "type": "string"
+          },
+          "unread": {
+            "description": "Сколько всего непрочитанных в этой выборке, не только на странице.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "unread"
+        ],
+        "type": "object"
+      },
       "OccurrenceDTO": {
         "additionalProperties": false,
         "properties": {
@@ -2750,6 +3205,33 @@
         ],
         "type": "object"
       },
+      "PrefsOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/PrefsOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationPrefDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
       "PreviewOutputBody": {
         "additionalProperties": false,
         "properties": {
@@ -2914,6 +3396,67 @@
         ],
         "type": "object"
       },
+      "ReadNotificationsInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/ReadNotificationsInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "all": {
+            "description": "Пометить всё непрочитанное (в группе, если указана).",
+            "type": "boolean"
+          },
+          "group_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ids": {
+            "description": "Что пометить прочитанным.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "ReadNotificationsOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/ReadNotificationsOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "marked": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "unread": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "marked",
+          "unread"
+        ],
+        "type": "object"
+      },
       "RefreshInputBody": {
         "additionalProperties": false,
         "properties": {
@@ -2993,6 +3536,165 @@
         },
         "required": [
           "name"
+        ],
+        "type": "object"
+      },
+      "ReminderBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/ReminderBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "remind_at": {
+            "description": "Момент времени; на телефоне — по его часам.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "repeat": {
+            "enum": [
+              "NONE",
+              "DAILY",
+              "WEEKLY",
+              "MONTHLY"
+            ],
+            "type": "string"
+          },
+          "target_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "target_type": {
+            "description": "К чему привязано; вместе с target_id.",
+            "enum": [
+              "TASK",
+              "MATERIAL",
+              "SCHEDULE"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "remind_at"
+        ],
+        "type": "object"
+      },
+      "ReminderDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/ReminderDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "group_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "last_fired_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "remind_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "repeat": {
+            "enum": [
+              "NONE",
+              "DAILY",
+              "WEEKLY",
+              "MONTHLY"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "SCHEDULED",
+              "SENT",
+              "DONE"
+            ],
+            "type": "string"
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "target_type": {
+            "enum": [
+              "TASK",
+              "MATERIAL",
+              "SCHEDULE"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "group_id",
+          "title",
+          "note",
+          "remind_at",
+          "repeat",
+          "status",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "RemindersOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/RemindersOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReminderDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
         ],
         "type": "object"
       },
@@ -3346,6 +4048,60 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "SetPrefsInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/SetPrefsInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "maxItems": 40,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "SnoozeReminderInputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/SnoozeReminderInputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "minutes": {
+            "default": 60,
+            "description": "Через сколько напомнить снова.",
+            "format": "int32",
+            "maximum": 43200,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "minutes"
+        ],
         "type": "object"
       },
       "SubjectBody": {
@@ -4088,6 +4844,28 @@
         ],
         "type": "object"
       },
+      "UnreadOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/schemas/UnreadOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "unread": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unread"
+        ],
+        "type": "object"
+      },
       "UpdateGroupInputBody": {
         "additionalProperties": false,
         "properties": {
@@ -4477,6 +5255,102 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/announcements/{announcementId}": {
+      "delete": {
+        "operationId": "announcement-delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "announcementId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Снять объявление",
+        "tags": [
+          "announcements"
+        ]
+      },
+      "patch": {
+        "description": "Повторного уведомления не будет: группа его уже слышала.",
+        "operationId": "announcement-update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "announcementId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnouncementBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnouncementDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Изменить объявление",
+        "tags": [
+          "announcements"
+        ]
+      }
+    },
     "/auth/google": {
       "post": {
         "description": "Без bearer-токена: вход в привязанный аккаунт или создание нового защищённого аккаунта. С bearer-токеном: привязка Google к текущему аккаунту.",
@@ -5139,6 +6013,122 @@
         "summary": "Лента активности (кто что когда)",
         "tags": [
           "sync"
+        ]
+      }
+    },
+    "/groups/{groupId}/announcements": {
+      "get": {
+        "description": "Закреплённые сверху, дальше — по времени.",
+        "operationId": "announcements-list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "format": "int32",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnouncementsOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Объявления группы",
+        "tags": [
+          "announcements"
+        ]
+      },
+      "post": {
+        "description": "Староста или админ с защищённым аккаунтом. Уведомление получают все; срочное — даже в тихие часы.",
+        "operationId": "announcement-create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnouncementBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnouncementDTO"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Объявить группе",
+        "tags": [
+          "announcements"
         ]
       }
     },
@@ -6608,6 +7598,228 @@
         ]
       }
     },
+    "/groups/{groupId}/notification-mutes": {
+      "delete": {
+        "operationId": "notification-unmute",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "scope_type",
+            "required": true,
+            "schema": {
+              "enum": [
+                "GROUP",
+                "SUBJECT",
+                "THREAD",
+                "TYPE"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "scope_id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Вернуть звук",
+        "tags": [
+          "notifications"
+        ]
+      },
+      "post": {
+        "description": "Предмет, обсуждение, тип уведомлений или всю группу — до указанного момента (не дольше года).",
+        "operationId": "notification-mute",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MuteInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MuteDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Приглушить на время",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/groups/{groupId}/notification-prefs": {
+      "get": {
+        "description": "Все типы уведомлений со значением по умолчанию, если участник его не менял.",
+        "operationId": "notification-prefs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrefsOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Что присылать в этой группе",
+        "tags": [
+          "notifications"
+        ]
+      },
+      "put": {
+        "operationId": "notification-prefs-set",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPrefsInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrefsOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Изменить, что присылать",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/groups/{groupId}/quick-tags": {
       "get": {
         "description": "Системные фильтры («Мои», «Сохранённое», «Непрочитанное») и активные предметы в порядке сортировки.",
@@ -6653,6 +7865,131 @@
         "summary": "Быстрые теги для главного экрана",
         "tags": [
           "tags"
+        ]
+      }
+    },
+    "/groups/{groupId}/reminders": {
+      "get": {
+        "description": "Личные: чужие не видны никому, включая старосту.",
+        "operationId": "reminders-list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Только незакрытые.",
+            "explode": false,
+            "in": "query",
+            "name": "open_only",
+            "schema": {
+              "description": "Только незакрытые.",
+              "type": "boolean"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemindersOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Мои напоминания",
+        "tags": [
+          "reminders"
+        ]
+      },
+      "post": {
+        "operationId": "reminder-create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "groupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReminderBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderDTO"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Поставить напоминание",
+        "tags": [
+          "reminders"
         ]
       }
     },
@@ -8775,6 +10112,311 @@
         ]
       }
     },
+    "/me/notification-mutes": {
+      "get": {
+        "operationId": "notification-mutes",
+        "parameters": [
+          {
+            "description": "Только эта группа; пусто — все.",
+            "explode": false,
+            "in": "query",
+            "name": "group_id",
+            "schema": {
+              "description": "Только эта группа; пусто — все.",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutesOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Что сейчас молчит",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/me/notification-settings": {
+      "get": {
+        "operationId": "notification-settings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSettingsDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Push и тихие часы",
+        "tags": [
+          "notifications"
+        ]
+      },
+      "put": {
+        "operationId": "notification-settings-save",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationSettingsDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSettingsDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Изменить push и тихие часы",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/me/notifications": {
+      "get": {
+        "description": "Новые сверху. Уведомление хранится для каждого участника отдельно; в списке только свои.",
+        "operationId": "notifications-list",
+        "parameters": [
+          {
+            "description": "Только эта группа; пусто — все мои группы.",
+            "explode": false,
+            "in": "query",
+            "name": "group_id",
+            "schema": {
+              "description": "Только эта группа; пусто — все мои группы.",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Только непрочитанные.",
+            "explode": false,
+            "in": "query",
+            "name": "unread_only",
+            "schema": {
+              "description": "Только непрочитанные.",
+              "type": "boolean"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 30,
+              "format": "int32",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationsOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Мои уведомления",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/me/notifications/read": {
+      "post": {
+        "operationId": "notifications-read",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadNotificationsInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadNotificationsOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Пометить прочитанными",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/me/notifications/unread": {
+      "get": {
+        "description": "Для бейджа на иконке.",
+        "operationId": "notifications-unread",
+        "parameters": [
+          {
+            "description": "Только эта группа; пусто — все.",
+            "explode": false,
+            "in": "query",
+            "name": "group_id",
+            "schema": {
+              "description": "Только эта группа; пусто — все.",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Сколько непрочитанных",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/media/{token}": {
       "get": {
         "operationId": "media-get",
@@ -9229,6 +10871,217 @@
         "summary": "Ограничения и возможности сервера",
         "tags": [
           "meta"
+        ]
+      }
+    },
+    "/reminders/{reminderId}": {
+      "delete": {
+        "operationId": "reminder-delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reminderId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Удалить напоминание",
+        "tags": [
+          "reminders"
+        ]
+      },
+      "patch": {
+        "description": "Поля заменяются целиком; напоминание снова встаёт в очередь.",
+        "operationId": "reminder-update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reminderId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReminderBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Изменить напоминание",
+        "tags": [
+          "reminders"
+        ]
+      }
+    },
+    "/reminders/{reminderId}/done": {
+      "post": {
+        "description": "Повторяющееся напоминание закрывается совсем.",
+        "operationId": "reminder-done",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reminderId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DoneReminderInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Готово",
+        "tags": [
+          "reminders"
+        ]
+      }
+    },
+    "/reminders/{reminderId}/snooze": {
+      "post": {
+        "operationId": "reminder-snooze",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reminderId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnoozeReminderInputBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Отложить",
+        "tags": [
+          "reminders"
         ]
       }
     },

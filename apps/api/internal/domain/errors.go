@@ -89,6 +89,11 @@ const (
 	CodeDrivePublisherNoAccess  = "drive_publisher_no_access"
 	CodeDrivePublisherRevoked   = "drive_publisher_revoked"
 	CodeDrivePublisherRequired  = "drive_publisher_required"
+
+	// Sign-in failures a person can act on: a wrong email or password, and an
+	// account that has no password at all (it signs in another way).
+	CodeInvalidCredentials = "invalid_credentials"
+	CodePasswordNotSet     = "password_not_set"
 )
 
 // AllErrorCodes lists the codes, exported to packages/shared.
@@ -97,6 +102,7 @@ var AllErrorCodes = []string{
 	CodeFolderLink, CodeFolderNotShared, CodeNotAFolder, CodeFolderTrashed, CodeVersionUnavailable,
 	CodeDriveOAuthNotConfigured, CodeDriveScopeMissing, CodeDrivePublisherNoAccess,
 	CodeDrivePublisherRevoked, CodeDrivePublisherRequired,
+	CodeInvalidCredentials, CodePasswordNotSet,
 }
 
 // codedError attaches a machine-readable code to an error without changing

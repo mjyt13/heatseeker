@@ -18,13 +18,17 @@ import (
 	"heatseeker/api/internal/adapters/gotenberg"
 	"heatseeker/api/internal/adapters/media"
 	"heatseeker/api/internal/adapters/postgres"
+	"heatseeker/api/internal/adapters/push"
 	"heatseeker/api/internal/adapters/queue"
 	"heatseeker/api/internal/app/access"
+	"heatseeker/api/internal/app/announcements"
 	"heatseeker/api/internal/app/auth"
 	"heatseeker/api/internal/app/discussions"
 	"heatseeker/api/internal/app/drive"
 	"heatseeker/api/internal/app/groups"
 	"heatseeker/api/internal/app/materials"
+	"heatseeker/api/internal/app/notify"
+	"heatseeker/api/internal/app/reminders"
 	"heatseeker/api/internal/app/schedule"
 	"heatseeker/api/internal/app/subjects"
 	appsync "heatseeker/api/internal/app/sync"
@@ -43,22 +47,25 @@ import (
 
 // Services is the assembled application.
 type Services struct {
-	Pool        *pgxpool.Pool
-	Store       *postgres.Store
-	Bus         *events.Bus
-	Tokens      *auth.Tokens
-	Auth        *auth.Service
-	Groups      *groups.Service
-	Subjects    *subjects.Service
-	Tags        *tags.Service
-	Sync        *appsync.Service
-	Materials   *materials.Service
-	Drive       *drive.Service
-	Tasks       *tasks.Service
-	Discussions *discussions.Service
-	Schedule    *schedule.Service
-	Media       domain.MediaStore
-	Queue       domain.JobQueue
+	Pool          *pgxpool.Pool
+	Store         *postgres.Store
+	Bus           *events.Bus
+	Tokens        *auth.Tokens
+	Auth          *auth.Service
+	Groups        *groups.Service
+	Subjects      *subjects.Service
+	Tags          *tags.Service
+	Sync          *appsync.Service
+	Materials     *materials.Service
+	Drive         *drive.Service
+	Tasks         *tasks.Service
+	Discussions   *discussions.Service
+	Schedule      *schedule.Service
+	Notify        *notify.Service
+	Reminders     *reminders.Service
+	Announcements *announcements.Service
+	Media         domain.MediaStore
+	Queue         domain.JobQueue
 
 	closers []func()
 }
@@ -74,6 +81,8 @@ type Options struct {
 	Converter domain.DocumentConverter
 	Media     domain.MediaStore
 	Clock     clock.Clock
+	// Push overrides the push provider (tests).
+	Push domain.Pusher
 }
 
 // Build connects to Postgres and wires every service from configuration.
@@ -214,7 +223,33 @@ func wire(pool *pgxpool.Pool, cfg *config.Config, log *slog.Logger, opts Options
 		ScanLimit:       int32(cfg.Tasks.ScanLimit),
 	})
 
+	quietFrom, quietTo, err := cfg.Notify.Quiet()
+	if err != nil {
+		return nil, err
+	}
+	if opts.Push == nil && cfg.Notify.PushEnabled() {
+		opts.Push = push.NewExpo(cfg.Notify.ExpoAccessToken)
+	}
+	notifySvc := notify.NewService(notify.Deps{
+		Notify: store.Notify(), Events: store.Events(), Groups: store.Groups(), Access: acc,
+		Queue: opts.Queue, Push: opts.Push, Tx: store, Clock: clk, Log: log,
+	}, notify.Settings{
+		Delay:            time.Duration(cfg.Notify.DelaySec) * time.Second,
+		BatchLimit:       int32(cfg.Notify.ScanLimit),
+		MaterialBatchMin: cfg.Notify.MaterialBatchMin,
+		DPOSilent:        cfg.Notify.DPOSilent(),
+		QuietFrom:        quietFrom,
+		QuietTo:          quietTo,
+		Retention:        time.Duration(cfg.Notify.RetentionDays) * 24 * time.Hour,
+	})
+
+	remindersSvc := reminders.NewService(reminders.Deps{
+		Repo: store.Reminders(), Users: store.Users(), Access: acc, Notify: notifySvc,
+		Tx: store, Clock: clk, Log: log,
+	}, reminders.Settings{ScanLimit: int32(cfg.Notify.ScanLimit)})
+
 	bus.Subscribe(driveSvc.OnEvent)
+	bus.Subscribe(notifySvc.OnEvent)
 
 	return &Services{
 		Pool:      pool,
@@ -239,6 +274,11 @@ func wire(pool *pgxpool.Pool, cfg *config.Config, log *slog.Logger, opts Options
 		}, schedule.Settings{
 			APIBaseURL:    strings.TrimRight(cfg.App.BaseURL, "/") + "/api/v1",
 			SigningSecret: cfg.Auth.JWTAccessSecret,
+		}),
+		Notify:    notifySvc,
+		Reminders: remindersSvc,
+		Announcements: announcements.NewService(announcements.Deps{
+			Repo: store.Announcements(), Access: acc, Events: publisher, Tx: store, Log: log,
 		}),
 		Media: opts.Media,
 		Queue: opts.Queue,
@@ -282,6 +322,8 @@ func (s *Services) JobDeps(cfg *config.Config, log *slog.Logger) jobs.Deps {
 		Drive:          s.Drive,
 		Materials:      s.Materials,
 		Tasks:          s.Tasks,
+		Notify:         s.Notify,
+		Reminders:      s.Reminders,
 		Log:            log,
 	}
 }
@@ -289,19 +331,22 @@ func (s *Services) JobDeps(cfg *config.Config, log *slog.Logger) jobs.Deps {
 // HTTPServer builds the HTTP transport over the services.
 func (s *Services) HTTPServer(cfg *config.Config, log *slog.Logger) *httptransport.Server {
 	return httptransport.NewServer(httptransport.Deps{
-		Cfg:         cfg,
-		Log:         log,
-		Tokens:      s.Tokens,
-		Auth:        s.Auth,
-		Groups:      s.Groups,
-		Subjects:    s.Subjects,
-		Tags:        s.Tags,
-		Sync:        s.Sync,
-		Materials:   s.Materials,
-		Drive:       s.Drive,
-		Tasks:       s.Tasks,
-		Discussions: s.Discussions,
-		Schedule:    s.Schedule,
+		Cfg:           cfg,
+		Log:           log,
+		Tokens:        s.Tokens,
+		Auth:          s.Auth,
+		Groups:        s.Groups,
+		Subjects:      s.Subjects,
+		Tags:          s.Tags,
+		Sync:          s.Sync,
+		Materials:     s.Materials,
+		Drive:         s.Drive,
+		Tasks:         s.Tasks,
+		Discussions:   s.Discussions,
+		Schedule:      s.Schedule,
+		Notify:        s.Notify,
+		Reminders:     s.Reminders,
+		Announcements: s.Announcements,
 		Health: func(ctx context.Context) error {
 			pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 			defer cancel()

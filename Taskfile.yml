@@ -39,6 +39,16 @@ tasks:
     desc: Follow container logs (task dev:logs -- postgres)
     cmds: ["{{.COMPOSE}} logs -f --tail=100 {{.CLI_ARGS}}"]
 
+  mobile:build:dev:
+    desc: "EAS: Android development build (APK with dev client, connects to Metro)"
+    dir: apps/mobile
+    cmds: ["pnpm exec eas build --platform android --profile development {{.CLI_ARGS}}"]
+
+  mobile:build:apk:
+    desc: "EAS: standalone Android APK to share with the group (set EXPO_PUBLIC_API_URL in eas.json first)"
+    dir: apps/mobile
+    cmds: ["pnpm exec eas build --platform android --profile preview {{.CLI_ARGS}}"]
+
   gen:
     desc: Regenerate everything derived from Go (sqlc, OpenAPI, packages/shared, api-client)
     cmds:

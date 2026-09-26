@@ -399,25 +399,36 @@ In-app (MVP); Expo push → FCM/APNs (MVP; APK — FCM); Web push (с вебом
 рекомендуется); Email (опционально, только у кого есть email). `PUSH_PROVIDER=expo|none`,
 интерфейс `PushProvider` (Adapter).
 
-### 8.2 Механизм
+### 8.2 Механизм (реализовано, D50)
 
-`group_events` → `Notifier` → получатели (участники − автор, минус **mutes**, минус
-preferences, минус тихие часы) → `notifications(dedupe_key)` → asynq-задачи доставки по каналам
-→ `notification_deliveries`.
+`group_events` → читатель журнала (`notify:fanout`, курсор в `notifier_cursors`, пауза
+`NOTIFY_DELAY_SEC`) → получатели (участники − автор, минус **mutes**, минус выключенные типы,
+минус те, кто уже прочитал сообщение) → `notifications(dedupe_key)` → `notify:push` → Expo →
+`notification_deliveries`. Тихие часы и выключенный push снимают только доставку на телефон:
+уведомление всё равно есть в списке. Тихие часы не пробивает ничто, включая срочное объявление, — кроме случая, когда участник сам
+разрешил это переключателем `urgent_in_quiet`. Группа без курсора начинается с текущей головы журнала.
 
-- Типы: `MATERIAL_ADDED`, `MATERIAL_BATCH` (окно `NOTIFY_MATERIAL_BATCH_WINDOW_SEC`),
-  `MESSAGE_NEW`, `MESSAGE_REPLY`, `TASK_CREATED`, `TASK_PINNED`, `TASK_DUE_SOON`,
-  `TASK_STATUS_CHANGED`, `SCHEDULE_CHANGED`, `PROPOSAL_*`, `ANNOUNCEMENT`, `REMINDER`,
-  `MEMBER_JOINED`, `MODERATION` (модератору: инфицированный файл, Inbox).
+- Типы: `MATERIAL_ADDED`, `MATERIAL_BATCH` (склейка от `NOTIFY_MATERIAL_BATCH_MIN` файлов),
+  `MESSAGE_NEW`, `MESSAGE_REPLY`, `TASK_CREATED`, `TASK_PINNED`, `TASK_DUE_SOON`, `TASK_OVERDUE`,
+  `TASK_STATUS_CHANGED`, `SCHEDULE_CHANGED`, `MEMBER_JOINED` — работают; `PROPOSAL_NEW`,
+  `ANNOUNCEMENT`, `REMINDER` (этап 4), `MODERATION` (модератору: инфицированный файл, Inbox) —
+  объявлены, но пока не приходят.
+- Настройки — переключатель на тип в группе (`notification_prefs`); разделение по каналам
+  появится вместе со вторым каналом (веб-пуш, Telegram).
 - **Mute по теме на время** (`notification_mutes`): «предмет X на 3 дня», «сообщения на 8 часов»,
   «занятия до конца недели», «вся группа до завтра» — из настроек и из контекстного меню
   треда/предмета; срок — обязательное поле (пресеты 1ч/8ч/1д/1нед/до даты).
 - **ДПО**: для `groups.kind=DPO` дефолтные преференции — всё выключено, кроме `ANNOUNCEMENT`.
 - Дедлайны и напоминания — сканер раз в минуту (asynq scheduler), offsets из преференций
   (`7d,3d,1d,3h`), не шлём, если своя часть DONE.
-- Кастомные напоминания (`reminders`) — текст/время/повтор, опциональная привязка; кейс
-  старосты: «скинуть материалы преподавателю в четверг» + кнопки «Отложить / Готово».
-  Объявления (`announcements`) — broadcast от старосты/админа, `urgent` игнорирует тихие часы.
+- **Кастомные напоминания** (`reminders`, сделано) — заголовок, заметка, момент, повтор
+  (`NONE|DAILY|WEEKLY|MONTHLY`), необязательная привязка к задаче/материалу/занятию; сканер раз в
+  минуту (`reminders:scan`) шлёт напоминание владельцу, кнопки «Отложить / Готово». Текст личный:
+  в журнал группы он не попадает, уведомление пишется адресату напрямую (D51).
+- **Объявления** (`announcements`, сделано) — broadcast от старосты/админа с защищённым аккаунтом
+  (`announcement.send`), `pinned` держит наверху, `urgent` выделяет объявление (тихие часы не
+  пробивает — D51); событие
+  `announcement.created` идёт в журнал и ленту активности, уведомление — всей группе.
 
 ---
 

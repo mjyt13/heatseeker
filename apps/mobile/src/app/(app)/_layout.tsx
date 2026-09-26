@@ -12,6 +12,8 @@ import {
 } from '@heatseeker/core';
 import { useTheme } from '@heatseeker/ui';
 
+import { usePushRegistration } from '@/lib/push';
+
 type IconName = keyof typeof Ionicons.glyphMap;
 
 const icon =
@@ -31,6 +33,8 @@ export default function AppLayout() {
   useGroupChanges(groupId);
   // Sends messages written offline once the network is back.
   useOutboxFlusher();
+  // Asks for the push token once and opens what a tapped push is about.
+  usePushRegistration(groupId);
   const unread = useDiscussions(groupId).data?.unread ?? 0;
   return (
     <Tabs
@@ -77,6 +81,10 @@ export default function AppLayout() {
       <Tabs.Screen name="inbox" options={{ href: null }} />
       <Tabs.Screen name="drive" options={{ href: null }} />
       <Tabs.Screen name="activity" options={{ href: null }} />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
+      <Tabs.Screen name="notification-settings" options={{ href: null }} />
+      <Tabs.Screen name="announcements" options={{ href: null }} />
+      <Tabs.Screen name="reminders" options={{ href: null }} />
       <Tabs.Screen name="subjects" options={{ href: null }} />
       <Tabs.Screen name="task/[id]" options={{ href: null }} />
       <Tabs.Screen name="task/new" options={{ href: null }} />

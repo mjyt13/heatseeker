@@ -3,11 +3,12 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 import type { TokenStore, Tokens } from '@heatseeker/api-client';
-import type { GroupIdStore, OutboxItem, OutboxStorage } from '@heatseeker/core';
+import type { GroupIdStore, IdStore, OutboxItem, OutboxStorage } from '@heatseeker/core';
 
 const TOKENS_KEY = 'heatseeker.tokens';
 const GROUP_KEY = 'heatseeker.current_group';
 const OUTBOX_KEY = 'heatseeker.outbox';
+const DEVICE_KEY = 'heatseeker.device';
 
 /**
  * Токены — в защищённом хранилище (Keychain/Keystore). На вебе SecureStore
@@ -41,6 +42,12 @@ export const tokenStore: TokenStore = {
 export const groupStore: GroupIdStore = {
   get: () => AsyncStorage.getItem(GROUP_KEY),
   set: (id) => (id ? AsyncStorage.setItem(GROUP_KEY, id) : AsyncStorage.removeItem(GROUP_KEY)),
+};
+
+/** Это устройство на сервере: по нему регистрируется push-токен. */
+export const deviceStore: IdStore = {
+  get: () => AsyncStorage.getItem(DEVICE_KEY),
+  set: (id) => (id ? AsyncStorage.setItem(DEVICE_KEY, id) : AsyncStorage.removeItem(DEVICE_KEY)),
 };
 
 /** Неотправленные сообщения (D41) — переживают перезапуск приложения. */

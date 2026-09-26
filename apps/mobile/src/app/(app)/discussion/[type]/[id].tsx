@@ -1,5 +1,4 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { randomUUID } from 'expo-crypto';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -50,9 +49,11 @@ import {
   UnreadDivider,
   type MessageAction,
 } from '@/components/discussions';
+import { MuteButton } from '@/components/mute-button';
 import { describeError } from '@/lib/errors';
 import { useScreenFocused } from '@/lib/focus';
 import { subjectLabel, useGroupContext } from '@/lib/group';
+import { newId } from '@/lib/ids';
 
 type Row =
   | { kind: 'message'; key: string; message: Message; showAuthor: boolean }
@@ -171,7 +172,7 @@ function DiscussionView({
       return;
     }
     send(
-      randomUUID(),
+      newId(),
       body,
       replyTo
         ? { id: replyTo.id, author_name: replyTo.author_name, body: snippet(replyTo.body, 200) }
@@ -292,6 +293,13 @@ function DiscussionView({
               ) : null}
             </YStack>
             <XStack alignItems="center" gap="$1.5">
+              {groupId && (target.type === 'SUBJECT' || newest?.thread) ? (
+                <MuteButton
+                  groupId={groupId}
+                  scopeType={target.type === 'SUBJECT' ? 'SUBJECT' : 'THREAD'}
+                  scopeId={target.type === 'SUBJECT' ? target.id : newest!.thread!.id}
+                />
+              ) : null}
               <Paragraph size="$1" color="$color10">
                 {t('discussions.show_hidden')}
               </Paragraph>

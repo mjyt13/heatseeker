@@ -32,6 +32,13 @@ Expo SDK 57 (React Native 0.86, React 19.2, Expo Router 57). API Expo меняе
   `class/edit.tsx` (новое занятие, серия целиком или с даты, одно занятие; переход передаёт `n`,
   чтобы форма открывалась чистой). Часовой пояс серии — `deviceTimeZone()` из `src/lib/timezone.ts`;
   календарь месяца — общий `src/components/calendar-month.tsx`.
+- Уведомления — экран `notifications.tsx` (лента, курсор, «прочитать все»), настройки —
+  `notification-settings.tsx` (типы в группе, push, тихие часы, приглушённое); куда ведёт
+  уведомление, решает `src/lib/notifications.ts` по полю `data` с сервера. Push-токен
+  регистрирует `usePushRegistration` (`src/lib/push.ts`) из `(app)/_layout.tsx`: в Expo Go на
+  Android токена нет — ошибка глотается, остаются уведомления в приложении.
+- Объявления (`announcements.tsx`) и личные напоминания (`reminders.tsx`) — разделы в «Ещё»;
+  форма напоминания берёт день из `CalendarMonth`, время — из `TimeField` (`components/schedule`).
 - Картинки: `Thumbnail` и `PictureViewer` из `src/components/picture.tsx` (expo-image, кеш по id
   версии: `thumbnail_url` временная, картинка — нет).
 - Проверка без устройства: `pnpm typecheck`, `pnpm lint`, `pnpm export:check` (бандл Metro).

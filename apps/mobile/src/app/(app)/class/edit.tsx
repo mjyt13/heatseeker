@@ -1,5 +1,4 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { randomUUID } from 'expo-crypto';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -50,6 +49,7 @@ import { SectionLabel, SubjectPicker } from '@/components/materials';
 import { formatDayKey, ScheduleKindPicker, TimeField, WeekdayPicker } from '@/components/schedule';
 import { describeError } from '@/lib/errors';
 import { useGroupContext } from '@/lib/group';
+import { newId } from '@/lib/ids';
 import { deviceTimeZone } from '@/lib/timezone';
 
 type Params = {
@@ -225,7 +225,7 @@ function SeriesForm({
   const ctx = useGroupContext();
   const create = useCreateScheduleEvent(ctx.groupId ?? '');
   const update = useUpdateScheduleEvent(ctx.groupId ?? '');
-  const [clientId] = useState(randomUUID);
+  const [clientId] = useState(newId);
   const following = !!event && scope === 'FOLLOWING';
 
   const firstDay = event ? toCalendarDay(new Date(event.starts_at)) : null;

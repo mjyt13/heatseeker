@@ -26,6 +26,7 @@ type Config struct {
 	Groups  Groups
 	Tasks   Tasks
 	Events  Events
+	Notify  Notify
 	Media   Media
 	Storage Storage
 	GDrive  GDrive
@@ -145,6 +146,64 @@ func parseOffset(raw string) (int32, error) {
 // Events configures the group event log.
 type Events struct {
 	RetentionDays int `env:"EVENT_LOG_RETENTION_DAYS" envDefault:"90"`
+}
+
+// Notify configures notifications and their delivery (docs/PLAN.md §8).
+type Notify struct {
+	// Provider picks the push service; "none" keeps notifications in-app only.
+	Provider string `env:"PUSH_PROVIDER" envDefault:"expo"`
+	// ExpoAccessToken is needed only for Expo projects with enhanced security.
+	ExpoAccessToken string `env:"EXPO_ACCESS_TOKEN"`
+	// DelaySec is how long an event waits before it becomes a notification:
+	// long enough for somebody already reading the discussion to be left alone.
+	DelaySec int `env:"NOTIFY_DELAY_SEC" envDefault:"10"`
+	// MaterialBatchMin is how many new files collapse into one line.
+	MaterialBatchMin int `env:"NOTIFY_MATERIAL_BATCH_MIN" envDefault:"3"`
+	// ScanLimit bounds one pass over a group's log.
+	ScanLimit int `env:"NOTIFY_SCAN_LIMIT" envDefault:"500"`
+	// RetentionDays is how long a notification stays in the list.
+	RetentionDays int `env:"NOTIFY_RETENTION_DAYS" envDefault:"60"`
+	// QuietHours silences push in the member's own timezone; empty — never.
+	QuietHours string `env:"QUIET_HOURS_DEFAULT" envDefault:"23:00-08:00"`
+	// DPODefault off starts DPO groups silent but for announcements.
+	DPODefault string `env:"DPO_NOTIFICATIONS_DEFAULT" envDefault:"off"`
+}
+
+// PushEnabled reports whether notifications are also sent to devices.
+func (n Notify) PushEnabled() bool { return strings.EqualFold(n.Provider, "expo") }
+
+// DPOSilent reports whether DPO groups start with notifications off.
+func (n Notify) DPOSilent() bool { return !strings.EqualFold(n.DPODefault, "on") }
+
+// Quiet parses QUIET_HOURS_DEFAULT ("23:00-08:00") into minutes from
+// midnight. Empty or "off" means no quiet hours.
+func (n Notify) Quiet() (from, to *int16, err error) {
+	spec := strings.TrimSpace(n.QuietHours)
+	if spec == "" || strings.EqualFold(spec, "off") {
+		return nil, nil, nil
+	}
+	left, right, ok := strings.Cut(spec, "-")
+	if !ok {
+		return nil, nil, fmt.Errorf("QUIET_HOURS_DEFAULT: %q must be HH:MM-HH:MM", spec)
+	}
+	start, err := parseClock(left)
+	if err != nil {
+		return nil, nil, err
+	}
+	end, err := parseClock(right)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &start, &end, nil
+}
+
+// parseClock turns "23:00" into minutes from midnight.
+func parseClock(v string) (int16, error) {
+	t, err := time.Parse("15:04", strings.TrimSpace(v))
+	if err != nil {
+		return 0, fmt.Errorf("QUIET_HOURS_DEFAULT: %q must be HH:MM", v)
+	}
+	return int16(t.Hour()*60 + t.Minute()), nil //nolint:gosec // below 1440
 }
 
 // Media configures how material files are uploaded and served.
@@ -271,6 +330,7 @@ func (c *Config) validate() error {
 	if c.Events.RetentionDays <= 0 {
 		errs = append(errs, errors.New("EVENT_LOG_RETENTION_DAYS must be positive"))
 	}
+	errs = append(errs, c.Notify.validate()...)
 	errs = append(errs, c.Media.validate()...)
 	errs = append(errs, c.Storage.validate()...)
 	errs = append(errs, c.GDrive.validate()...)
@@ -382,4 +442,26 @@ func compact(values ...string) []string {
 		}
 	}
 	return out
+}
+
+func (n *Notify) validate() []error {
+	var errs []error
+	switch strings.ToLower(n.Provider) {
+	case "expo", "none":
+	default:
+		errs = append(errs, fmt.Errorf("PUSH_PROVIDER must be expo|none, got %q", n.Provider))
+	}
+	if _, _, err := n.Quiet(); err != nil {
+		errs = append(errs, err)
+	}
+	if n.DelaySec < 0 || n.DelaySec > 600 {
+		errs = append(errs, errors.New("NOTIFY_DELAY_SEC must be between 0 and 600"))
+	}
+	if n.MaterialBatchMin < 2 {
+		errs = append(errs, errors.New("NOTIFY_MATERIAL_BATCH_MIN must be at least 2"))
+	}
+	if n.RetentionDays <= 0 {
+		errs = append(errs, errors.New("NOTIFY_RETENTION_DAYS must be positive"))
+	}
+	return errs
 }

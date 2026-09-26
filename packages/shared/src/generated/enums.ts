@@ -33,7 +33,7 @@ export type PushProvider = (typeof PUSH_PROVIDERS)[number];
 export const IDENTITY_PROVIDERS = ["GOOGLE", "APPLE"] as const;
 export type IdentityProvider = (typeof IDENTITY_PROVIDERS)[number];
 
-export const EVENT_KINDS = ["group.created", "group.updated", "member.joined", "member.roles_changed", "member.status_changed", "subject.created", "subject.updated", "subject.archived", "subject.restored", "tag.created", "tag.updated", "tag.deleted", "invite.created", "invite.revoked", "group.join_code_rotated", "material.added", "material.updated", "material.classified", "material.bulk_classified", "material.archived", "material.restored", "material.deleted", "drive.connected", "drive.disconnected", "drive.synced", "drive.reclassified", "drive.publisher_connected", "drive.publisher_disconnected", "task.created", "task.updated", "task.status_changed", "task.pinned", "task.unpinned", "task.deleted", "task.due_soon", "task.overdue", "message.created", "message.updated", "message.deleted", "message.undeleted", "message.hidden", "message.restored", "schedule.created", "schedule.updated", "schedule.deleted", "schedule.cancelled", "schedule.changed", "schedule.reset"] as const;
+export const EVENT_KINDS = ["group.created", "group.updated", "member.joined", "member.roles_changed", "member.status_changed", "subject.created", "subject.updated", "subject.archived", "subject.restored", "tag.created", "tag.updated", "tag.deleted", "invite.created", "invite.revoked", "group.join_code_rotated", "material.added", "material.updated", "material.classified", "material.bulk_classified", "material.archived", "material.restored", "material.deleted", "drive.connected", "drive.disconnected", "drive.synced", "drive.reclassified", "drive.publisher_connected", "drive.publisher_disconnected", "task.created", "task.updated", "task.status_changed", "task.pinned", "task.unpinned", "task.deleted", "task.due_soon", "task.overdue", "message.created", "message.updated", "message.deleted", "message.undeleted", "message.hidden", "message.restored", "schedule.created", "schedule.updated", "schedule.deleted", "schedule.cancelled", "schedule.changed", "schedule.reset", "announcement.created", "announcement.updated", "announcement.deleted"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 
 export const MATERIAL_KINDS = ["LECTURE", "NOTES", "REPORT", "CALC", "ASSIGNMENT", "OTHER"] as const;
@@ -42,7 +42,7 @@ export type MaterialKind = (typeof MATERIAL_KINDS)[number];
 export const FILE_TYPES = ["DOCUMENT", "IMAGE", "AUDIO", "VIDEO", "ARCHIVE", "OTHER"] as const;
 export type FileType = (typeof FILE_TYPES)[number];
 
-export const ERROR_CODES = ["drive_not_configured", "drive_api_disabled", "drive_auth_failed", "folder_link", "folder_not_shared", "not_a_folder", "folder_trashed", "version_unavailable", "drive_oauth_not_configured", "drive_scope_missing", "drive_publisher_no_access", "drive_publisher_revoked", "drive_publisher_required"] as const;
+export const ERROR_CODES = ["drive_not_configured", "drive_api_disabled", "drive_auth_failed", "folder_link", "folder_not_shared", "not_a_folder", "folder_trashed", "version_unavailable", "drive_oauth_not_configured", "drive_scope_missing", "drive_publisher_no_access", "drive_publisher_revoked", "drive_publisher_required", "invalid_credentials", "password_not_set"] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
 export const TASK_KINDS = ["TEACHER", "GROUP", "PERSONAL"] as const;
@@ -62,6 +62,21 @@ export type TaskVisibility = (typeof TASK_VISIBILITYS)[number];
 
 export const THREAD_TARGETS = ["SUBJECT", "LESSON", "MATERIAL", "TASK", "PROPOSAL", "GENERAL"] as const;
 export type ThreadTarget = (typeof THREAD_TARGETS)[number];
+
+export const NOTIFICATION_TYPES = ["MESSAGE_NEW", "MESSAGE_REPLY", "MATERIAL_ADDED", "MATERIAL_BATCH", "TASK_CREATED", "TASK_PINNED", "TASK_DUE_SOON", "TASK_OVERDUE", "TASK_STATUS_CHANGED", "SCHEDULE_CHANGED", "MEMBER_JOINED", "ANNOUNCEMENT", "REMINDER", "PROPOSAL_NEW", "MODERATION"] as const;
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+export const MUTE_SCOPES = ["GROUP", "SUBJECT", "THREAD", "TYPE"] as const;
+export type MuteScope = (typeof MUTE_SCOPES)[number];
+
+export const REMINDER_REPEATS = ["NONE", "DAILY", "WEEKLY", "MONTHLY"] as const;
+export type ReminderRepeat = (typeof REMINDER_REPEATS)[number];
+
+export const REMINDER_STATUSS = ["SCHEDULED", "SENT", "DONE"] as const;
+export type ReminderStatus = (typeof REMINDER_STATUSS)[number];
+
+export const REMINDER_TARGETS = ["TASK", "MATERIAL", "SCHEDULE"] as const;
+export type ReminderTarget = (typeof REMINDER_TARGETS)[number];
 
 export const MATERIAL_SOURCES = ["UPLOAD", "GDRIVE"] as const;
 export type MaterialSource = (typeof MATERIAL_SOURCES)[number];

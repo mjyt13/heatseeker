@@ -36,4 +36,14 @@ export const keys = {
   occurrence: (eventId: string, date: string) =>
     ['schedule-event', eventId, 'occurrence', date] as const,
   calendarLink: (id: string) => ['group', id, 'calendar-link'] as const,
+  notificationsAll: (id: string) => ['group', id, 'notifications'] as const,
+  notifications: (id: string, unreadOnly = false) =>
+    ['group', id, 'notifications', { unreadOnly }] as const,
+  notificationsUnread: (id: string) => ['group', id, 'notifications', 'unread'] as const,
+  notificationPrefs: (id: string) => ['group', id, 'notification-prefs'] as const,
+  notificationSettings: () => ['me', 'notification-settings'] as const,
+  mutes: (id: string) => ['group', id, 'mutes'] as const,
+  announcements: (id: string) => ['group', id, 'announcements'] as const,
+  remindersAll: (id: string) => ['group', id, 'reminders'] as const,
+  reminders: (id: string, openOnly = false) => ['group', id, 'reminders', { openOnly }] as const,
 };

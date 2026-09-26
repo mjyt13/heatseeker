@@ -9,6 +9,10 @@
 *.jks
 *.keystore
 service-account*.json
+# Ключи и конфиг Firebase для пуша: в репозитории не держим, они лежат в
+# переменных окружения EAS (см. README, «Проверить уведомления»).
+firebase-service-account*.json
+google-services.json
 gen-lang-client-*.json
 client_secret_*.json
 credentials/

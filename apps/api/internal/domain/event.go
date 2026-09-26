@@ -68,6 +68,11 @@ const (
 	EventMessageHidden   EventKind = "message.hidden"
 	EventMessageRestored EventKind = "message.restored"
 
+	// The headman spoke to the whole group.
+	EventAnnouncementCreated EventKind = "announcement.created"
+	EventAnnouncementUpdated EventKind = "announcement.updated"
+	EventAnnouncementDeleted EventKind = "announcement.deleted"
+
 	// A class (one-off or a series) was added, edited or removed; editing
 	// "from this date on" ends the old series and adds a new one.
 	EventScheduleCreated EventKind = "schedule.created"
@@ -95,6 +100,7 @@ var AllEventKinds = []EventKind{
 	EventMessageRestored,
 	EventScheduleCreated, EventScheduleUpdated, EventScheduleDeleted, EventScheduleCancelled, EventScheduleChanged,
 	EventScheduleReset,
+	EventAnnouncementCreated, EventAnnouncementUpdated, EventAnnouncementDeleted,
 }
 
 // Event is one row of the append-only group log. Seq is monotonic per group

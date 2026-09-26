@@ -27,6 +27,7 @@ import {
   YStack,
 } from '@heatseeker/ui';
 
+import { NotificationsBell } from '@/components/notifications-bell';
 import { SubjectPicker } from '@/components/materials';
 import { TaskRow } from '@/components/tasks';
 import { describeError } from '@/lib/errors';
@@ -70,7 +71,7 @@ export default function TasksScreen() {
           alignItems="center"
           justifyContent="space-between"
         >
-          <H3>{t('tasks.title')}</H3>
+          <H3 flex={1}>{t('tasks.title')}</H3>
           {counts ? (
             <Paragraph size="$2" color="$color10">
               {[
@@ -82,6 +83,7 @@ export default function TasksScreen() {
                 .join(' · ')}
             </Paragraph>
           ) : null}
+          <NotificationsBell groupId={groupId} />
         </XStack>
 
         <ScrollView
