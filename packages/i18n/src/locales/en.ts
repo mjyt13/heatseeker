@@ -111,6 +111,7 @@ export default {
     "unread": "Unread"
   },
   "tabs": {
+    "upcoming": "Upcoming",
     "feed": "Feed",
     "schedule": "Schedule",
     "tasks": "Tasks",
@@ -415,6 +416,17 @@ export default {
     "ALL": "Everyone",
     "SELECTED": "Selected people",
     "SELF": "Only me"
+  },
+  "upcoming": {
+    "title": "Upcoming",
+    "overdue": "Overdue",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "week": "This week",
+    "later": "Later",
+    "empty": "No upcoming deadlines",
+    "empty_hint": "Your open tasks due in the next two weeks show up here.",
+    "all_tasks": "All tasks"
   },
   "tasks": {
     "files": "Files",

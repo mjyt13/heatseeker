@@ -99,3 +99,55 @@ export function dueState(task: Task, now: Date = new Date()): DueState {
   if (days <= 7) return { kind: 'days', days };
   return { kind: 'date' };
 }
+
+/** Раздел экрана «Ближайшее». */
+export type UpcomingBucket = 'overdue' | 'today' | 'tomorrow' | 'week' | 'later';
+
+export const UPCOMING_BUCKETS: readonly UpcomingBucket[] = [
+  'overdue',
+  'today',
+  'tomorrow',
+  'week',
+  'later',
+];
+
+/** Сколько дней вперёд показывает «Ближайшее». */
+export const UPCOMING_HORIZON_DAYS = 14;
+
+/** Граница запроса для «Ближайшего»: конец дня через `days` дней — ключ запроса не меняется в течение дня. */
+export function upcomingDueBefore(now: Date = new Date(), days = UPCOMING_HORIZON_DAYS): string {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + days, 23, 59, 59, 999);
+  return d.toISOString();
+}
+
+/**
+ * Раскладывает задачи по срокам для экрана «Ближайшее»: только со сроком и не
+ * закрытые лично мной; внутри раздела — по сроку. Пустые разделы не возвращаются.
+ */
+export function groupUpcoming(
+  tasks: readonly Task[],
+  now: Date = new Date(),
+): { bucket: UpcomingBucket; data: Task[] }[] {
+  const byBucket = new Map<UpcomingBucket, Task[]>();
+  for (const task of tasks) {
+    if (!task.due_at || isClosed(myStatus(task))) continue;
+    const days = daysUntil(task.due_at, now);
+    const bucket: UpcomingBucket =
+      new Date(task.due_at) < now
+        ? 'overdue'
+        : days === 0
+          ? 'today'
+          : days === 1
+            ? 'tomorrow'
+            : days <= 7
+              ? 'week'
+              : 'later';
+    const list = byBucket.get(bucket) ?? [];
+    list.push(task);
+    byBucket.set(bucket, list);
+  }
+  return UPCOMING_BUCKETS.filter((b) => byBucket.has(b)).map((bucket) => ({
+    bucket,
+    data: byBucket.get(bucket)!.sort((a, b) => Date.parse(a.due_at!) - Date.parse(b.due_at!)),
+  }));
+}

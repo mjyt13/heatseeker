@@ -1,9 +1,6 @@
 import { Redirect } from 'expo-router';
 
-/**
- * Что открывается при входе в приложение. Пока — задачи; какой экран должен
- * встречать, решим отдельно (docs/FIXES.md).
- */
+/** Что открывается при входе в приложение: «Ближайшее» — задачи с ближайшими сроками. */
 export default function Home() {
-  return <Redirect href="/(app)/tasks" />;
+  return <Redirect href="/(app)/upcoming" />;
 }

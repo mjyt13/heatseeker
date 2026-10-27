@@ -22,7 +22,7 @@ const icon =
     <Ionicons name={name} color={color as string} size={size} />
   );
 
-/** Нижние вкладки: Задачи / Лента / Расписание / Обсуждения / Ещё. */
+/** Нижние вкладки: Ближайшее / Задачи / Лента / Расписание / Обсуждения / Ещё. */
 export default function AppLayout() {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -50,6 +50,10 @@ export default function AppLayout() {
         },
       }}
     >
+      <Tabs.Screen
+        name="upcoming"
+        options={{ title: t('tabs.upcoming'), tabBarIcon: icon('alarm-outline') }}
+      />
       <Tabs.Screen
         name="tasks"
         options={{ title: t('tabs.tasks'), tabBarIcon: icon('checkbox-outline') }}
