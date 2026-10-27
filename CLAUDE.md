@@ -174,7 +174,8 @@ docs/            PLAN.md, DATA-MODEL.md, DECISIONS.md, OPEN-QUESTIONS.md, adr/
 
 Go-тулчейн стоит в user-space; в каждом shell перед Go-командами:
 `source /run/media/deck/EE4S8/go-toolchain/env.sh` (даёт go, sqlc, task, golangci-lint).
-Docker Hub недоступен — compose использует зеркала (`mirror.gcr.io`, `quay.io`).
+Docker Hub недоступен — compose использует зеркала (`mirror.gcr.io`, `ghcr.io` — MinIO больше не раздаёт свои образы, берётся
+пересборка `ghcr.io/coollabsio/minio`).
 
 ```bash
 # инфраструктура для разработки (Postgres :5433, Redis :6379, MinIO :9100/:9101, asynqmon :8082,

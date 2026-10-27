@@ -6,7 +6,7 @@
 |---|---|---|
 | postgres | `mirror.gcr.io/library/postgres:17-alpine` | 5433 |
 | redis | `mirror.gcr.io/library/redis:7-alpine` | 6379 |
-| minio | `quay.io/minio/minio:latest` | 9100 (S3), 9101 (консоль) |
+| minio | `ghcr.io/coollabsio/minio:latest` (пересборка MinIO из исходников: официальные образы больше не раздаются) | 9100 (S3), 9101 (консоль) |
 | asynqmon | `mirror.gcr.io/hibiken/asynqmon:latest` | 8082 |
 
 Образы берутся с зеркал: Docker Hub из некоторых сетей недоступен. Порты смещены, чтобы не

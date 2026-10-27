@@ -1,7 +1,7 @@
 # Local infrastructure for development. Ports are bound to loopback and
 # offset from defaults so they do not collide with other projects on the host.
 #
-# Images come from mirrors (mirror.gcr.io, quay.io): Docker Hub may be
+# Images come from mirrors (mirror.gcr.io, ghcr.io): Docker Hub may be
 # unreachable from some networks.
 #
 #   podman compose -f infra/compose/docker-compose.dev.yml up -d
@@ -39,7 +39,9 @@ services:
       retries: 10
 
   minio:
-    image: quay.io/minio/minio:latest
+    # MinIO no longer publishes images (quay.io denies pulls, dl.min.io is gone);
+    # this is a community rebuild of the upstream sources.
+    image: ghcr.io/coollabsio/minio:latest
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-heatseeker}
