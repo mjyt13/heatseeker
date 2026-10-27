@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Политика конфиденциальности — Heatseeker</title>
+<style>
+  :root { --bg: #fafaf9; --fg: #1c1917; --muted: #57534e; --accent: #c2410c; --line: #e7e5e4; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1c1917; --fg: #f5f5f4; --muted: #a8a29e; --accent: #fb923c; --line: #44403c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 680px; margin: 0 auto; padding: 48px 16px 64px; }
+  h1 { font-size: 1.8rem; margin: 0 0 4px; }
+  .date { color: var(--muted); margin: 0 0 32px; }
+  h2 { font-size: 1.15rem; margin: 32px 0 8px; }
+  ul { padding-left: 1.2em; }
+  li { margin: 4px 0; }
+  a { color: var(--accent); }
+  code { font-size: .9em; }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line);
+           color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Политика конфиденциальности</h1>
+  <p class="date">Heatseeker · редакция от 27 октября 2026 г.</p>
+
+  <p>Heatseeker — приложение для закрытых учебных групп. Здесь описано, какие данные оно хранит,
+  зачем и как их удалить.</p>
+
+  <h2>Какие данные мы храним</h2>
+  <ul>
+    <li><b>Аккаунт:</b> имя, которое вы указали; если вы защитили аккаунт — email и пароль
+    (только в виде хеша) или привязку к аккаунту Google (идентификатор и email).</li>
+    <li><b>Участие в группах:</b> в каких группах вы состоите и ваши роли.</li>
+    <li><b>То, что вы добавляете:</b> материалы и файлы, задачи и отметки о выполнении,
+    сообщения, напоминания, занятия расписания.</li>
+    <li><b>Устройство:</b> push-токен для отправки уведомлений и время последнего входа.</li>
+    <li><b>Журнал действий в группе</b> (кто что добавил или изменил) — его видят участники группы.</li>
+  </ul>
+
+  <h2>Данные Google</h2>
+  <p>Доступ к Google используется в двух случаях, и только с вашего согласия:</p>
+  <ul>
+    <li><b>Вход через Google.</b> Приложение получает ваш идентификатор Google и email, чтобы
+    узнавать вас при входе. Токены доступа при этом не сохраняются.</li>
+    <li><b>Публикация на Google Диск (только староста или администратор группы).</b> Приложение
+    запрашивает доступ к Google Диску (<code>https://www.googleapis.com/auth/drive</code>) и email
+    аккаунта. Доступ используется только для того, чтобы проверить права на папку группы и
+    загрузить в неё файлы, которые участники группы отправили через приложение. Приложение не
+    читает, не изменяет и не удаляет другие файлы на вашем Диске. Токен обновления хранится на
+    сервере в зашифрованном виде (AES-GCM) и не передаётся участникам группы.</li>
+  </ul>
+  <p>Использование данных, полученных из API Google, соответствует
+  <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services
+  User Data Policy</a>, включая требования Limited Use. Данные Google не продаются, не передаются
+  третьим лицам, не используются для рекламы и для обучения моделей ИИ.</p>
+
+  <h2>Кто видит ваши данные</h2>
+  <p>Участники вашей группы видят ваше имя, материалы, задачи, сообщения и записи журнала группы.
+  Личные задачи и напоминания видите только вы. Данные хранятся на сервере приложения и в папке
+  Google Диска группы (для опубликованных файлов). Уведомления доставляются через сервис Expo
+  (Expo Push) и Firebase Cloud Messaging — им передаются только push-токен и текст уведомления.
+  Больше никому данные не передаются.</p>
+
+  <h2>Как отозвать доступ и удалить данные</h2>
+  <ul>
+    <li>Отключить аккаунт Google для публикации: в приложении «Ещё → Google Диск → Отключить» —
+    токен удаляется и отзывается у Google. Отозвать доступ можно и в настройках аккаунта Google:
+    <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</li>
+    <li>Удалить аккаунт и данные: напишите на
+    <a href="mailto:maksrabb135@gmail.com">maksrabb135@gmail.com</a> — удалим в течение 30 дней.
+    Файлы, уже опубликованные в папку группы на Google Диске, остаются у владельца папки.</li>
+  </ul>
+
+  <h2>Изменения</h2>
+  <p>Если политика изменится, новая редакция появится на этой странице с новой датой.</p>
+
+  <footer>
+    <a href="/">Heatseeker</a> · Связь: <a href="mailto:maksrabb135@gmail.com">maksrabb135@gmail.com</a>
+  </footer>
+</main>
+</body>
+</html>
